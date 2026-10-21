@@ -1,0 +1,8 @@
+{
+  "name": "Douyin & TikTok Video Downloader",
+  "description": "Multi-platform watermark-free video and photo downloader for Douyin, TikTok, Bilibili, and Xiaohongshu with iOS Glass UI.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "permissions": []
+}

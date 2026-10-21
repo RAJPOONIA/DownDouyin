@@ -1,0 +1,26 @@
+{
+  "name": "douyin-downloader",
+  "version": "1.0.0",
+  "description": "Multi-platform watermark-free video and photo downloader for Douyin, TikTok, Bilibili, and Xiaohongshu with iOS Glass UI.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "sm-crypto": "^0.5.7"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
