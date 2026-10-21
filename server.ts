@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import archiver from 'archiver';
 import http from 'http';
@@ -11,6 +12,38 @@ import { ABogus, DOUYIN_BASE_PARAMS, DOUYIN_FIXED_UA, extractDouyinQualities, Do
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Resolve project root (compatible with both `tsx server.ts` in /var/www/DownDouyin and `node dist/server.js` in /var/www/DownDouyin/dist)
+const PROJECT_ROOT = fs.existsSync(path.join(__dirname, 'static')) ? __dirname : path.resolve(__dirname, '..');
+const STATIC_DIR = path.join(PROJECT_ROOT, 'static');
+const LOGS_DIR = path.join(PROJECT_ROOT, 'logs');
+const STATS_LOG_FILE = path.join(LOGS_DIR, 'download-stats.jsonl');
+
+// Load .env file from PROJECT_ROOT if present (without overriding existing process.env variables)
+function loadDotEnvIfPresent(): void {
+  const envPath = path.join(PROJECT_ROOT, '.env');
+  try {
+    if (!fs.existsSync(envPath)) return;
+    const raw = fs.readFileSync(envPath, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx <= 0) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      let val = trimmed.slice(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (key && process.env[key] === undefined) {
+        process.env[key] = val;
+      }
+    }
+  } catch {
+    // Ignore .env read errors so server startup is never blocked
+  }
+}
+loadDotEnvIfPresent();
+
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -19,8 +52,310 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Static directory
-const STATIC_DIR = path.join(__dirname, 'static');
+export type SupportedPlatform = 'douyin' | 'tiktok' | 'bilibili' | 'xiaohongshu' | 'unknown';
+export type StatOperation = 'parse_request' | 'file_download' | 'zip_download';
+export type StatStatus = 'success' | 'failed' | 'aborted';
+
+export interface DownloadStatRecord {
+  timestamp: string;
+  request_id: string;
+  operation: StatOperation;
+  platform: SupportedPlatform;
+  download_method: string;
+  status: StatStatus;
+  http_status: number;
+  error_category: string | null;
+  duration_ms: number;
+}
+
+interface PlatformBreakdown {
+  parse_success: number;
+  parse_failed: number;
+  file_download_success: number;
+  file_download_failed: number;
+  file_download_aborted: number;
+  zip_download_success: number;
+  zip_download_failed: number;
+  zip_download_aborted: number;
+}
+
+interface CumulativeStatsSummary {
+  total_records_loaded: number;
+  parse_requests: { total: number; success: number; failed: number };
+  file_downloads: { total: number; success: number; failed: number; aborted: number };
+  zip_downloads: { total: number; success: number; failed: number; aborted: number };
+  by_platform: Record<SupportedPlatform, PlatformBreakdown>;
+}
+
+const MAX_RECENT_STATS = 500;
+const MAX_STARTUP_LOG_BYTES = 5 * 1024 * 1024; // Read up to last 5 MB on startup
+const MAX_STARTUP_RECORDS = 10000;
+const recentDownloadStats: DownloadStatRecord[] = [];
+
+function createEmptyPlatformBreakdown(): PlatformBreakdown {
+  return {
+    parse_success: 0,
+    parse_failed: 0,
+    file_download_success: 0,
+    file_download_failed: 0,
+    file_download_aborted: 0,
+    zip_download_success: 0,
+    zip_download_failed: 0,
+    zip_download_aborted: 0
+  };
+}
+
+const cumulativeSummary: CumulativeStatsSummary = {
+  total_records_loaded: 0,
+  parse_requests: { total: 0, success: 0, failed: 0 },
+  file_downloads: { total: 0, success: 0, failed: 0, aborted: 0 },
+  zip_downloads: { total: 0, success: 0, failed: 0, aborted: 0 },
+  by_platform: {
+    douyin: createEmptyPlatformBreakdown(),
+    tiktok: createEmptyPlatformBreakdown(),
+    bilibili: createEmptyPlatformBreakdown(),
+    xiaohongshu: createEmptyPlatformBreakdown(),
+    unknown: createEmptyPlatformBreakdown()
+  }
+};
+
+function normalizePlatformName(raw?: string, fallbackUrl?: string): SupportedPlatform {
+  const p = (raw || '').trim().toLowerCase();
+  if (p === 'douyin' || p === 'tiktok' || p === 'bilibili' || p === 'xiaohongshu') {
+    return p;
+  }
+  if (fallbackUrl) {
+    const detected = detectPlatform(fallbackUrl);
+    if (detected === 'douyin' || detected === 'tiktok' || detected === 'bilibili' || detected === 'xiaohongshu') {
+      return detected;
+    }
+  }
+  return 'unknown';
+}
+
+function generateRequestId(): string {
+  try {
+    return 'req_' + crypto.randomBytes(8).toString('hex');
+  } catch {
+    return 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
+  }
+}
+
+function categorizeError(errOrMsg: unknown, httpStatus = 500): string {
+  const msg = String((errOrMsg as any)?.message || errOrMsg || '').toLowerCase();
+  if (!msg) return httpStatus >= 500 ? 'server_error' : 'request_error';
+  if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('abort')) return 'upstream_timeout';
+  if (msg.includes('cookie') || msg.includes('sessdata') || msg.includes('login')) return 'auth_or_cookie_required';
+  if (msg.includes('xsec_token') || msg.includes('安全限制') || msg.includes('过期')) return 'expired_or_restricted_link';
+  if (msg.includes('404') || msg.includes('not found') || msg.includes('不存在') || msg.includes('已删除')) return 'media_not_found';
+  if (msg.includes('403') || msg.includes('forbidden')) return 'upstream_forbidden';
+  if (msg.includes('network') || msg.includes('fetch failed') || msg.includes('econnreset')) return 'upstream_network_error';
+  if (httpStatus === 400) return 'invalid_request';
+  if (httpStatus === 502 || httpStatus === 504) return 'upstream_gateway_error';
+  return 'parse_or_stream_error';
+}
+
+function applyRecordToSummary(entry: DownloadStatRecord): void {
+  cumulativeSummary.total_records_loaded++;
+  const platBucket = cumulativeSummary.by_platform[entry.platform] || cumulativeSummary.by_platform.unknown;
+
+  if (entry.operation === 'parse_request') {
+    cumulativeSummary.parse_requests.total++;
+    if (entry.status === 'success') {
+      cumulativeSummary.parse_requests.success++;
+      platBucket.parse_success++;
+    } else {
+      cumulativeSummary.parse_requests.failed++;
+      platBucket.parse_failed++;
+    }
+  } else if (entry.operation === 'zip_download') {
+    cumulativeSummary.zip_downloads.total++;
+    if (entry.status === 'success') {
+      cumulativeSummary.zip_downloads.success++;
+      platBucket.zip_download_success++;
+    } else if (entry.status === 'aborted') {
+      cumulativeSummary.zip_downloads.aborted++;
+      platBucket.zip_download_aborted++;
+    } else {
+      cumulativeSummary.zip_downloads.failed++;
+      platBucket.zip_download_failed++;
+    }
+  } else {
+    cumulativeSummary.file_downloads.total++;
+    if (entry.status === 'success') {
+      cumulativeSummary.file_downloads.success++;
+      platBucket.file_download_success++;
+    } else if (entry.status === 'aborted') {
+      cumulativeSummary.file_downloads.aborted++;
+      platBucket.file_download_aborted++;
+    } else {
+      cumulativeSummary.file_downloads.failed++;
+      platBucket.file_download_failed++;
+    }
+  }
+
+  recentDownloadStats.push(entry);
+  if (recentDownloadStats.length > MAX_RECENT_STATS) {
+    recentDownloadStats.shift();
+  }
+}
+
+function sanitizeLoadedRecord(raw: any): DownloadStatRecord | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const op = raw.operation;
+  if (op !== 'parse_request' && op !== 'file_download' && op !== 'zip_download') return null;
+  const st = raw.status;
+  if (st !== 'success' && st !== 'failed' && st !== 'aborted') return null;
+  const plat = normalizePlatformName(typeof raw.platform === 'string' ? raw.platform : '');
+  const timestamp = typeof raw.timestamp === 'string' && raw.timestamp.length >= 10
+    ? raw.timestamp.slice(0, 40)
+    : new Date().toISOString();
+  const requestId = typeof raw.request_id === 'string' && raw.request_id
+    ? raw.request_id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48)
+    : generateRequestId();
+  const downloadMethod = typeof raw.download_method === 'string' && raw.download_method
+    ? raw.download_method.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40)
+    : 'unknown';
+  const httpStatus = Number.isFinite(Number(raw.http_status)) ? Number(raw.http_status) : 200;
+  const errorCategory = typeof raw.error_category === 'string' && raw.error_category
+    ? raw.error_category.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48)
+    : null;
+  const durationMs = Number.isFinite(Number(raw.duration_ms)) && Number(raw.duration_ms) >= 0
+    ? Math.round(Number(raw.duration_ms))
+    : 0;
+
+  return {
+    timestamp,
+    request_id: requestId,
+    operation: op,
+    platform: plat,
+    download_method: downloadMethod,
+    status: st,
+    http_status: httpStatus,
+    error_category: errorCategory,
+    duration_ms: durationMs
+  };
+}
+
+function loadHistoricalStatsFromDisk(): void {
+  try {
+    if (!fs.existsSync(STATS_LOG_FILE)) return;
+    const stat = fs.statSync(STATS_LOG_FILE);
+    if (!stat.isFile() || stat.size <= 0) return;
+
+    let content = '';
+    if (stat.size > MAX_STARTUP_LOG_BYTES) {
+      const fd = fs.openSync(STATS_LOG_FILE, 'r');
+      try {
+        const buf = Buffer.alloc(MAX_STARTUP_LOG_BYTES);
+        const startOffset = stat.size - MAX_STARTUP_LOG_BYTES;
+        const bytesRead = fs.readSync(fd, buf, 0, MAX_STARTUP_LOG_BYTES, startOffset);
+        content = buf.toString('utf8', 0, bytesRead);
+        // Drop partial first line when reading from an offset
+        const firstNewline = content.indexOf('\n');
+        if (firstNewline >= 0) {
+          content = content.slice(firstNewline + 1);
+        }
+      } finally {
+        fs.closeSync(fd);
+      }
+    } else {
+      content = fs.readFileSync(STATS_LOG_FILE, 'utf8');
+    }
+
+    const lines = content.split(/\r?\n/);
+    const startIdx = Math.max(0, lines.length - MAX_STARTUP_RECORDS);
+    for (let i = startIdx; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      try {
+        const parsed = JSON.parse(line);
+        const validRecord = sanitizeLoadedRecord(parsed);
+        if (validRecord) {
+          applyRecordToSummary(validRecord);
+        }
+      } catch {
+        // Safely skip malformed JSON lines
+      }
+    }
+  } catch {
+    // Safely ignore missing file or permission errors on startup
+  }
+}
+loadHistoricalStatsFromDisk();
+
+function recordDownloadStat(entry: DownloadStatRecord): void {
+  const sanitized = sanitizeLoadedRecord(entry);
+  if (!sanitized) return;
+  applyRecordToSummary(sanitized);
+
+  const line = JSON.stringify(sanitized) + '\n';
+  fs.mkdir(LOGS_DIR, { recursive: true }, (dirErr) => {
+    if (dirErr) return;
+    fs.appendFile(STATS_LOG_FILE, line, 'utf8', () => {
+      // Non-blocking append; ignore file write errors so downloads are never impacted
+    });
+  });
+}
+
+// Track multi-chunk range transfers by req_id so each file download is counted once with accurate total duration
+const activeRangeTransfers = new Map<string, { startTime: number }>();
+const finalizedTransferIds = new Set<string>();
+const MAX_TRACKED_TRANSFERS = 2000;
+
+function markTransferFinalized(reqId: string): boolean {
+  if (!reqId) return false;
+  if (finalizedTransferIds.has(reqId)) return true;
+  finalizedTransferIds.add(reqId);
+  activeRangeTransfers.delete(reqId);
+  if (finalizedTransferIds.size > MAX_TRACKED_TRANSFERS) {
+    const oldest = finalizedTransferIds.values().next().value;
+    if (oldest) finalizedTransferIds.delete(oldest);
+  }
+  return false;
+}
+
+// Constant-time admin token verification for GET /api/stats/downloads
+function verifyAdminStatsRequest(req: Request, res: Response): boolean {
+  const configuredToken = (process.env.ADMIN_STATS_TOKEN || '').trim();
+  if (!configuredToken || configuredToken.length < 8) {
+    res.status(403).json({
+      success: false,
+      error: 'Statistics endpoint is disabled. Set a strong ADMIN_STATS_TOKEN (at least 8 characters) in the server environment.'
+    });
+    return false;
+  }
+
+  let providedToken = '';
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.toLowerCase().startsWith('bearer ')) {
+    providedToken = authHeader.slice(7).trim();
+  } else if (typeof req.headers['x-admin-token'] === 'string') {
+    providedToken = req.headers['x-admin-token'].trim();
+  }
+
+  if (!providedToken) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="DownDouyin Admin Statistics"');
+    res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Missing admin authentication token.'
+    });
+    return false;
+  }
+
+  const expectedHash = crypto.createHash('sha256').update(configuredToken, 'utf8').digest();
+  const actualHash = crypto.createHash('sha256').update(providedToken, 'utf8').digest();
+  if (!crypto.timingSafeEqual(expectedHash, actualHash)) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="DownDouyin Admin Statistics"');
+    res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Invalid admin authentication token.'
+    });
+    return false;
+  }
+
+  return true;
+}
 
 // Common User Agents
 const UA_MOBILE_IOS = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/121.0.2277.107 Version/17.0 Mobile/15E148 Safari/604.1';
@@ -1001,11 +1336,35 @@ app.use('/static', express.static(STATIC_DIR));
 
 // 1. /api/parse
 app.post('/api/parse', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const requestId = generateRequestId();
+  res.setHeader('X-Request-Id', requestId);
+
   const text = (req.body?.text || '').trim();
   let platform = (req.body?.platform || '').trim().toLowerCase();
 
   if (!platform || platform === 'auto' || platform === 'all') {
     platform = detectPlatform(text);
+  }
+  const normalizedPlat = normalizePlatformName(platform, text);
+
+  if (!text) {
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'parse_request',
+      platform: normalizedPlat,
+      download_method: 'metadata_parse',
+      status: 'failed',
+      http_status: 200,
+      error_category: 'empty_input',
+      duration_ms: Date.now() - startTime
+    });
+    return res.json({
+      success: false,
+      platform: '',
+      error: '请粘贴有效的视频或图文分享链接'
+    });
   }
 
   try {
@@ -1019,12 +1378,34 @@ app.post('/api/parse', async (req: Request, res: Response) => {
     } else if (platform === 'xiaohongshu') {
       resultData = await parseXiaohongshu(text);
     } else if (/^\d{15,25}$/.test(text)) {
+      recordDownloadStat({
+        timestamp: new Date().toISOString(),
+        request_id: requestId,
+        operation: 'parse_request',
+        platform: normalizedPlat,
+        download_method: 'metadata_parse',
+        status: 'failed',
+        http_status: 200,
+        error_category: 'ambiguous_numeric_id',
+        duration_ms: Date.now() - startTime
+      });
       return res.json({
         success: false,
         platform,
         error: '这看起来是一个纯数字作品 id，但光凭 id 分不清是哪个平台。请先把上方横条切到对应平台（TikTok 或 抖音），再粘贴 id。'
       });
     } else {
+      recordDownloadStat({
+        timestamp: new Date().toISOString(),
+        request_id: requestId,
+        operation: 'parse_request',
+        platform: 'unknown',
+        download_method: 'metadata_parse',
+        status: 'failed',
+        http_status: 200,
+        error_category: 'unsupported_platform',
+        duration_ms: Date.now() - startTime
+      });
       return res.json({
         success: false,
         platform: '',
@@ -1032,12 +1413,35 @@ app.post('/api/parse', async (req: Request, res: Response) => {
       });
     }
 
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'parse_request',
+      platform: normalizePlatformName(platform, text),
+      download_method: 'metadata_parse',
+      status: 'success',
+      http_status: 200,
+      error_category: null,
+      duration_ms: Date.now() - startTime
+    });
+
     return res.json({
       success: true,
       platform,
       data: resultData
     });
   } catch (err: any) {
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'parse_request',
+      platform: normalizedPlat,
+      download_method: 'metadata_parse',
+      status: 'failed',
+      http_status: 200,
+      error_category: categorizeError(err, 200),
+      duration_ms: Date.now() - startTime
+    });
     return res.json({
       success: false,
       platform,
@@ -1050,12 +1454,59 @@ app.post('/api/parse', async (req: Request, res: Response) => {
 app.get('/api/proxy', async (req: Request, res: Response) => {
   const targetUrl = req.query.url as string;
   const platform = req.query.platform as string;
+  const isDownloadTransfer = req.query.dl === '1';
+  const dlMethod = String(req.query.method || 'range_chunk_stream').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'range_chunk_stream';
+  const requestId = String(req.query.req_id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || generateRequestId();
+  const normalizedPlat = normalizePlatformName(platform, targetUrl);
 
-  if (!targetUrl) return res.status(400).send('Missing url parameter');
+  let transferStartTime = Date.now();
+  if (isDownloadTransfer) {
+    const existing = activeRangeTransfers.get(requestId);
+    if (existing) {
+      transferStartTime = existing.startTime;
+    } else {
+      activeRangeTransfers.set(requestId, { startTime: transferStartTime });
+      if (activeRangeTransfers.size > MAX_TRACKED_TRANSFERS) {
+        const oldestKey = activeRangeTransfers.keys().next().value;
+        if (oldestKey) activeRangeTransfers.delete(oldestKey);
+      }
+    }
+  }
+
+  const recordProxyStatOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
+    if (!isDownloadTransfer) return;
+    if (markTransferFinalized(requestId)) return;
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'file_download',
+      platform: normalizedPlat,
+      download_method: dlMethod,
+      status,
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: Math.max(0, Date.now() - transferStartTime)
+    });
+  };
+
+  if (!targetUrl) {
+    recordProxyStatOnce('failed', 400, 'missing_url_param');
+    return res.status(400).send('Missing url parameter');
+  }
 
   const headers = getPlatformHeaders(targetUrl, platform);
   const range = req.headers.range;
   if (range) headers['Range'] = range;
+
+  let clientAborted = false;
+  req.on('aborted', () => {
+    clientAborted = true;
+  });
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      clientAborted = true;
+    }
+  });
 
   try {
     const upstream = await fetch(targetUrl, { headers });
@@ -1067,38 +1518,140 @@ app.get('/api/proxy', async (req: Request, res: Response) => {
       if (v) res.setHeader(h, v);
     });
 
-    if (!upstream.body) return res.end();
-    const reader = upstream.body.getReader();
-    const stream = async () => {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (!res.write(value)) {
-          await new Promise(resolve => res.once('drain', resolve));
+    if (!upstream.ok && upstream.status !== 206) {
+      recordProxyStatOnce('failed', upstream.status, upstream.status >= 500 ? 'upstream_http_5xx' : 'upstream_http_4xx');
+      if (!upstream.body) return res.end();
+      const errText = await upstream.text().catch(() => '');
+      return res.end(errText);
+    }
+
+    if (!upstream.body) {
+      recordProxyStatOnce('failed', upstream.status, 'empty_upstream_body');
+      return res.end();
+    }
+
+    let isFinalChunkOrFullFile = upstream.status === 200;
+    const contentRange = upstream.headers.get('content-range') || '';
+    if (upstream.status === 206 && contentRange) {
+      const m = contentRange.match(/bytes\s+\d+-(\d+)\/(\d+)/i);
+      if (m) {
+        const endByte = parseInt(m[1], 10);
+        const totalBytes = parseInt(m[2], 10);
+        if (totalBytes > 0 && endByte + 1 >= totalBytes) {
+          isFinalChunkOrFullFile = true;
         }
       }
+    }
+
+    const reader = upstream.body.getReader();
+    let bytesWritten = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (clientAborted || res.destroyed) {
+        try { await reader.cancel(); } catch {}
+        break;
+      }
+      if (value) {
+        bytesWritten += value.byteLength;
+        if (!res.write(value)) {
+          await new Promise<void>(resolve => {
+            const onDrain = () => { cleanup(); resolve(); };
+            const onClose = () => { cleanup(); resolve(); };
+            const cleanup = () => {
+              res.removeListener('drain', onDrain);
+              res.removeListener('close', onClose);
+            };
+            res.once('drain', onDrain);
+            res.once('close', onClose);
+          });
+        }
+      }
+    }
+
+    if (!res.writableEnded) {
       res.end();
-    };
-    await stream();
+    }
+
+    if (clientAborted) {
+      recordProxyStatOnce('aborted', upstream.status, 'client_aborted');
+    } else if (bytesWritten === 0) {
+      recordProxyStatOnce('failed', upstream.status, 'empty_upstream_body');
+    } else if (isFinalChunkOrFullFile) {
+      recordProxyStatOnce('success', upstream.status, null);
+    }
   } catch (err: any) {
+    if (clientAborted) {
+      recordProxyStatOnce('aborted', 499, 'client_aborted');
+    } else {
+      recordProxyStatOnce('failed', 502, categorizeError(err, 502));
+    }
     if (!res.headersSent) {
       res.status(502).send(`Proxy fetch failed: ${err.message}`);
+    } else if (!res.writableEnded) {
+      res.end();
     }
   }
 });
 
 // 3. /api/download (Attachment download streaming with custom filename)
 app.get('/api/download', async (req: Request, res: Response) => {
-  const targetUrl = req.query.url as string;
-  const filename = (req.query.name as string) || 'download.mp4';
-  const platform = req.query.platform as string;
+  const startTime = Date.now();
+  const requestId = generateRequestId();
+  res.setHeader('X-Request-Id', requestId);
 
-  if (!targetUrl) return res.status(400).send('Missing url parameter');
+  const targetUrl = req.query.url as string;
+  const filename = (req.query.name as string) || (req.query.prefix ? String(req.query.prefix) + String(req.query.ext || '.mp4') : 'download.mp4');
+  const platform = req.query.platform as string;
+  const mediaType = String(req.query.type || 'video').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'video';
+  const normalizedPlat = normalizePlatformName(platform, targetUrl);
+
+  let statRecorded = false;
+  const recordDownloadOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
+    if (statRecorded) return;
+    statRecorded = true;
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'file_download',
+      platform: normalizedPlat,
+      download_method: `attachment_${mediaType}`,
+      status,
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: Math.max(0, Date.now() - startTime)
+    });
+  };
+
+  if (!targetUrl) {
+    recordDownloadOnce('failed', 400, 'missing_url_param');
+    return res.status(400).send('Missing url parameter');
+  }
+
+  let clientAborted = false;
+  req.on('aborted', () => {
+    clientAborted = true;
+  });
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      clientAborted = true;
+    }
+  });
 
   const headers = getPlatformHeaders(targetUrl, platform);
 
   try {
     const upstream = await fetch(targetUrl, { headers });
+    if (!upstream.ok) {
+      recordDownloadOnce('failed', upstream.status, upstream.status >= 500 ? 'upstream_http_5xx' : 'upstream_http_4xx');
+      return res.status(upstream.status).send(`Upstream returned HTTP ${upstream.status}`);
+    }
+
+    if (!upstream.body) {
+      recordDownloadOnce('failed', 502, 'empty_upstream_body');
+      return res.status(502).send('Upstream returned empty body');
+    }
+
     res.status(upstream.status);
 
     const safeExt = filename.endsWith('.jpg') ? '.jpg' : filename.endsWith('.mp3') ? '.mp3' : filename.endsWith('.zip') ? '.zip' : '.mp4';
@@ -1112,54 +1665,195 @@ app.get('/api/download', async (req: Request, res: Response) => {
     const clen = upstream.headers.get('content-length');
     if (clen) res.setHeader('Content-Length', clen);
 
-    if (!upstream.body) return res.end();
     const reader = upstream.body.getReader();
+    let bytesWritten = 0;
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      if (!res.write(value)) {
-        await new Promise(resolve => res.once('drain', resolve));
+      if (clientAborted || res.destroyed) {
+        try { await reader.cancel(); } catch {}
+        break;
+      }
+      if (value) {
+        bytesWritten += value.byteLength;
+        if (!res.write(value)) {
+          await new Promise<void>(resolve => {
+            const onDrain = () => { cleanup(); resolve(); };
+            const onClose = () => { cleanup(); resolve(); };
+            const cleanup = () => {
+              res.removeListener('drain', onDrain);
+              res.removeListener('close', onClose);
+            };
+            res.once('drain', onDrain);
+            res.once('close', onClose);
+          });
+        }
       }
     }
-    res.end();
+
+    if (!res.writableEnded) {
+      res.end();
+    }
+
+    if (clientAborted) {
+      recordDownloadOnce('aborted', upstream.status, 'client_aborted');
+    } else if (bytesWritten === 0) {
+      recordDownloadOnce('failed', upstream.status, 'empty_upstream_body');
+    } else {
+      recordDownloadOnce('success', upstream.status, null);
+    }
   } catch (err: any) {
+    if (clientAborted) {
+      recordDownloadOnce('aborted', 499, 'client_aborted');
+    } else {
+      recordDownloadOnce('failed', 502, categorizeError(err, 502));
+    }
     if (!res.headersSent) {
       res.status(502).send(`Download failed: ${err.message}`);
+    } else if (!res.writableEnded) {
+      res.end();
     }
   }
 });
 
 // 4. /api/zip (Streaming multi-item ZIP archive)
 app.post('/api/zip', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const requestId = generateRequestId();
+  res.setHeader('X-Request-Id', requestId);
+
   const items: Array<{ url: string; name: string }> = req.body?.items || [];
-  const zipName = cleanFilename(req.body?.zip_name || 'photos', 'photos') + '.zip';
+  const zipName = cleanFilename(req.body?.zip_name || req.body?.prefix || 'photos', 'photos') + '.zip';
+  const normalizedPlat = normalizePlatformName(req.body?.platform, items[0]?.url);
+
+  let statRecorded = false;
+  const recordZipOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
+    if (statRecorded) return;
+    statRecorded = true;
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'zip_download',
+      platform: normalizedPlat,
+      download_method: 'album_zip',
+      status,
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: Math.max(0, Date.now() - startTime)
+    });
+  };
 
   if (!items || items.length === 0) {
+    recordZipOnce('failed', 400, 'zip_empty_items');
     return res.status(400).json({ error: 'No items provided for zip' });
   }
 
-  const encodedZipName = encodeURIComponent(zipName);
-  res.setHeader('Content-Disposition', `attachment; filename="${encodedZipName}"; filename*=UTF-8''${encodedZipName}`);
-  res.setHeader('Content-Type', 'application/zip');
+  let clientAborted = false;
+  req.on('aborted', () => {
+    clientAborted = true;
+  });
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      clientAborted = true;
+    }
+  });
 
-  const archive = archiver('zip', { zlib: { level: 5 } });
-  archive.pipe(res);
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    try {
-      const headers = getPlatformHeaders(item.url);
-      const upstream = await fetch(item.url, { headers });
-      if (upstream.ok) {
-        const arrayBuf = await upstream.arrayBuffer();
-        archive.append(Buffer.from(arrayBuf), { name: item.name || `photo_${i + 1}.jpg` });
+  try {
+    const fetchedEntries: Array<{ buffer: Buffer; name: string }> = [];
+    for (let i = 0; i < items.length; i++) {
+      if (clientAborted) break;
+      const item = items[i];
+      if (!item || !item.url) continue;
+      try {
+        const headers = getPlatformHeaders(item.url, normalizedPlat);
+        const upstream = await fetch(item.url, { headers });
+        if (upstream.ok) {
+          const arrayBuf = await upstream.arrayBuffer();
+          if (arrayBuf.byteLength > 0) {
+            fetchedEntries.push({
+              buffer: Buffer.from(arrayBuf),
+              name: item.name || `photo_${i + 1}.jpg`
+            });
+          }
+        }
+      } catch {
+        // Continue trying remaining items
       }
-    } catch {
-      // Continue next item
+    }
+
+    if (clientAborted) {
+      recordZipOnce('aborted', 499, 'client_aborted');
+      if (!res.writableEnded) res.end();
+      return;
+    }
+
+    if (fetchedEntries.length === 0) {
+      recordZipOnce('failed', 502, 'zip_upstream_fetch_failed');
+      return res.status(502).json({ error: 'Failed to fetch album media from upstream CDN' });
+    }
+
+    const encodedZipName = encodeURIComponent(zipName);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodedZipName}"; filename*=UTF-8''${encodedZipName}`);
+    res.setHeader('Content-Type', 'application/zip');
+
+    const archive = archiver('zip', { zlib: { level: 5 } });
+    archive.on('error', (err) => {
+      recordZipOnce('failed', 500, categorizeError(err, 500));
+    });
+    archive.pipe(res);
+
+    for (const entry of fetchedEntries) {
+      archive.append(entry.buffer, { name: entry.name });
+    }
+
+    await archive.finalize();
+
+    if (clientAborted) {
+      recordZipOnce('aborted', 499, 'client_aborted');
+    } else {
+      recordZipOnce('success', 200, null);
+    }
+  } catch (err: any) {
+    if (clientAborted) {
+      recordZipOnce('aborted', 499, 'client_aborted');
+    } else {
+      recordZipOnce('failed', 500, categorizeError(err, 500));
+    }
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'ZIP creation failed' });
+    } else if (!res.writableEnded) {
+      res.end();
     }
   }
+});
 
-  await archive.finalize();
+// 4b. /api/stats/downloads (Protected read-only anonymized backend download statistics summary)
+app.get('/api/stats/downloads', (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  if (!verifyAdminStatsRequest(req, res)) {
+    return;
+  }
+
+  res.json({
+    success: true,
+    note: 'Backend operational download statistics (separate from GA4 visitor analytics). No raw URLs or sensitive query parameters are stored.',
+    log_file: 'logs/download-stats.jsonl',
+    summary: {
+      total_records_loaded: cumulativeSummary.total_records_loaded,
+      recent_buffer_size: recentDownloadStats.length,
+      parse_requests: { ...cumulativeSummary.parse_requests },
+      file_downloads: { ...cumulativeSummary.file_downloads },
+      zip_downloads: { ...cumulativeSummary.zip_downloads },
+      by_platform: {
+        douyin: { ...cumulativeSummary.by_platform.douyin },
+        tiktok: { ...cumulativeSummary.by_platform.tiktok },
+        bilibili: { ...cumulativeSummary.by_platform.bilibili },
+        xiaohongshu: { ...cumulativeSummary.by_platform.xiaohongshu },
+        unknown: { ...cumulativeSummary.by_platform.unknown }
+      }
+    },
+    recent_events: recentDownloadStats.slice(-50).reverse()
+  });
 });
 
 // 5. /api/zip/prepare & /api/zip/get

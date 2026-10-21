@@ -1,0 +1,2 @@
+{"timestamp":"2026-10-21T12:47:55.902Z","request_id":"req_32444958ce01d7de","operation":"parse_request","platform":"douyin","download_method":"metadata_parse","status":"failed","http_status":200,"error_category":"parse_or_stream_error","duration_ms":1}
+{"timestamp":"2026-10-21T12:47:57.657Z","request_id":"req_5112309ebcbc2da6","operation":"parse_request","platform":"douyin","download_method":"metadata_parse","status":"success","http_status":200,"error_category":null,"duration_ms":1750}

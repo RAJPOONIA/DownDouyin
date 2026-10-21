@@ -12,6 +12,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-S9BHCYX6EN"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  if (!window.__ddGaInitialized) {
+    window.__ddGaInitialized = true;
+    gtag('js', new Date());
+    gtag('config', 'G-S9BHCYX6EN', {
+      send_page_view: true,
+      page_location: window.location.origin + window.location.pathname
+    });
+  }
+</script>
 <style>
   *, *::before, *::after {
     box-sizing: border-box;
@@ -2449,22 +2463,94 @@
     return n + ' B';
   }
 
+  /* ==================== GOOGLE ANALYTICS 4 SAFE EVENT HELPERS ==================== */
+  const ALLOWED_PLATFORMS = ['douyin', 'tiktok', 'bilibili', 'xiaohongshu'];
+
+  function sanitizeAnalyticsPlatform(plat) {
+    const p = String(plat || currentPlatform || '').trim().toLowerCase();
+    return ALLOWED_PLATFORMS.includes(p) ? p : 'unknown';
+  }
+
+  function categorizeClientError(errOrMsg) {
+    const msg = String((errOrMsg && errOrMsg.message) ? errOrMsg.message : (errOrMsg || '')).toLowerCase();
+    if (!msg) return 'unknown_error';
+    if (msg.includes('纯数字作品') || msg.includes('ambiguous')) return 'ambiguous_numeric_id';
+    if (msg.includes('没识别出链接所属平台') || msg.includes('unsupported')) return 'unsupported_platform';
+    if (msg.includes('xsec_token') || msg.includes('安全限制') || msg.includes('过期')) return 'expired_or_restricted_link';
+    if (msg.includes('cookie') || msg.includes('sessdata') || msg.includes('login')) return 'auth_or_cookie_required';
+    if (msg.includes('404') || msg.includes('not found') || msg.includes('不存在') || msg.includes('已删除')) return 'media_not_found';
+    if (msg.includes('chunk download failed')) return 'chunk_transfer_error';
+    if (msg.includes('http 5')) return 'server_http_5xx';
+    if (msg.includes('http 4')) return 'server_http_4xx';
+    if (msg.includes('zip')) return 'zip_archive_error';
+    if (msg.includes('empty video data')) return 'empty_parse_data';
+    if (msg.includes('network') || msg.includes('failed to fetch') || msg.includes('load failed')) return 'network_error';
+    return 'request_error';
+  }
+
+  function trackAnalyticsEvent(eventName, rawParams) {
+    if (typeof window.gtag !== 'function') return;
+    try {
+      const safeParams = {};
+      if (rawParams && typeof rawParams === 'object') {
+        if (rawParams.platform) {
+          safeParams.platform = sanitizeAnalyticsPlatform(rawParams.platform);
+        }
+        if (rawParams.status === 'success' || rawParams.status === 'failed' || rawParams.status === 'started') {
+          safeParams.status = rawParams.status;
+        }
+        if (rawParams.error_category) {
+          safeParams.error_category = String(rawParams.error_category).replace(/[^a-z0-9_]/gi, '_').slice(0, 40);
+        }
+        if (rawParams.download_method) {
+          safeParams.download_method = String(rawParams.download_method).replace(/[^a-z0-9_]/gi, '_').slice(0, 40);
+        }
+      }
+      window.gtag('event', eventName, safeParams);
+    } catch {
+      // Never allow analytics errors to interrupt user functionality
+    }
+  }
+
   /* ==================== SAFE NON-NAVIGATING DOWNLOAD HANDLER ==================== */
   /* Uses 10MB HTTP Range chunks via /api/proxy so large Original Quality files (>32MB)
      never hit Cloud Run's 32MB single-response HTTP 500 limit and never cause a white screen */
-  async function downloadFileSafely(targetUrl, filename, btnEl, rawMediaUrl, platform) {
+  async function downloadFileSafely(targetUrl, filename, btnEl, rawMediaUrl, platform, downloadMethod) {
     if (!targetUrl && !rawMediaUrl) return;
+    if (btnEl && btnEl.disabled) return;
+
+    const cleanPlat = sanitizeAnalyticsPlatform(platform || currentPlatform);
+    const cleanMethod = String(downloadMethod || 'video_stream').replace(/[^a-z0-9_]/gi, '_');
+    const dlReqId = 'dl_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+
+    // 1. Track user click on download button (distinct from completed download)
+    trackAnalyticsEvent('download_button_click', {
+      platform: cleanPlat,
+      download_method: cleanMethod
+    });
+
     const origHtml = btnEl ? btnEl.innerHTML : '';
     if (btnEl) {
       btnEl.disabled = true;
       btnEl.innerHTML = '<span>⏳ 0%</span>';
     }
 
+    // 2. Track actual file transfer request started
+    trackAnalyticsEvent('download_request_started', {
+      platform: cleanPlat,
+      download_method: cleanMethod,
+      status: 'started'
+    });
+
     try {
       const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB per chunk (<32MB Cloud Run limit)
-      const proxyEndpoint = rawMediaUrl
-        ? buildProxyUrl(rawMediaUrl, platform || currentPlatform)
+      const baseProxyUrl = rawMediaUrl
+        ? buildProxyUrl(rawMediaUrl, cleanPlat)
         : targetUrl;
+      const proxyEndpoint = baseProxyUrl +
+        (baseProxyUrl.includes('?') ? '&' : '?') +
+        'dl=1&method=' + encodeURIComponent(cleanMethod) +
+        '&req_id=' + encodeURIComponent(dlReqId);
 
       let totalSize = 0;
       let supportsRange = false;
@@ -2496,7 +2582,7 @@
       const chunks = [];
       let received = 0;
 
-      if ( firstResp.body && typeof firstResp.body.getReader === 'function') {
+      if (firstResp.body && typeof firstResp.body.getReader === 'function') {
         const reader = firstResp.body.getReader();
         while (true) {
           const { done, value } = await reader.read();
@@ -2550,6 +2636,10 @@
         }
       }
 
+      if (received === 0) {
+        throw new Error('Download returned empty payload');
+      }
+
       const blob = new Blob(chunks, { type: contentType });
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -2563,6 +2653,13 @@
         a.remove();
       }, 6000);
 
+      // 3. Track completed file transfer ONLY after full Blob is assembled and saved
+      trackAnalyticsEvent('download_request_success', {
+        platform: cleanPlat,
+        download_method: cleanMethod,
+        status: 'success'
+      });
+
       if (btnEl) {
         btnEl.innerHTML = '<span>✓ Saved</span>';
         setTimeout(() => {
@@ -2572,6 +2669,13 @@
       }
       showToast('Download complete: ' + (filename || 'video.mp4'));
     } catch (err) {
+      // 4. Track failed file transfer with non-sensitive error_category
+      trackAnalyticsEvent('download_request_failed', {
+        platform: cleanPlat,
+        download_method: cleanMethod,
+        status: 'failed',
+        error_category: categorizeClientError(err)
+      });
       showError('Download failed: ' + (err && err.message ? err.message : 'Network error'));
       if (btnEl) {
         btnEl.disabled = false;
@@ -3011,7 +3115,7 @@
       dlBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const dlUrl = buildDownloadUrl(data.music_url, baseName + '_audio', plat, 'music', '.mp3');
-        downloadFileSafely(dlUrl, baseName + '_audio.mp3', dlBtn, data.music_url, plat);
+        downloadFileSafely(dlUrl, baseName + '_audio.mp3', dlBtn, data.music_url, plat, 'audio_mp3');
       });
       listEl.appendChild(row);
       return;
@@ -3036,7 +3140,7 @@
       dlBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const dlUrl = buildDownloadUrl(coverUrl, baseName + '_cover', plat, 'image', '.jpg');
-        downloadFileSafely(dlUrl, baseName + '_cover.jpg', dlBtn, coverUrl, plat);
+        downloadFileSafely(dlUrl, baseName + '_cover.jpg', dlBtn, coverUrl, plat, 'thumbnail_jpg');
       });
       listEl.appendChild(row);
       return;
@@ -3087,7 +3191,7 @@
         const qTag = idx === 0 ? 'Original' : String(q.resolution || q.id || q.name || 'HD').replace(/[^a-zA-Z0-9]/g, '');
         const fname = `${baseName}_${qTag}.mp4`;
         const dlUrl = buildDownloadUrl(targetRawUrl, `${baseName}_${qTag}`, plat, 'video', '.mp4');
-        downloadFileSafely(dlUrl, fname, dlBtn, targetRawUrl, plat);
+        downloadFileSafely(dlUrl, fname, dlBtn, targetRawUrl, plat, idx === 0 ? 'video_original_mp4' : 'video_mp4');
       });
 
       listEl.appendChild(row);
@@ -3135,14 +3239,14 @@
       const imgBtn = card.querySelector('[data-kind="img"]');
       imgBtn.addEventListener('click', () => {
         const dl = buildDownloadUrl(imgUrl, `${baseName}_${idx + 1}`, plat, 'image', '.jpg');
-        downloadFileSafely(dl, `${baseName}_${idx + 1}.jpg`, imgBtn, imgUrl, plat);
+        downloadFileSafely(dl, `${baseName}_${idx + 1}.jpg`, imgBtn, imgUrl, plat, 'gallery_jpg');
       });
 
       const liveBtn = card.querySelector('[data-kind="live"]');
       if (liveBtn && matchingLive) {
         liveBtn.addEventListener('click', () => {
           const dl = buildDownloadUrl(matchingLive.video_url, `${baseName}_live_${idx + 1}`, plat, 'video', '.mp4');
-          downloadFileSafely(dl, `${baseName}_live_${idx + 1}.mp4`, liveBtn, matchingLive.video_url, plat);
+          downloadFileSafely(dl, `${baseName}_live_${idx + 1}.mp4`, liveBtn, matchingLive.video_url, plat, 'gallery_live_mp4');
         });
       }
 
@@ -3152,6 +3256,7 @@
     const zipBtn = $('btnDownloadZip');
     if (zipBtn) {
       zipBtn.onclick = async () => {
+        if (zipBtn.disabled) return;
         const items = [];
         images.forEach((u, i) => items.push({ url: u, name: `${baseName}_img_${i + 1}.jpg` }));
         livePhotos.forEach((lp, i) => {
@@ -3161,9 +3266,22 @@
         });
         if (!items.length) return;
 
+        const cleanPlat = sanitizeAnalyticsPlatform(plat);
+        trackAnalyticsEvent('download_button_click', {
+          platform: cleanPlat,
+          download_method: 'album_zip'
+        });
+
         const origText = zipBtn.innerHTML;
         zipBtn.disabled = true;
         zipBtn.innerHTML = '⏳ Packing ZIP...';
+
+        trackAnalyticsEvent('download_request_started', {
+          platform: cleanPlat,
+          download_method: 'album_zip',
+          status: 'started'
+        });
+
         try {
           const resp = await fetch(API_BASE + '/api/zip', {
             method: 'POST',
@@ -3172,6 +3290,7 @@
           });
           if (!resp.ok) throw new Error('ZIP Error HTTP ' + resp.status);
           const blob = await resp.blob();
+          if (!blob || blob.size === 0) throw new Error('ZIP archive returned empty payload');
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -3182,8 +3301,20 @@
             URL.revokeObjectURL(url);
             a.remove();
           }, 5000);
+
+          trackAnalyticsEvent('download_request_success', {
+            platform: cleanPlat,
+            download_method: 'album_zip',
+            status: 'success'
+          });
           showToast('Album ZIP downloaded!');
         } catch (e) {
+          trackAnalyticsEvent('download_request_failed', {
+            platform: cleanPlat,
+            download_method: 'album_zip',
+            status: 'failed',
+            error_category: categorizeClientError(e)
+          });
           showError('ZIP download failed: ' + (e.message || 'Error'));
         } finally {
           zipBtn.disabled = false;
@@ -3212,6 +3343,14 @@
     if (detected) {
       setActivePlatform(detected);
     }
+
+    const submitPlatform = sanitizeAnalyticsPlatform(detected || currentPlatform);
+
+    // Track link submission (distinct from a completed media file download)
+    trackAnalyticsEvent('downloader_link_submit', {
+      platform: submitPlatform,
+      download_method: 'link_parse'
+    });
 
     const btn = $('btnFetch');
     const origBtnHtml = btn.innerHTML;
@@ -3258,6 +3397,12 @@
       renderPreviewCard(data);
       showToast(currentLang === 'zh' ? '解析成功！请选择画质下载。' : 'Video fetched! Select a quality below to download.');
     } catch (err) {
+      trackAnalyticsEvent('download_request_failed', {
+        platform: submitPlatform,
+        download_method: 'link_parse',
+        status: 'failed',
+        error_category: categorizeClientError(err)
+      });
       showPreviewEmptyState();
       showError(err && err.message ? err.message : 'Unable to parse video link.');
     } finally {
