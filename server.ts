@@ -10,6 +10,7 @@ import archiver from 'archiver';
 import http from 'http';
 import https from 'https';
 import { ABogus, DOUYIN_BASE_PARAMS, DOUYIN_FIXED_UA, extractDouyinQualities, DouyinQualityItem, scoreDouyinCdnUrl } from './douyin_abogus.js';
+import { setupAdminControlCenter } from './admin_center.js';
 
 // Prefer IPv4 first and use a scoped custom DNS lookup with bounded timeouts and system DNS fallback
 try {
@@ -408,10 +409,33 @@ function loadHistoricalStatsFromDisk(): void {
 }
 loadHistoricalStatsFromDisk();
 
+let adminCenterHooks: ReturnType<typeof setupAdminControlCenter> | null = null;
+
 function recordDownloadStat(entry: DownloadStatRecord): void {
   const sanitized = sanitizeLoadedRecord(entry);
   if (!sanitized) return;
   applyRecordToSummary(sanitized);
+
+  if (sanitized.status === 'failed' && adminCenterHooks) {
+    const routeCat =
+      sanitized.operation === 'parse_request'
+        ? 'parse'
+        : sanitized.operation === 'zip_download'
+        ? 'zip'
+        : sanitized.download_method === 'range_chunk_stream'
+        ? 'proxy'
+        : 'download';
+    adminCenterHooks.recordAppError({
+      requestId: sanitized.request_id,
+      severity: sanitized.http_status >= 500 ? 'error' : 'warn',
+      routeCategory: routeCat,
+      platform: sanitized.platform,
+      httpStatus: sanitized.http_status,
+      errorCategory: sanitized.error_category || 'download_failed',
+      durationMs: sanitized.duration_ms,
+      summary: `${sanitized.operation} (${sanitized.download_method}) failed on ${sanitized.platform}: ${sanitized.error_category || 'error'}`
+    });
+  }
 
   const line = JSON.stringify(sanitized) + '\n';
   fs.mkdir(LOGS_DIR, { recursive: true }, (dirErr) => {
@@ -1611,6 +1635,9 @@ app.get(['/', '/index.html'], (req: Request, res: Response) => {
   if (!fs.existsSync(indexPath)) {
     return res.status(404).send('index.html not found');
   }
+  try {
+    adminCenterHooks?.recordVisitorEvent(req, 'page_view');
+  } catch {}
   let html = fs.readFileSync(indexPath, 'utf-8');
   html = html.replace(/__SERVICE_PORT__/g, String(PORT));
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -1664,11 +1691,17 @@ app.get('/robots.txt', (req: Request, res: Response) => {
       'User-agent: *',
       'Allow: /',
       'Disallow: /api/',
+      'Disallow: /admin',
       '',
       `Sitemap: ${CANONICAL_SITE_ORIGIN}/sitemap.xml`,
       ''
     ].join('\n')
   );
+});
+
+// Prevent direct static indexing of admin.html via /static/admin.html
+app.get('/static/admin.html', (req: Request, res: Response) => {
+  res.redirect(302, '/admin');
 });
 
 // Serve other static files
@@ -2920,13 +2953,18 @@ app.post('/api/contact', (req: Request, res: Response) => {
   const platform = normalizePlatformName(String(req.body?.platform || ''));
   const message = String(req.body?.message || '').trim().slice(0, 2000);
 
+  adminCenterHooks?.recordContactFunnelEvent('submission_attempted', { category, platform });
+
   if (!name || name.length < 2) {
+    adminCenterHooks?.recordContactFunnelEvent('validation_failed', { category, platform, reason: 'invalid_name' });
     return res.status(400).json({ success: false, error: 'Please enter your name (at least 2 characters).' });
   }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    adminCenterHooks?.recordContactFunnelEvent('validation_failed', { category, platform, reason: 'invalid_email' });
     return res.status(400).json({ success: false, error: 'Please enter a valid email address.' });
   }
   if (!message || message.length < 10) {
+    adminCenterHooks?.recordContactFunnelEvent('validation_failed', { category, platform, reason: 'message_too_short' });
     return res.status(400).json({ success: false, error: 'Please enter a detailed message (at least 10 characters).' });
   }
 
@@ -2947,19 +2985,51 @@ app.post('/api/contact', (req: Request, res: Response) => {
   try {
     fs.mkdirSync(LOGS_DIR, { recursive: true });
     fs.appendFileSync(CONTACT_LOG_FILE, JSON.stringify(record) + '\n', 'utf8');
-  } catch {
+  } catch (err: any) {
+    adminCenterHooks?.recordAppError({
+      requestId: inquiryId,
+      severity: 'critical',
+      routeCategory: 'contact',
+      platform,
+      httpStatus: 500,
+      errorCategory: 'contact_storage_write_failed',
+      summary: 'Failed to append contact inquiry to logs/contact-messages.jsonl'
+    });
     return res.status(500).json({
       success: false,
       error: 'Unable to record inquiry on server disk at this time.'
     });
   }
 
+  if (adminCenterHooks) {
+    void adminCenterHooks.onNewContactInquiryStored(record);
+  }
+
+  const emailActive = Boolean((process.env.RESEND_API_KEY || '').trim().length >= 10);
   return res.json({
     success: true,
     inquiry_id: inquiryId,
-    storage_mode: 'server_inbox_log',
-    message: `Your message has been logged on the DownDouyin server (Reference ID: ${inquiryId}). Note: Automated outbound email notification is not enabled; the site administrator reviews logged inquiries directly on the server.`
+    storage_mode: emailActive ? 'server_inbox_and_email_notification' : 'server_inbox_log',
+    message: emailActive
+      ? `Your message has been logged in the DownDouyin Admin Inbox and an email notification has been dispatched (Reference ID: ${inquiryId}).`
+      : `Your message has been logged in the DownDouyin Admin Inbox (Reference ID: ${inquiryId}). The site administrator reviews logged inquiries in the Admin Control Center.`
   });
+});
+
+// Initialize Admin Control Center (/admin and /api/admin/*)
+adminCenterHooks = setupAdminControlCenter(app, {
+  projectRoot: PROJECT_ROOT,
+  staticDir: STATIC_DIR,
+  logsDir: LOGS_DIR,
+  getDownloadStats: () => ({
+    recent: recentDownloadStats,
+    summary: cumulativeSummary
+  }),
+  getRuntimeConfigStatus: () => ({
+    bilibiliConfigured: Boolean((bilibiliCookie || process.env.BILIBILI_COOKIE || '').trim()),
+    bilibiliSource: bilibiliCookie ? 'runtime_cookie' : (process.env.BILIBILI_COOKIE ? 'env_cookie' : 'none'),
+    tiktokProxyConfigured: Boolean(tiktokProxyUrl)
+  })
 });
 
 // 8. Bilibili tracks & audio stubs

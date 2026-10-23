@@ -4125,6 +4125,35 @@
       return;
     }
 
+    // Optional Admin Login Shortcut Check:
+    // Only checked for non-URL, non-video-ID phrases (4–64 chars) before any analytics or parse call.
+    // Never authenticates; only redirects to /admin login page and clears the input immediately.
+    if (
+      rawText.length >= 4 &&
+      rawText.length <= 64 &&
+      !/https?:\/\//i.test(rawText) &&
+      !/^\d{15,25}$/.test(rawText) &&
+      !/\b(?:BV[0-9A-Za-z]{10}|av\d+)\b/i.test(rawText)
+    ) {
+      try {
+        const scResp = await fetch(API_BASE + '/api/public/shortcut-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input: rawText })
+        });
+        if (scResp.ok) {
+          const scData = await scResp.json();
+          if (scData && scData.matched) {
+            inputEl.value = '';
+            const clearBtn = $('btnClearInput');
+            if (clearBtn) clearBtn.classList.remove('visible');
+            window.location.href = scData.redirect || '/admin';
+            return;
+          }
+        }
+      } catch {}
+    }
+
     const detected = detectPlatformFromText(rawText);
     if (detected) {
       setActivePlatform(detected);
@@ -4321,6 +4350,15 @@
     target.classList.add('show');
     if (modalId === 'settingsModal') {
       refreshConfigStatus();
+    }
+    if (modalId === 'contactModal') {
+      try {
+        fetch(API_BASE + '/api/public/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event_type: 'contact_form_opened' })
+        }).catch(() => {});
+      } catch {}
     }
     if (hashSlug && window.location.hash !== '#' + hashSlug) {
       try {
@@ -4742,17 +4780,30 @@
           feedbackBox.textContent = msg;
         };
 
+        const reportContactValidation = (reason) => {
+          try {
+            fetch(API_BASE + '/api/public/telemetry', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ event_type: 'contact_validation_failed', category, platform, reason })
+            }).catch(() => {});
+          } catch {}
+        };
+
         if (name.length < 2) {
+          reportContactValidation('client_invalid_name');
           showContactFeedback('Please enter your name (at least 2 characters).', true);
           $('contactName').focus();
           return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          reportContactValidation('client_invalid_email');
           showContactFeedback('Please enter a valid email address.', true);
           $('contactEmail').focus();
           return;
         }
         if (message.length < 10) {
+          reportContactValidation('client_message_too_short');
           showContactFeedback('Please enter a detailed message (at least 10 characters).', true);
           $('contactMessage').focus();
           return;

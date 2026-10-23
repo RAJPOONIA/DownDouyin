@@ -1,0 +1,2886 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>DownDouyin — Admin Control Center</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root, html[data-theme="dark"] {
+    --bg-canvas: #090D16;
+    --bg-surface: #111827;
+    --bg-elevated: #1A2333;
+    --bg-hover: rgba(255, 255, 255, 0.04);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.15);
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --accent: #633BFF;
+    --accent-hover: #7C5CFF;
+    --accent-soft: rgba(99, 59, 255, 0.16);
+    --success: #10B981;
+    --success-soft: rgba(16, 185, 129, 0.14);
+    --warning: #F59E0B;
+    --warning-soft: rgba(245, 158, 11, 0.14);
+    --danger: #EF4444;
+    --danger-soft: rgba(239, 68, 68, 0.14);
+    --info: #3B82F6;
+    --info-soft: rgba(59, 130, 246, 0.14);
+  }
+
+  html[data-theme="light"] {
+    --bg-canvas: #F8FAFC;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #F1F5F9;
+    --bg-hover: rgba(15, 23, 42, 0.04);
+    --border-subtle: #E2E8F0;
+    --border-strong: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --accent: #5630FF;
+    --accent-hover: #4622E5;
+    --accent-soft: rgba(86, 48, 255, 0.1);
+    --success: #059669;
+    --success-soft: rgba(5, 150, 105, 0.1);
+    --warning: #D97706;
+    --warning-soft: rgba(217, 119, 6, 0.1);
+    --danger: #DC2626;
+    --danger-soft: rgba(220, 38, 38, 0.1);
+    --info: #2563EB;
+    --info-soft: rgba(37, 99, 235, 0.1);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ==================== AUTH / SETUP SCREEN ==================== */
+  .auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 430px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 32px;
+  }
+
+  .auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .auth-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+  }
+
+  .auth-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .auth-subtitle {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13.5px;
+    transition: border-color 0.15s ease;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #ffffff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .btn-secondary {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--border-strong);
+  }
+
+  .btn-danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: var(--danger);
+    color: #fff;
+  }
+
+  .btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  .btn-block {
+    width: 100%;
+  }
+
+  .alert-box {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    margin-bottom: 16px;
+    border: 1px solid transparent;
+    display: none;
+  }
+
+  .alert-box.show {
+    display: block;
+  }
+
+  .alert-error {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .alert-success {
+    background: var(--success-soft);
+    color: var(--success);
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  .alert-info {
+    background: var(--info-soft);
+    color: var(--info);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  /* ==================== APP SHELL ==================== */
+  .admin-shell {
+    display: none;
+    min-height: 100vh;
+  }
+
+  .admin-shell.active {
+    display: flex;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 248px;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar-header {
+    height: 60px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+
+  .sidebar-brand strong {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .sidebar-brand span {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    line-height: 1.1;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 10px;
+  }
+
+  .nav-group-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 10px 10px 6px;
+  }
+
+  .nav-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    margin-bottom: 2px;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+
+  .nav-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .nav-btn.active {
+    background: var(--accent-soft);
+    color: var(--text-primary);
+    border-left: 3px solid var(--accent);
+    padding-left: 7px;
+  }
+
+  .nav-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  .nav-badge.unread {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  .sidebar-footer {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .user-meta {
+    overflow: hidden;
+  }
+
+  .user-meta strong {
+    display: block;
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-meta span {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  /* Main Workspace */
+  .main-area {
+    flex: 1;
+    margin-left: 248px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    height: 60px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mobile-menu-btn {
+    display: none;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .page-heading {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .range-bar {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    border-radius: 7px;
+    padding: 2px;
+  }
+
+  .range-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 9px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .range-btn.active {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+
+  .custom-date-inputs {
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .custom-date-inputs.show {
+    display: inline-flex;
+  }
+
+  .date-input {
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+
+  .workspace-content {
+    padding: 24px;
+    max-width: 1440px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .tab-pane {
+    display: none;
+  }
+
+  .tab-pane.active {
+    display: block;
+  }
+
+  /* Grid & Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 18px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .card-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .kpi-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+
+  .kpi-foot {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .source-tag {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .delta-pos { color: var(--success); font-weight: 600; }
+  .delta-neg { color: var(--danger); font-weight: 600; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .equal-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  th {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background: var(--bg-hover);
+  }
+
+  .status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status-dot::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .status-ok { color: var(--success); }
+  .status-ok::before { background: var(--success); }
+  .status-warn { color: var(--warning); }
+  .status-warn::before { background: var(--warning); }
+  .status-err { color: var(--danger); }
+  .status-err::before { background: var(--danger); }
+  .status-neutral { color: var(--text-secondary); }
+  .status-neutral::before { background: var(--text-muted); }
+
+  /* Filter Toolbar */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Bar Chart */
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 170px;
+    padding-top: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .chart-col {
+    flex: 1;
+    min-width: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    position: relative;
+  }
+
+  .chart-bar-stack {
+    width: 100%;
+    max-width: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 1px;
+    height: 140px;
+  }
+
+  .bar-seg-dl {
+    background: var(--accent);
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+  }
+
+  .bar-seg-pv {
+    background: var(--info);
+    opacity: 0.55;
+    border-radius: 3px 3px 0 0;
+  }
+
+  .chart-date {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    white-space: nowrap;
+  }
+
+  /* Modal / Drawer */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+
+  .modal-backdrop.show {
+    display: flex;
+  }
+
+  .modal-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .modal-foot {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .funnel-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .funnel-step {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .funnel-step span {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: block;
+  }
+
+  .funnel-step strong {
+    font-size: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .toggle-row:last-child {
+    border-bottom: none;
+  }
+
+  .toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  }
+
+  @media (max-width: 960px) {
+    .sidebar {
+      transform: translateX(-100%);
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    .main-area {
+      margin-left: 0;
+    }
+    .mobile-menu-btn {
+      display: inline-flex;
+    }
+    .two-col, .equal-col {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== 1. UNAUTHENTICATED LOGIN / INITIAL SETUP SCREEN ==================== -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-logo">DD</div>
+      <div>
+        <div class="auth-title">DownDouyin Admin</div>
+        <div class="auth-subtitle">Private Operational Control Center</div>
+      </div>
+    </div>
+
+    <div class="alert-box alert-error" id="authErrorBox"></div>
+
+    <!-- Standard Sign-In Form -->
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label" for="loginUsername">Administrator Username</label>
+        <input class="form-input" type="text" id="loginUsername" name="username" autocomplete="username" required placeholder="admin">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="loginPassword">Password</label>
+        <input class="form-input" type="password" id="loginPassword" name="password" autocomplete="current-password" required placeholder="••••••••••••">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="btnLoginSubmit">Sign In to Control Center</button>
+      <p style="font-size:11.5px;color:var(--text-muted);margin-top:14px;line-height:1.45;">
+        Protected by server-side session verification, scrypt password hashing, and rate limiting. Locked out? Set <code class="mono">ADMIN_RESET_PASSWORD</code> in <code class="mono">.env</code> on the server and restart.
+      </p>
+    </form>
+
+    <!-- Initial One-Time Setup Form (Shown only when no admin user exists yet) -->
+    <form id="setupForm" style="display:none;">
+      <div class="alert-box alert-info show" style="margin-bottom:14px;">
+        <strong>Initial Administrator Setup Required</strong><br>
+        No administrator account exists yet. Enter the one-time setup token generated on the server in <code class="mono">logs/admin-setup-token.txt</code> (or set <code class="mono">ADMIN_INITIAL_PASSWORD</code> in <code class="mono">.env</code>).
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="setupToken">One-Time Server Setup Token</label>
+        <input class="form-input mono" type="password" id="setupToken" required placeholder="Paste token from logs/admin-setup-token.txt">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="setupUsername">Owner Username</label>
+        <input class="form-input" type="text" id="setupUsername" value="admin" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="setupEmail">Administrator Email</label>
+        <input class="form-input" type="email" id="setupEmail" required placeholder="admin@downdouyin.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="setupPassword">Strong Password (min 10 characters)</label>
+        <input class="form-input" type="password" id="setupPassword" minlength="10" required placeholder="At least 10 characters">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="btnSetupSubmit">Complete Initial Owner Setup</button>
+    </form>
+
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+      <a href="/" style="color:var(--text-secondary);text-decoration:none;">← Return to Public Site</a>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnAuthThemeToggle">Toggle Theme</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 2. AUTHENTICATED ADMIN CONTROL CENTER SHELL ==================== -->
+<div class="admin-shell" id="adminShell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="/admin" class="sidebar-brand">
+        <div class="auth-logo" style="width:30px;height:30px;font-size:13px;">DD</div>
+        <div>
+          <strong>DownDouyin</strong>
+          <span>Admin Control Center</span>
+        </div>
+      </a>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">Operations &amp; Traffic</div>
+      <button type="button" class="nav-btn active" data-tab="overview">
+        <span>1. Overview</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="analytics">
+        <span>2. Website Analytics</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="downloads">
+        <span>3. Downloads</span>
+      </button>
+
+      <div class="nav-group-label">Support &amp; Users</div>
+      <button type="button" class="nav-btn" data-tab="contacts">
+        <span>4. Contact Inbox</span>
+        <span class="nav-badge unread" id="navUnreadBadge" style="display:none;">0</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="feedback">
+        <span>5. Feedback</span>
+        <span class="nav-badge" id="navFeedbackBadge" style="display:none;">0</span>
+      </button>
+
+      <div class="nav-group-label">Reliability &amp; SEO</div>
+      <button type="button" class="nav-btn" data-tab="errors">
+        <span>6. Errors &amp; Logs</span>
+        <span class="nav-badge" id="navErrorsBadge" style="display:none;">0</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="health">
+        <span>7. System Health</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="seo">
+        <span>8. SEO Overview</span>
+      </button>
+
+      <div class="nav-group-label">Administration</div>
+      <button type="button" class="nav-btn" data-tab="notifications">
+        <span>9. Notifications</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="integrations">
+        <span>10. Integrations</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="security">
+        <span>11. Security &amp; Audit</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="settings">
+        <span>12. Settings</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-meta">
+        <strong id="sidebarUsername">admin</strong>
+        <span id="sidebarRole">owner</span>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnLogout">Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button type="button" class="mobile-menu-btn" id="btnMobileMenu">☰</button>
+        <h1 class="page-heading" id="topbarTitle">Overview</h1>
+      </div>
+
+      <div class="topbar-right">
+        <div class="range-bar" id="dateRangeBar">
+          <button type="button" class="range-btn" data-range="today">Today</button>
+          <button type="button" class="range-btn" data-range="yesterday">Yesterday</button>
+          <button type="button" class="range-btn active" data-range="7d">7D</button>
+          <button type="button" class="range-btn" data-range="28d">28D</button>
+          <button type="button" class="range-btn" data-range="90d">90D</button>
+          <button type="button" class="range-btn" data-range="custom">Custom</button>
+        </div>
+        <div class="custom-date-inputs" id="customDateWrap">
+          <input type="date" class="date-input" id="customStartDate">
+          <span style="color:var(--text-muted);font-size:12px;">to</span>
+          <input type="date" class="date-input" id="customEndDate">
+          <button type="button" class="btn btn-primary btn-sm" id="btnApplyCustomRange">Apply</button>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnRefreshCurrent">↻ Refresh</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnThemeToggle">◐ Theme</button>
+        <a href="/" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Public Site ↗</a>
+      </div>
+    </header>
+
+    <main class="workspace-content">
+      <!-- ==================== TAB 1: OVERVIEW ==================== -->
+      <section class="tab-pane active" id="pane-overview">
+        <div class="kpi-grid" id="overviewKpiGrid"></div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Daily Operational &amp; Page View Trend</div>
+                <div class="card-subtitle" id="overviewChartSubtitle">First-party page views vs completed downloads in selected window</div>
+              </div>
+              <span class="source-tag">First-Party Server Logs</span>
+            </div>
+            <div class="chart-bars" id="overviewDailyChart"></div>
+            <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--text-secondary);">
+              <span><strong style="color:var(--accent);">■</strong> Successful Downloads &amp; Parses</span>
+              <span><strong style="color:var(--info);">■</strong> First-Party Page Views</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Supported Platform Distribution</div>
+                <div class="card-subtitle">Activity across Douyin, Bilibili, TikTok &amp; Xiaohongshu</div>
+              </div>
+              <span class="source-tag">download-stats.jsonl</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Platform</th>
+                    <th>Total</th>
+                    <th>Success</th>
+                    <th>Failed</th>
+                  </tr>
+                </thead>
+                <tbody id="overviewPlatformTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="equal-col">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Contact Support &amp; Feedback Funnel</div>
+                <div class="card-subtitle">Tracks visitors opening the support modal through stored inquiries</div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" data-goto="contacts">Open Inbox →</button>
+            </div>
+            <div class="funnel-row" id="overviewFunnelRow"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Runtime &amp; Backup Status</div>
+                <div class="card-subtitle">Server uptime, error count, and latest snapshot backup</div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" data-goto="health">System Health →</button>
+            </div>
+            <div id="overviewHealthSummary"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 2: WEBSITE ANALYTICS ==================== -->
+      <section class="tab-pane" id="pane-analytics">
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Google Analytics 4 Integration Status</div>
+              <div class="card-subtitle">Client-side GA4 tag (<code class="mono" id="ga4MeasurementLabel">G-S9BHCYX6EN</code>) &amp; optional GA4 Data API reporting</div>
+            </div>
+            <span id="ga4ApiBadge" class="status-dot status-neutral">Checking...</span>
+          </div>
+          <div id="ga4StatusBody"></div>
+        </div>
+
+        <div class="kpi-grid" id="analyticsFirstPartyKpis"></div>
+
+        <div class="equal-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Top Referrer Hosts (First-Party Page Views)</div>
+              <span class="source-tag">visitor-events.jsonl</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Referrer Source</th><th>Page Views</th></tr></thead>
+                <tbody id="analyticsReferrersTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Device &amp; Language Breakdown</div>
+              <span class="source-tag">User-Agent / Accept-Language</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Segment</th><th>Category</th><th>Page Views</th></tr></thead>
+                <tbody id="analyticsDeviceLangTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 3: DOWNLOADS ==================== -->
+      <section class="tab-pane" id="pane-downloads">
+        <div class="filter-bar">
+          <div>
+            <h2 style="font-size:15px;font-weight:700;">Platform Parse &amp; Download Telemetry</h2>
+            <p style="font-size:12px;color:var(--text-secondary);">Anonymized operational events from <code class="mono">/api/parse</code>, <code class="mono">/api/proxy</code>, <code class="mono">/api/download</code>, and <code class="mono">/api/zip</code>.</p>
+          </div>
+          <div class="filter-group">
+            <a href="/api/admin/export/downloads.csv" class="btn btn-secondary btn-sm">⬇ Export Downloads CSV</a>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-title">Per-Platform Performance Breakdown</div>
+            <span class="source-tag" id="downloadsWindowLabel">Selected Window</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Platform</th>
+                  <th>Parse Attempts</th>
+                  <th>Parse Success</th>
+                  <th>Parse Failed</th>
+                  <th>Media Downloads</th>
+                  <th>Download Success</th>
+                  <th>Download Failed</th>
+                  <th>Client Aborted</th>
+                  <th>Avg Latency</th>
+                </tr>
+              </thead>
+              <tbody id="downloadsPlatformTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Recent Parse &amp; Download Failures</div>
+              <span class="source-tag">Last 50 Failures</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time (UTC)</th>
+                    <th>Req ID</th>
+                    <th>Operation</th>
+                    <th>Platform</th>
+                    <th>Error Category</th>
+                    <th>Latency</th>
+                  </tr>
+                </thead>
+                <tbody id="downloadsFailuresTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Failure Categories</div>
+              <span class="source-tag">Error Distribution</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Error Category</th><th>Occurrences</th></tr></thead>
+                <tbody id="downloadsErrorCatTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 4: CONTACT INBOX ==================== -->
+      <section class="tab-pane" id="pane-contacts">
+        <div class="card" style="margin-bottom:18px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Contact Support Attempt Funnel</div>
+              <div class="card-subtitle">Visibility into visitors who opened the contact form, encountered validation errors, or submitted inquiries</div>
+            </div>
+            <span class="source-tag">contact-events.jsonl</span>
+          </div>
+          <div class="funnel-row" id="contactsFunnelBar" style="margin-bottom:0;"></div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="filter-group">
+            <input type="search" class="form-input" id="contactSearchInput" placeholder="Search Ref ID, name, email, message..." style="width:260px;">
+            <select class="form-select" id="contactStatusFilter" style="width:140px;">
+              <option value="all">All Statuses</option>
+              <option value="unread">Unread Only</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="spam">Spam</option>
+            </select>
+            <select class="form-select" id="contactPlatformFilter" style="width:145px;">
+              <option value="all">All Platforms</option>
+              <option value="douyin">Douyin</option>
+              <option value="bilibili">Bilibili</option>
+              <option value="tiktok">TikTok</option>
+              <option value="xiaohongshu">Xiaohongshu</option>
+              <option value="unknown">General / Other</option>
+            </select>
+            <button type="button" class="btn btn-primary btn-sm" id="btnFilterContacts">Filter</button>
+          </div>
+          <div class="filter-group">
+            <a href="/api/admin/export/contacts.csv" class="btn btn-secondary btn-sm">⬇ Export Contacts CSV</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Submitted (UTC)</th>
+                  <th>Status</th>
+                  <th>Sender</th>
+                  <th>Category / Platform</th>
+                  <th>Message Preview</th>
+                  <th>Email Alert</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="contactsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 5: FEEDBACK ==================== -->
+      <section class="tab-pane" id="pane-feedback">
+        <div class="filter-bar">
+          <div>
+            <h2 style="font-size:15px;font-weight:700;">User Feedback &amp; Bug Reports</h2>
+            <p style="font-size:12px;color:var(--text-secondary);">Filtered view of product feedback, feature suggestions, and bug reports submitted via the public form.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Submitted</th>
+                  <th>Type</th>
+                  <th>Platform</th>
+                  <th>Sender</th>
+                  <th>Feedback / Report</th>
+                  <th>Status</th>
+                  <th>Manage</th>
+                </tr>
+              </thead>
+              <tbody id="feedbackTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 6: ERRORS & LOGS ==================== -->
+      <section class="tab-pane" id="pane-errors">
+        <div class="filter-bar">
+          <div class="filter-group">
+            <select class="form-select" id="errorSeverityFilter" style="width:150px;">
+              <option value="all">All Severities</option>
+              <option value="warn">Warning</option>
+              <option value="error">Error</option>
+              <option value="critical">Critical</option>
+            </select>
+            <select class="form-select" id="errorRouteFilter" style="width:160px;">
+              <option value="all">All Route Categories</option>
+              <option value="parse">Parse (/api/parse)</option>
+              <option value="download">Download (/api/download)</option>
+              <option value="proxy">Proxy (/api/proxy)</option>
+              <option value="zip">ZIP (/api/zip)</option>
+              <option value="contact">Contact (/api/contact)</option>
+            </select>
+            <button type="button" class="btn btn-primary btn-sm" id="btnFilterErrors">Apply Filter</button>
+          </div>
+          <span class="source-tag">Redacted Structured Log (logs/app-errors.jsonl)</span>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp (UTC)</th>
+                  <th>Req ID</th>
+                  <th>Severity</th>
+                  <th>Route</th>
+                  <th>Platform</th>
+                  <th>HTTP</th>
+                  <th>Category</th>
+                  <th>Duration</th>
+                  <th>Sanitized Summary</th>
+                </tr>
+              </thead>
+              <tbody id="errorsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 7: SYSTEM HEALTH ==================== -->
+      <section class="tab-pane" id="pane-health">
+        <div class="kpi-grid" id="healthKpiGrid"></div>
+        <div class="equal-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Persistent Storage &amp; Log Files</div>
+              <span class="source-tag" id="healthWritableBadge">Checking...</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Data Store File</th><th>Size</th></tr></thead>
+                <tbody id="healthFilesTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Runtime Subsystems Readiness</div>
+              <span class="source-tag">Live Probe</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Subsystem</th><th>Status</th></tr></thead>
+                <tbody id="healthIntegrationsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 8: SEO OVERVIEW ==================== -->
+      <section class="tab-pane" id="pane-seo">
+        <div class="equal-col">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Technical SEO &amp; Indexing Verification</div>
+                <div class="card-subtitle">Live inspection of <code class="mono">static/index.html</code>, <code class="mono">/sitemap.xml</code>, and <code class="mono">/robots.txt</code></div>
+              </div>
+              <span class="source-tag">Live Inspection</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Check</th><th>Current Value / Status</th></tr></thead>
+                <tbody id="seoTechnicalTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">robots.txt &amp; Sitemap Configuration</div>
+                <div class="card-subtitle">Verifies <code class="mono">Disallow: /admin</code> and canonical sitemap directive</div>
+              </div>
+              <a href="/sitemap.xml" target="_blank" class="btn btn-secondary btn-sm">Open sitemap.xml ↗</a>
+            </div>
+            <pre class="mono" id="seoRobotsPre" style="background:var(--bg-canvas);padding:12px;border-radius:8px;border:1px solid var(--border-subtle);font-size:12px;overflow-x:auto;margin-bottom:16px;"></pre>
+
+            <div class="card-title" style="margin-bottom:8px;">Google Search Console API Status</div>
+            <div id="seoGscBox"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 9: NOTIFICATIONS ==================== -->
+      <section class="tab-pane" id="pane-notifications">
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Email Delivery History</div>
+                <div class="card-subtitle">Transactional emails dispatched via Resend HTTPS API (<code class="mono">logs/email-deliveries.jsonl</code>)</div>
+              </div>
+              <span id="notifProviderBadge" class="status-dot status-neutral">Checking...</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Event</th>
+                    <th>Recipient</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="notifDeliveriesTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Send Administrator Test Email</div>
+                <div class="card-subtitle">Verify Resend API key and sender domain configuration</div>
+              </div>
+            </div>
+            <div class="alert-box" id="testEmailFeedback"></div>
+            <div class="form-group">
+              <label class="form-label" for="testEmailInput">Recipient Email Address</label>
+              <input type="email" class="form-input" id="testEmailInput" placeholder="admin@downdouyin.com">
+            </div>
+            <button type="button" class="btn btn-primary btn-block" id="btnSendTestEmail">Send Test Notification Email</button>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.45;">
+              Requires <code class="mono">RESEND_API_KEY</code> in your server <code class="mono">.env</code> file. Every delivery attempt (sent or failed) is recorded in the table on the left and in the Security Audit Log.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 10: INTEGRATIONS ==================== -->
+      <section class="tab-pane" id="pane-integrations">
+        <div class="equal-col" id="integrationsCardsGrid"></div>
+      </section>
+
+      <!-- ==================== TAB 11: SECURITY & AUDIT LOG ==================== -->
+      <section class="tab-pane" id="pane-security">
+        <div class="equal-col">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Active Administrator Sessions</div>
+                <div class="card-subtitle">Server-managed HttpOnly cookie sessions (<code class="mono">logs/admin-sessions.json</code>)</div>
+              </div>
+            </div>
+            <div class="table-wrap" style="margin-bottom:14px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Browser / OS</th>
+                    <th>Last Active</th>
+                    <th>Expires</th>
+                  </tr>
+                </thead>
+                <tbody id="securitySessionsTbody"></tbody>
+              </table>
+            </div>
+            <div style="border-top:1px solid var(--border-subtle);padding-top:12px;display:flex;gap:8px;align-items:center;">
+              <input type="password" class="form-input" id="revokeAllPasswordInput" placeholder="Confirm current password to revoke all..." style="max-width:260px;">
+              <button type="button" class="btn btn-danger btn-sm" id="btnRevokeAllSessions">Revoke All Sessions</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Administrator &amp; Staff Accounts</div>
+                <div class="card-subtitle">Supports <code class="mono">owner</code>, <code class="mono">admin</code>, and read-only <code class="mono">viewer</code> roles</div>
+              </div>
+            </div>
+            <div class="table-wrap" style="margin-bottom:14px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Last Login</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="securityUsersTbody"></tbody>
+              </table>
+            </div>
+            <form id="createStaffForm" style="border-top:1px solid var(--border-subtle);padding-top:12px;">
+              <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Add Authorized Staff Account (Owner Only)</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                <input type="text" class="form-input" id="staffUsername" placeholder="Username (e.g. support1)" required>
+                <input type="email" class="form-input" id="staffEmail" placeholder="Email address" required>
+                <input type="password" class="form-input" id="staffPassword" placeholder="Password (min 10 chars)" minlength="10" required>
+                <select class="form-select" id="staffRole">
+                  <option value="viewer">Viewer (Read-Only)</option>
+                  <option value="admin">Admin (Manage Inbox &amp; Settings)</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-secondary btn-sm">Create Staff Account</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Immutable Security &amp; Administrative Audit Log</div>
+              <div class="card-subtitle">Tracks sign-ins, failed attempts, inbox mutations, CSV exports, backups, and settings changes (<code class="mono">logs/audit-log.jsonl</code>)</div>
+            </div>
+            <span class="source-tag">Recent 250 Events</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp (UTC)</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>IP Hash</th>
+                  <th>Status</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody id="securityAuditTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 12: SETTINGS ==================== -->
+      <section class="tab-pane" id="pane-settings">
+        <div class="equal-col">
+          <!-- Left: Notification & Shortcut Settings -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Notifications, Shortcut &amp; Retention Settings</div>
+                <div class="card-subtitle">Persisted atomically in <code class="mono">logs/admin-settings.json</code></div>
+              </div>
+            </div>
+            <form id="settingsForm">
+              <div class="form-group">
+                <label class="form-label">Contact &amp; Feedback Notification Recipient Email</label>
+                <input type="email" class="form-input" id="setNotifToEmail" placeholder="admin@downdouyin.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sender Address (Resend Verified Domain)</label>
+                <input type="text" class="form-input" id="setNotifFromEmail" placeholder="DownDouyin Admin <onboarding@resend.dev>">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Critical Error Alert Email</label>
+                <input type="email" class="form-input" id="setAlertEmail" placeholder="alerts@downdouyin.com">
+              </div>
+
+              <div style="margin:14px 0;padding:12px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:8px;">
+                <div class="toggle-row">
+                  <span>Email on New Contact Inquiry</span>
+                  <input type="checkbox" id="setNotifyContact">
+                </div>
+                <div class="toggle-row">
+                  <span>Email on New User Feedback / Bug Report</span>
+                  <input type="checkbox" id="setNotifyFeedback">
+                </div>
+                <div class="toggle-row">
+                  <span>Email on Critical Server Errors</span>
+                  <input type="checkbox" id="setNotifyErrors">
+                </div>
+                <div class="toggle-row">
+                  <span>Email on Repeated Download Failures (10m window)</span>
+                  <input type="checkbox" id="setNotifyRepeated">
+                </div>
+              </div>
+
+              <div style="margin:14px 0;padding:12px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:8px;">
+                <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Optional Public Search-Box Shortcut</div>
+                <p style="font-size:11.5px;color:var(--text-secondary);margin-bottom:10px;">
+                  Convenience navigation only: typing this phrase into the public homepage search box clears the input immediately, skips analytics/parsing, and opens the <code class="mono">/admin</code> login screen. It <strong>never</strong> authenticates automatically.
+                </p>
+                <div class="toggle-row">
+                  <span>Enable Search-Box Shortcut to <code class="mono">/admin</code></span>
+                  <input type="checkbox" id="setShortcutEnabled">
+                </div>
+                <div class="form-group" style="margin-top:10px;margin-bottom:0;">
+                  <label class="form-label">Set New Shortcut Phrase (4–64 chars, stored as SHA-256 hash)</label>
+                  <input type="password" class="form-input" id="setNewShortcutPhrase" placeholder="Leave blank to keep current phrase">
+                  <span style="font-size:11px;color:var(--text-muted);" id="shortcutStatusHint"></span>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group">
+                  <label class="form-label">GA4 Property ID (Numeric)</label>
+                  <input type="text" class="form-input mono" id="setGa4PropertyId" placeholder="e.g. 123456789">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Search Console Site URL</label>
+                  <input type="text" class="form-input mono" id="setGscSiteUrl" placeholder="https://downdouyin.com/">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Operational Log Retention (Days)</label>
+                  <input type="number" class="form-input mono" id="setRetentionOpDays" min="7" max="3650" value="90">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Session Expiration (Hours)</label>
+                  <input type="number" class="form-input mono" id="setSessionTtlHours" min="1" max="168" value="12">
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block">Save Configuration Settings</button>
+            </form>
+          </div>
+
+          <!-- Right: Password Change, Backups & Retention Cleanup -->
+          <div>
+            <div class="card" style="margin-bottom:16px;">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Snapshot Backups &amp; Retention Cleanup</div>
+                  <div class="card-subtitle">Create point-in-time JSON snapshots in <code class="mono">logs/backups/</code></div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="btnCreateBackup">+ Create Backup</button>
+              </div>
+              <div class="table-wrap" style="margin-bottom:12px;">
+                <table>
+                  <thead><tr><th>Filename</th><th>Created (UTC)</th><th>Size</th></tr></thead>
+                  <tbody id="settingsBackupsTbody"></tbody>
+                </table>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border-subtle);">
+                <span style="font-size:12px;color:var(--text-secondary);">Prune operational logs older than configured retention days</span>
+                <button type="button" class="btn btn-danger btn-sm" id="btnRunRetention">Run Retention Cleanup</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Change Administrator Password</div>
+                  <div class="card-subtitle">Re-hashes with scrypt and revokes other active sessions</div>
+                </div>
+              </div>
+              <form id="changePasswordForm">
+                <div class="form-group">
+                  <label class="form-label">Current Password</label>
+                  <input type="password" class="form-input" id="cpCurrentPassword" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">New Password (min 10 characters)</label>
+                  <input type="password" class="form-input" id="cpNewPassword" minlength="10" required>
+                </div>
+                <button type="submit" class="btn btn-secondary btn-block">Update Password</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ==================== CONTACT INQUIRY DETAIL MODAL ==================== -->
+<div class="modal-backdrop" id="contactDetailModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <strong id="cdModalTitle" style="font-size:15px;">Inquiry Details</strong>
+        <div id="cdModalMeta" style="font-size:12px;color:var(--text-secondary);"></div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnCloseContactDetail">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <span class="form-label">Sender Name</span>
+          <div id="cdSenderName" style="font-weight:700;"></div>
+        </div>
+        <div>
+          <span class="form-label">Sender Email</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="cdSenderEmail" class="mono" style="font-size:12.5px;"></span>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnCopySenderEmail">Copy</button>
+            <a href="#" id="btnMailtoSender" class="btn btn-primary btn-sm">Reply via Email ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <span class="form-label">Message Content</span>
+        <div id="cdMessageBody" style="background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:8px;padding:12px;white-space:pre-wrap;font-size:13.5px;max-height:220px;overflow-y:auto;"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div>
+          <label class="form-label">Workflow Status</label>
+          <select class="form-select" id="cdStatusSelect">
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="spam">Spam</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Classification</label>
+          <select class="form-select" id="cdTypeSelect">
+            <option value="inquiry">Support Inquiry</option>
+            <option value="feedback">Product Feedback</option>
+            <option value="bug_report">Bug Report</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Read Status</label>
+          <select class="form-select" id="cdReadSelect">
+            <option value="true">Read</option>
+            <option value="false">Unread</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Internal Administrator Notes</label>
+        <textarea class="form-textarea" id="cdAdminNotes" rows="3" placeholder="Add internal resolution notes..."></textarea>
+      </div>
+
+      <div>
+        <span class="form-label">Audit Timeline</span>
+        <div id="cdTimelineList" style="background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:8px;padding:10px;font-size:12px;max-height:130px;overflow-y:auto;"></div>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;">
+      <button type="button" class="btn btn-danger btn-sm" id="btnDeleteInquiry">Delete Inquiry Record</button>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnCancelContactDetail">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnSaveContactDetail">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CONFIRMATION MODAL (No window.confirm) ==================== -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-head">
+      <strong id="confirmModalTitle">Confirm Action</strong>
+    </div>
+    <div class="modal-body">
+      <p id="confirmModalText" style="color:var(--text-secondary);font-size:13.5px;"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary btn-sm" id="btnConfirmCancel">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="btnConfirmProceed">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+
+  let csrfToken = '';
+  let currentUser = null;
+  let currentTab = 'overview';
+  let currentRange = '7d';
+  let customStart = '';
+  let customEnd = '';
+  let cachedContacts = [];
+  let activeContactItem = null;
+  let pendingConfirmCallback = null;
+
+  function esc(val) {
+    const d = document.createElement('div');
+    d.textContent = val === undefined || val === null ? '' : String(val);
+    return d.innerHTML;
+  }
+
+  function formatBytes(bytes) {
+    const b = Number(bytes) || 0;
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function formatUptime(sec) {
+    const s = Math.max(0, Number(sec) || 0);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m ${s % 60}s`;
+  }
+
+  function showToast(msg) {
+    const wrap = $('toastContainer');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 3400);
+  }
+
+  function openConfirmModal(title, message, onConfirm) {
+    $('confirmModalTitle').textContent = title;
+    $('confirmModalText').textContent = message;
+    pendingConfirmCallback = onConfirm;
+    $('confirmModal').classList.add('show');
+  }
+
+  $('btnConfirmCancel').addEventListener('click', () => {
+    pendingConfirmCallback = null;
+    $('confirmModal').classList.remove('show');
+  });
+
+  $('btnConfirmProceed').addEventListener('click', async () => {
+    const cb = pendingConfirmCallback;
+    pendingConfirmCallback = null;
+    $('confirmModal').classList.remove('show');
+    if (typeof cb === 'function') await cb();
+  });
+
+  // Theme management
+  function applyTheme(t) {
+    const theme = t === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem('dd_admin_theme', theme); } catch {}
+  }
+
+  const savedTheme = (() => {
+    try { return localStorage.getItem('dd_admin_theme') || 'dark'; } catch { return 'dark'; }
+  })();
+  applyTheme(savedTheme);
+
+  const toggleTheme = () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  };
+  $('btnThemeToggle').addEventListener('click', toggleTheme);
+  $('btnAuthThemeToggle').addEventListener('click', toggleTheme);
+
+  // Authenticated API client with automatic CSRF header injection
+  async function apiFetch(path, opts = {}) {
+    const method = (opts.method || 'GET').toUpperCase();
+    const headers = Object.assign({ 'Accept': 'application/json' }, opts.headers || {});
+    if (opts.body && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if ((method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') && csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+    const resp = await fetch(path, Object.assign({}, opts, {
+      method,
+      headers,
+      credentials: 'same-origin'
+    }));
+    const data = await resp.json().catch(() => ({}));
+    if (resp.status === 401 && path !== '/api/admin/auth/login' && path !== '/api/admin/auth/setup') {
+      showAuthScreen(false);
+      throw new Error(data.error || 'Session expired. Please sign in again.');
+    }
+    if (!resp.ok || data.success === false) {
+      throw new Error(data.error || `Request failed (HTTP ${resp.status})`);
+    }
+    return data;
+  }
+
+  function buildRangeQuery() {
+    const params = new URLSearchParams({ range: currentRange });
+    if (currentRange === 'custom' && customStart && customEnd) {
+      params.set('start', customStart);
+      params.set('end', customEnd);
+    }
+    return params.toString();
+  }
+
+  // ==================== AUTH & SESSION BOOTSTRAP ====================
+  function showAuthError(msg) {
+    const box = $('authErrorBox');
+    if (!msg) {
+      box.classList.remove('show');
+      box.textContent = '';
+      return;
+    }
+    box.textContent = msg;
+    box.classList.add('show');
+  }
+
+  function showAuthScreen(needsSetup) {
+    $('adminShell').classList.remove('active');
+    $('authScreen').style.display = 'flex';
+    $('loginForm').style.display = needsSetup ? 'none' : 'block';
+    $('setupForm').style.display = needsSetup ? 'block' : 'none';
+    showAuthError('');
+  }
+
+  function enterDashboard(user, token) {
+    currentUser = user;
+    csrfToken = token || '';
+    $('sidebarUsername').textContent = user.username;
+    $('sidebarRole').textContent = user.role;
+    $('authScreen').style.display = 'none';
+    $('adminShell').classList.add('active');
+    loadActiveTab();
+  }
+
+  async function checkSessionOnLoad() {
+    try {
+      const res = await fetch('/api/admin/auth/session', { credentials: 'same-origin' });
+      const data = await res.json();
+      if (data.authenticated && data.user) {
+        enterDashboard(data.user, data.csrf_token);
+      } else {
+        showAuthScreen(Boolean(data.needs_initial_setup));
+      }
+    } catch {
+      showAuthScreen(false);
+    }
+  }
+
+  $('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showAuthError('');
+    const btn = $('btnLoginSubmit');
+    btn.disabled = true;
+    try {
+      const username = $('loginUsername').value.trim();
+      const password = $('loginPassword').value;
+      const data = await apiFetch('/api/admin/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password })
+      });
+      $('loginPassword').value = '';
+      enterDashboard(data.user, data.csrf_token);
+      showToast('Signed in to DownDouyin Admin Control Center');
+    } catch (err) {
+      showAuthError(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('setupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showAuthError('');
+    const btn = $('btnSetupSubmit');
+    btn.disabled = true;
+    try {
+      const payload = {
+        setup_token: $('setupToken').value.trim(),
+        username: $('setupUsername').value.trim(),
+        email: $('setupEmail').value.trim(),
+        password: $('setupPassword').value
+      };
+      const data = await apiFetch('/api/admin/auth/setup', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      $('setupPassword').value = '';
+      $('setupToken').value = '';
+      enterDashboard(data.user, data.csrf_token);
+      showToast('Initial owner account created and signed in!');
+    } catch (err) {
+      showAuthError(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('btnLogout').addEventListener('click', async () => {
+    try {
+      await apiFetch('/api/admin/auth/logout', { method: 'POST', body: '{}' });
+    } catch {}
+    csrfToken = '';
+    currentUser = null;
+    showAuthScreen(false);
+  });
+
+  // ==================== NAVIGATION & DATE RANGE ====================
+  const TAB_TITLES = {
+    overview: '1. Operational Overview',
+    analytics: '2. Website Analytics & Telemetry',
+    downloads: '3. Download & Parse Analytics',
+    contacts: '4. Contact Support Inbox',
+    feedback: '5. User Feedback & Bug Reports',
+    errors: '6. Application Errors & Logs',
+    health: '7. System Health & Resources',
+    seo: '8. Technical SEO & Search Console',
+    notifications: '9. Email Notifications (Resend)',
+    integrations: '10. External Integrations Status',
+    security: '11. Security, Sessions & Audit Log',
+    settings: '12. Control Center Settings'
+  };
+
+  function switchTab(tabKey) {
+    currentTab = tabKey;
+    document.querySelectorAll('.sidebar-nav .nav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tabKey);
+    });
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+      pane.classList.toggle('active', pane.id === 'pane-' + tabKey);
+    });
+    $('topbarTitle').textContent = TAB_TITLES[tabKey] || 'Admin Control Center';
+    $('sidebar').classList.remove('open');
+    loadActiveTab();
+  }
+
+  document.querySelectorAll('.sidebar-nav .nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  document.querySelectorAll('[data-goto]').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.goto));
+  });
+
+  $('btnMobileMenu').addEventListener('click', () => {
+    $('sidebar').classList.toggle('open');
+  });
+
+  document.querySelectorAll('#dateRangeBar .range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const r = btn.dataset.range;
+      currentRange = r;
+      document.querySelectorAll('#dateRangeBar .range-btn').forEach(b => b.classList.toggle('active', b === btn));
+      $('customDateWrap').classList.toggle('show', r === 'custom');
+      if (r !== 'custom') loadActiveTab();
+    });
+  });
+
+  $('btnApplyCustomRange').addEventListener('click', () => {
+    customStart = $('customStartDate').value;
+    customEnd = $('customEndDate').value;
+    if (customStart && customEnd) loadActiveTab();
+  });
+
+  $('btnRefreshCurrent').addEventListener('click', () => {
+    loadActiveTab();
+    showToast('Refreshed current view');
+  });
+
+  async function loadActiveTab() {
+    try {
+      if (currentTab === 'overview') await loadOverview();
+      else if (currentTab === 'analytics') await loadAnalytics();
+      else if (currentTab === 'downloads') await loadDownloads();
+      else if (currentTab === 'contacts') await loadContacts();
+      else if (currentTab === 'feedback') await loadFeedback();
+      else if (currentTab === 'errors') await loadErrors();
+      else if (currentTab === 'health') await loadHealth();
+      else if (currentTab === 'seo') await loadSeo();
+      else if (currentTab === 'notifications') await loadNotifications();
+      else if (currentTab === 'integrations') await loadIntegrations();
+      else if (currentTab === 'security') await loadSecurity();
+      else if (currentTab === 'settings') await loadSettings();
+    } catch (err) {
+      showToast(err.message || 'Failed to load data');
+    }
+  }
+
+  function formatDelta(cur, prev) {
+    if (typeof prev !== 'number' || prev === 0) return '<span style="color:var(--text-muted)">vs prev: —</span>';
+    const diff = cur - prev;
+    const pct = Math.round((diff / prev) * 100);
+    if (diff > 0) return `<span class="delta-pos">+${pct}% vs prev</span>`;
+    if (diff < 0) return `<span class="delta-neg">${pct}% vs prev</span>`;
+    return `<span style="color:var(--text-muted)">0% vs prev</span>`;
+  }
+
+  // ==================== 1. LOAD OVERVIEW ====================
+  async function loadOverview() {
+    const data = await apiFetch('/api/admin/overview?' + buildRangeQuery());
+    const dlCur = data.downloads.current;
+    const dlPrev = data.downloads.previous;
+    const tr = data.traffic;
+    const ct = data.contacts;
+    const hl = data.health;
+
+    // Update sidebar badges
+    const unreadBadge = $('navUnreadBadge');
+    if (ct.unread_count > 0) {
+      unreadBadge.textContent = ct.unread_count;
+      unreadBadge.style.display = 'inline-block';
+    } else {
+      unreadBadge.style.display = 'none';
+    }
+
+    const fbBadge = $('navFeedbackBadge');
+    if (ct.feedback_count > 0) {
+      fbBadge.textContent = ct.feedback_count;
+      fbBadge.style.display = 'inline-block';
+    } else {
+      fbBadge.style.display = 'none';
+    }
+
+    const errBadge = $('navErrorsBadge');
+    if (hl.recent_errors_count > 0) {
+      errBadge.textContent = hl.recent_errors_count;
+      errBadge.style.display = 'inline-block';
+    } else {
+      errBadge.style.display = 'none';
+    }
+
+    // Most used platform
+    let topPlat = '—';
+    let topPlatCount = 0;
+    Object.entries(dlCur.by_platform || {}).forEach(([k, v]) => {
+      if (v.total > topPlatCount) {
+        topPlatCount = v.total;
+        topPlat = k.toUpperCase();
+      }
+    });
+
+    $('overviewKpiGrid').innerHTML = `
+      <div class="card">
+        <div class="kpi-label"><span>First-Party Page Views</span><span class="source-tag">Server Log</span></div>
+        <div class="kpi-value">${tr.first_party_page_views}</div>
+        <div class="kpi-foot">${formatDelta(tr.first_party_page_views, tr.prev_first_party_page_views)}<span>GA4: ${esc(tr.ga4_measurement_id)}</span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>Total Parse &amp; Download Attempts</span><span class="source-tag">download-stats</span></div>
+        <div class="kpi-value">${dlCur.total_attempts}</div>
+        <div class="kpi-foot">${formatDelta(dlCur.total_attempts, dlPrev.total_attempts)}<span>Parse: ${dlCur.parse_total} | Media: ${dlCur.file_download_total}</span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>Successful Operations</span><span class="source-tag">download-stats</span></div>
+        <div class="kpi-value" style="color:var(--success);">${dlCur.total_success}</div>
+        <div class="kpi-foot"><span>Success Rate: <strong>${dlCur.success_rate_pct !== null ? dlCur.success_rate_pct + '%' : '—'}</strong></span><span>Avg: ${dlCur.avg_duration_ms}ms</span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>Failed Operations</span><span class="source-tag">download-stats</span></div>
+        <div class="kpi-value" style="color:${dlCur.total_failed > 0 ? 'var(--danger)' : 'var(--text-primary)'};">${dlCur.total_failed}</div>
+        <div class="kpi-foot"><span>Aborted by user: ${dlCur.file_download_aborted}</span><span>Top: ${esc(topPlat)}</span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>Contact Inquiries</span><span class="source-tag">contact-messages</span></div>
+        <div class="kpi-value">${ct.total_received}</div>
+        <div class="kpi-foot"><span style="color:${ct.unread_count > 0 ? 'var(--warning)' : 'inherit'}">Unread: <strong>${ct.unread_count}</strong></span><span>Unresolved: <strong>${ct.unresolved_count}</strong></span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>System Health &amp; Errors</span><span class="source-tag">Runtime</span></div>
+        <div class="kpi-value"><span class="status-dot status-ok" style="font-size:18px;">Healthy</span></div>
+        <div class="kpi-foot"><span>Errors in window: ${hl.recent_errors_count}</span><span>Uptime: ${formatUptime(hl.uptime_seconds)}</span></div>
+      </div>
+    `;
+
+    // Render daily bar chart
+    const series = Array.isArray(data.daily_series) ? data.daily_series.slice(-14) : [];
+    let maxVal = 1;
+    series.forEach(d => {
+      const tot = (d.page_views || 0) + (d.downloads_success || 0);
+      if (tot > maxVal) maxVal = tot;
+    });
+    $('overviewDailyChart').innerHTML = series.map(d => {
+      const dlH = Math.round(((d.downloads_success || 0) / maxVal) * 120);
+      const pvH = Math.round(((d.page_views || 0) / maxVal) * 120);
+      return `
+        <div class="chart-col" title="${esc(d.date)}: ${d.page_views} views, ${d.downloads_success} successful ops">
+          <div class="chart-bar-stack">
+            <div class="bar-seg-pv" style="height:${pvH}px;"></div>
+            <div class="bar-seg-dl" style="height:${dlH}px;"></div>
+          </div>
+          <span class="chart-date mono">${esc(d.date.slice(5))}</span>
+        </div>
+      `;
+    }).join('');
+
+    // Platform table
+    const platRows = Object.entries(dlCur.by_platform || {}).map(([plat, st]) => `
+      <tr>
+        <td style="text-transform:capitalize;font-weight:600;">${esc(plat)}</td>
+        <td class="mono">${st.total}</td>
+        <td class="mono" style="color:var(--success);">${st.success}</td>
+        <td class="mono" style="color:${st.failed > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${st.failed}</td>
+      </tr>
+    `).join('');
+    $('overviewPlatformTbody').innerHTML = platRows;
+
+    // Contact funnel
+    const fn = ct.funnel_period || {};
+    $('overviewFunnelRow').innerHTML = `
+      <div class="funnel-step"><span>1. Form Opened</span><strong>${fn.form_opened || 0}</strong></div>
+      <div class="funnel-step"><span>2. Validation Failed</span><strong style="color:var(--warning);">${fn.validation_failed || 0}</strong></div>
+      <div class="funnel-step"><span>3. Submit Attempted</span><strong>${fn.submission_attempted || 0}</strong></div>
+      <div class="funnel-step"><span>4. Stored in Inbox</span><strong style="color:var(--success);">${fn.submission_stored || 0}</strong></div>
+    `;
+
+    // Health summary
+    const lastBk = hl.last_backup
+      ? `${esc(hl.last_backup.filename)} (${esc(hl.last_backup.created_at.slice(0, 19).replace('T', ' '))})`
+      : 'No snapshot created yet';
+    $('overviewHealthSummary').innerHTML = `
+      <div class="toggle-row"><span>Email Notifications (Resend API)</span><span class="status-dot ${hl.email_configured ? 'status-ok' : 'status-warn'}">${hl.email_configured ? 'Configured' : 'Not Configured (Server Inbox Active)'}</span></div>
+      <div class="toggle-row"><span>GA4 Data API Reporting</span><span class="status-dot ${tr.ga4_data_api_configured ? 'status-ok' : 'status-neutral'}">${tr.ga4_data_api_configured ? 'Connected' : 'Frontend Tag Only (G-S9BHCYX6EN)'}</span></div>
+      <div class="toggle-row"><span>Last Snapshot Backup</span><span class="mono" style="font-size:12px;">${lastBk}</span></div>
+    `;
+  }
+
+  // ==================== 2. LOAD ANALYTICS ====================
+  async function loadAnalytics() {
+    const data = await apiFetch('/api/admin/analytics?' + buildRangeQuery());
+    const gs = data.ga4_status;
+    const fp = data.first_party_telemetry;
+
+    $('ga4MeasurementLabel').textContent = gs.measurement_id || 'G-S9BHCYX6EN';
+    const badge = $('ga4ApiBadge');
+    if (gs.data_api_active) {
+      badge.className = 'status-dot status-ok';
+      badge.textContent = 'GA4 Data API Live';
+    } else {
+      badge.className = 'status-dot status-warn';
+      badge.textContent = 'Frontend Tag Active · Server Data API Optional';
+    }
+
+    $('ga4StatusBody').innerHTML = `
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">
+        <strong>Installed Frontend Tag:</strong> Google Analytics 4 (<code class="mono">${esc(gs.measurement_id)}</code>) is active in <code class="mono">static/index.html</code> and tracks:
+        ${gs.tracked_client_events.map(e => `<code class="mono" style="margin-right:6px;">${esc(e)}</code>`).join('')}
+      </p>
+      ${gs.data_api_active ? `<div class="alert-box alert-success show">Connected to GA4 Property ID <code class="mono">${esc(gs.measurement_id)}</code> via Google Service Account.</div>` : `
+        <div style="font-size:12.5px;color:var(--text-muted);background:var(--bg-canvas);padding:10px 12px;border-radius:8px;border:1px solid var(--border-subtle);">
+          <strong>Truthful Data Source Notice:</strong> Unique visitor counts, geographic country distribution, and GA4 session channels are collected in your Google Analytics 4 property (<code class="mono">${esc(gs.measurement_id)}</code>). To pull live GA4 Data API reports directly into this panel, set <code class="mono">GA4_PROPERTY_ID</code> and <code class="mono">GOOGLE_SERVICE_ACCOUNT_JSON</code> in <code class="mono">.env</code>. Below is DownDouyin's real first-party server telemetry.
+        </div>
+      `}
+    `;
+
+    $('analyticsFirstPartyKpis').innerHTML = `
+      <div class="card"><div class="kpi-label"><span>First-Party Page Views</span><span class="source-tag">visitor-events</span></div><div class="kpi-value">${fp.page_views}</div></div>
+      <div class="card"><div class="kpi-label"><span>Link Parse Submits</span><span class="source-tag">download-stats</span></div><div class="kpi-value">${fp.link_submits}</div></div>
+      <div class="card"><div class="kpi-label"><span>Completed Downloads</span><span class="source-tag">download-stats</span></div><div class="kpi-value" style="color:var(--success);">${fp.completed_downloads}</div></div>
+      <div class="card"><div class="kpi-label"><span>Contact Form Opens</span><span class="source-tag">contact-events</span></div><div class="kpi-value">${fp.contact_form_opens}</div></div>
+    `;
+
+    const refEntries = Object.entries(fp.referrers || {}).sort((a, b) => b[1] - a[1]);
+    $('analyticsReferrersTbody').innerHTML = refEntries.length
+      ? refEntries.map(([host, cnt]) => `<tr><td class="mono">${esc(host)}</td><td class="mono">${cnt}</td></tr>`).join('')
+      : `<tr><td colspan="2" style="color:var(--text-muted);">No page view events in selected window</td></tr>`;
+
+    const devRows = Object.entries(fp.devices || {}).map(([k, v]) => `<tr><td>Device Category</td><td style="text-transform:capitalize;">${esc(k)}</td><td class="mono">${v}</td></tr>`);
+    const langRows = Object.entries(fp.languages || {}).map(([k, v]) => `<tr><td>Browser Language</td><td class="mono">${esc(k.toUpperCase())}</td><td class="mono">${v}</td></tr>`);
+    $('analyticsDeviceLangTbody').innerHTML = devRows.concat(langRows).join('');
+  }
+
+  // ==================== 3. LOAD DOWNLOADS ====================
+  async function loadDownloads() {
+    const data = await apiFetch('/api/admin/downloads?' + buildRangeQuery());
+    $('downloadsWindowLabel').textContent = `${data.window.start_date} → ${data.window.end_date}`;
+
+    const rows = Object.entries(data.by_platform || {}).map(([plat, b]) => `
+      <tr>
+        <td style="text-transform:capitalize;font-weight:700;">${esc(plat)}</td>
+        <td class="mono">${b.parse_total}</td>
+        <td class="mono" style="color:var(--success);">${b.parse_success}</td>
+        <td class="mono" style="color:${b.parse_failed > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${b.parse_failed}</td>
+        <td class="mono">${b.download_total}</td>
+        <td class="mono" style="color:var(--success);">${b.download_success}</td>
+        <td class="mono" style="color:${b.download_failed > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${b.download_failed}</td>
+        <td class="mono">${b.download_aborted}</td>
+        <td class="mono">${b.avg_latency_ms} ms</td>
+      </tr>
+    `).join('');
+    $('downloadsPlatformTbody').innerHTML = rows;
+
+    const fails = data.recent_failures || [];
+    $('downloadsFailuresTbody').innerHTML = fails.length
+      ? fails.map(f => `
+          <tr>
+            <td class="mono" style="font-size:11.5px;">${esc(f.timestamp.slice(0, 19).replace('T', ' '))}</td>
+            <td class="mono" style="font-size:11.5px;">${esc(f.request_id)}</td>
+            <td>${esc(f.operation)}</td>
+            <td style="text-transform:capitalize;">${esc(f.platform)}</td>
+            <td class="mono" style="color:var(--danger);font-size:12px;">${esc(f.error_category || 'error')}</td>
+            <td class="mono">${f.duration_ms}ms</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="6" style="color:var(--text-muted);">No failed download or parse events in this date window.</td></tr>`;
+
+    const errCats = Object.entries(data.error_categories || {}).sort((a, b) => b[1] - a[1]);
+    $('downloadsErrorCatTbody').innerHTML = errCats.length
+      ? errCats.map(([cat, cnt]) => `<tr><td class="mono">${esc(cat)}</td><td class="mono">${cnt}</td></tr>`).join('')
+      : `<tr><td colspan="2" style="color:var(--text-muted);">Zero errors recorded in window</td></tr>`;
+  }
+
+  // ==================== 4. LOAD CONTACTS INBOX ====================
+  async function loadContacts() {
+    const q = $('contactSearchInput').value.trim();
+    const status = $('contactStatusFilter').value;
+    const platform = $('contactPlatformFilter').value;
+    const params = new URLSearchParams({ q, status, platform, page_size: '50' });
+    const data = await apiFetch('/api/admin/contacts?' + params.toString());
+    cachedContacts = data.items || [];
+
+    const fn = data.funnel || {};
+    $('contactsFunnelBar').innerHTML = `
+      <div class="funnel-step"><span>Form Opened</span><strong>${fn.form_opened || 0}</strong></div>
+      <div class="funnel-step"><span>Validation Failed</span><strong style="color:var(--warning);">${fn.validation_failed || 0}</strong></div>
+      <div class="funnel-step"><span>Submit Attempted</span><strong>${fn.submission_attempted || 0}</strong></div>
+      <div class="funnel-step"><span>Stored in Inbox</span><strong style="color:var(--success);">${fn.submission_stored || 0}</strong></div>
+      <div class="funnel-step"><span>Email Alert Sent</span><strong style="color:var(--info);">${fn.email_sent || 0}</strong></div>
+      <div class="funnel-step"><span>Email Alert Failed</span><strong style="color:var(--danger);">${fn.email_failed || 0}</strong></div>
+    `;
+
+    $('contactsTableBody').innerHTML = cachedContacts.length
+      ? cachedContacts.map(item => {
+          const statusClass =
+            item.status === 'resolved' ? 'status-ok' :
+            item.status === 'in_progress' ? 'status-warn' :
+            item.status === 'spam' ? 'status-neutral' : 'status-err';
+          return `
+            <tr style="${!item.read ? 'font-weight:700;' : ''}">
+              <td class="mono" style="font-size:12px;">${esc(item.inquiry_id)}</td>
+              <td class="mono" style="font-size:12px;">${esc(item.timestamp.slice(0, 16).replace('T', ' '))}</td>
+              <td><span class="status-dot ${statusClass}">${esc(item.status)}${!item.read ? ' • NEW' : ''}</span></td>
+              <td>
+                <div>${esc(item.name)}</div>
+                <div class="mono" style="font-size:11px;color:var(--text-secondary);">${esc(item.email)}</div>
+              </td>
+              <td>
+                <div>${esc(item.category)}</div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:capitalize;">${esc(item.platform)}</div>
+              </td>
+              <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.message)}</td>
+              <td class="mono" style="font-size:11.5px;">${esc(item.email_notification_status)}</td>
+              <td>
+                <button type="button" class="btn btn-secondary btn-sm" data-open-inquiry="${esc(item.inquiry_id)}">Inspect</button>
+              </td>
+            </tr>
+          `;
+        }).join('')
+      : `<tr><td colspan="8" style="color:var(--text-muted);">No contact inquiries match the current filter.</td></tr>`;
+
+    document.querySelectorAll('[data-open-inquiry]').forEach(btn => {
+      btn.addEventListener('click', () => openContactDetailModal(btn.dataset.openInquiry));
+    });
+  }
+
+  $('btnFilterContacts').addEventListener('click', loadContacts);
+  $('contactSearchInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loadContacts();
+  });
+
+  function openContactDetailModal(inquiryId) {
+    const item = cachedContacts.find(c => c.inquiry_id === inquiryId);
+    if (!item) return;
+    activeContactItem = item;
+    $('cdModalTitle').textContent = `Inquiry #${item.inquiry_id}`;
+    $('cdModalMeta').textContent = `Submitted ${item.timestamp} • Category: ${item.category} • Platform: ${item.platform}`;
+    $('cdSenderName').textContent = item.name;
+    $('cdSenderEmail').textContent = item.email;
+    $('cdMessageBody').textContent = item.message;
+    $('cdStatusSelect').value = item.status || 'open';
+    $('cdTypeSelect').value = item.issue_type || 'inquiry';
+    $('cdReadSelect').value = item.read ? 'true' : 'false';
+    $('cdAdminNotes').value = item.admin_notes || '';
+
+    const subj = encodeURIComponent(`Re: [DownDouyin Support #${item.inquiry_id}] ${item.category}`);
+    $('btnMailtoSender').href = `mailto:${encodeURIComponent(item.email)}?subject=${subj}`;
+
+    const tl = Array.isArray(item.timeline) ? item.timeline : [];
+    $('cdTimelineList').innerHTML = tl.map(t => `
+      <div style="padding:4px 0;border-bottom:1px solid var(--border-subtle);">
+        <span class="mono" style="color:var(--text-muted);">${esc(t.timestamp.slice(0, 19).replace('T', ' '))}</span>
+        — <strong>${esc(t.actor)}</strong>: ${esc(t.detail || t.action)}
+      </div>
+    `).join('');
+
+    $('contactDetailModal').classList.add('show');
+  }
+
+  $('btnCopySenderEmail').addEventListener('click', () => {
+    if (!activeContactItem) return;
+    navigator.clipboard.writeText(activeContactItem.email).then(() => showToast('Copied email address'));
+  });
+
+  const closeContactModal = () => {
+    activeContactItem = null;
+    $('contactDetailModal').classList.remove('show');
+  };
+  $('btnCloseContactDetail').addEventListener('click', closeContactModal);
+  $('btnCancelContactDetail').addEventListener('click', closeContactModal);
+
+  $('btnSaveContactDetail').addEventListener('click', async () => {
+    if (!activeContactItem) return;
+    try {
+      await apiFetch('/api/admin/contacts/' + encodeURIComponent(activeContactItem.inquiry_id), {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: $('cdStatusSelect').value,
+          issue_type: $('cdTypeSelect').value,
+          read: $('cdReadSelect').value === 'true',
+          admin_notes: $('cdAdminNotes').value
+        })
+      });
+      showToast('Updated inquiry #' + activeContactItem.inquiry_id);
+      closeContactModal();
+      loadActiveTab();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+
+  $('btnDeleteInquiry').addEventListener('click', () => {
+    if (!activeContactItem) return;
+    const targetId = activeContactItem.inquiry_id;
+    openConfirmModal(
+      'Delete Contact Record',
+      `Permanently delete inquiry #${targetId} from logs/contact-messages.jsonl? This action will be recorded in the audit log.`,
+      async () => {
+        try {
+          await apiFetch('/api/admin/contacts/' + encodeURIComponent(targetId), {
+            method: 'DELETE',
+            body: JSON.stringify({ confirm: true })
+          });
+          showToast('Deleted inquiry #' + targetId);
+          closeContactModal();
+          loadActiveTab();
+        } catch (err) {
+          showToast(err.message);
+        }
+      }
+    );
+  });
+
+  // ==================== 5. LOAD FEEDBACK ====================
+  async function loadFeedback() {
+    const data = await apiFetch('/api/admin/contacts?page_size=100');
+    cachedContacts = data.items || [];
+    const fbItems = cachedContacts.filter(i =>
+      i.issue_type === 'feedback' ||
+      i.issue_type === 'bug_report' ||
+      String(i.category).includes('feedback') ||
+      String(i.category).includes('bug')
+    );
+
+    $('feedbackTableBody').innerHTML = fbItems.length
+      ? fbItems.map(item => `
+          <tr>
+            <td class="mono">${esc(item.inquiry_id)}</td>
+            <td class="mono">${esc(item.timestamp.slice(0, 16).replace('T', ' '))}</td>
+            <td><span class="source-tag">${esc(item.issue_type)}</span></td>
+            <td style="text-transform:capitalize;">${esc(item.platform)}</td>
+            <td>${esc(item.name)} <span class="mono" style="font-size:11px;color:var(--text-muted);">(${esc(item.email)})</span></td>
+            <td style="max-width:340px;">${esc(item.message)}</td>
+            <td><span class="status-dot ${item.status === 'resolved' ? 'status-ok' : 'status-warn'}">${esc(item.status)}</span></td>
+            <td><button type="button" class="btn btn-secondary btn-sm" data-open-fb="${esc(item.inquiry_id)}">Manage</button></td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="8" style="color:var(--text-muted);">No feedback or bug report entries found.</td></tr>`;
+
+    document.querySelectorAll('[data-open-fb]').forEach(btn => {
+      btn.addEventListener('click', () => openContactDetailModal(btn.dataset.openFb));
+    });
+  }
+
+  // ==================== 6. LOAD ERRORS ====================
+  async function loadErrors() {
+    const severity = $('errorSeverityFilter').value;
+    const route = $('errorRouteFilter').value;
+    const data = await apiFetch(`/api/admin/errors?severity=${encodeURIComponent(severity)}&route=${encodeURIComponent(route)}`);
+    const items = data.items || [];
+
+    $('errorsTableBody').innerHTML = items.length
+      ? items.map(e => `
+          <tr>
+            <td class="mono" style="font-size:11.5px;">${esc(e.timestamp.slice(0, 19).replace('T', ' '))}</td>
+            <td class="mono" style="font-size:11.5px;">${esc(e.request_id)}</td>
+            <td><span class="status-dot ${e.severity === 'critical' || e.severity === 'error' ? 'status-err' : 'status-warn'}">${esc(e.severity)}</span></td>
+            <td class="mono">${esc(e.route_category)}</td>
+            <td style="text-transform:capitalize;">${esc(e.platform)}</td>
+            <td class="mono">${e.http_status}</td>
+            <td class="mono" style="color:var(--danger);">${esc(e.error_category)}</td>
+            <td class="mono">${e.duration_ms}ms</td>
+            <td style="max-width:340px;">${esc(e.summary)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="9" style="color:var(--text-muted);">No structured application errors match the current filter.</td></tr>`;
+  }
+  $('btnFilterErrors').addEventListener('click', loadErrors);
+
+  // ==================== 7. LOAD SYSTEM HEALTH ====================
+  async function loadHealth() {
+    const data = await apiFetch('/api/admin/health');
+    const appInfo = data.application;
+    const res = data.resources;
+    const st = data.storage;
+    const ig = data.integrations;
+
+    $('healthKpiGrid').innerHTML = `
+      <div class="card">
+        <div class="kpi-label"><span>Application &amp; Runtime</span><span class="source-tag">${esc(appInfo.node_version)}</span></div>
+        <div class="kpi-value" style="font-size:20px;">${esc(appInfo.name)} v${esc(appInfo.version)}</div>
+        <div class="kpi-foot"><span>Platform: ${esc(appInfo.platform_arch)}</span><span>Uptime: ${formatUptime(appInfo.uptime_seconds)}</span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>Process Memory (RSS / Heap)</span><span class="source-tag">Node.js</span></div>
+        <div class="kpi-value">${res.process_rss_mb} MB</div>
+        <div class="kpi-foot"><span>Heap Used: ${res.heap_used_mb} MB</span><span>Load Avg (1m): ${res.load_average_1m}</span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>System Memory (Free / Total)</span><span class="source-tag">OS</span></div>
+        <div class="kpi-value">${res.system_free_ram_mb} MB</div>
+        <div class="kpi-foot"><span>Total RAM: ${res.system_total_ram_mb} MB</span><span>Mode: Persistent JSONL</span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>Snapshot Backups</span><span class="source-tag">logs/backups</span></div>
+        <div class="kpi-value">${st.backups_count}</div>
+        <div class="kpi-foot"><span>${st.last_backup ? esc(st.last_backup.filename) : 'No backups yet'}</span></div>
+      </div>
+    `;
+
+    const wb = $('healthWritableBadge');
+    wb.textContent = st.writable ? 'logs/ Writable' : 'Read-Only Warning';
+    wb.style.color = st.writable ? 'var(--success)' : 'var(--danger)';
+
+    $('healthFilesTbody').innerHTML = Object.entries(st.files || {}).map(([k, v]) => `
+      <tr><td class="mono">${esc(k.replace(/_bytes$/, '.jsonl'))}</td><td class="mono">${formatBytes(v)}</td></tr>
+    `).join('');
+
+    $('healthIntegrationsTbody').innerHTML = `
+      <tr><td>Resend Transactional Email API</td><td><span class="status-dot ${ig.resend_email_configured ? 'status-ok' : 'status-warn'}">${ig.resend_email_configured ? 'Configured' : 'Not Configured'}</span></td></tr>
+      <tr><td>Frontend GA4 Tag (G-S9BHCYX6EN)</td><td><span class="status-dot status-ok">Active in static/index.html</span></td></tr>
+      <tr><td>GA4 Server Data API</td><td><span class="status-dot ${ig.ga4_data_api_configured ? 'status-ok' : 'status-neutral'}">${ig.ga4_data_api_configured ? 'Configured' : 'Optional (Not Set)'}</span></td></tr>
+      <tr><td>Google Search Console API</td><td><span class="status-dot ${ig.search_console_api_configured ? 'status-ok' : 'status-neutral'}">${ig.search_console_api_configured ? 'Configured' : 'Optional (Not Set)'}</span></td></tr>
+      <tr><td>Bilibili High-Res Cookie (SESSDATA)</td><td><span class="status-dot ${ig.bilibili_cookie_configured ? 'status-ok' : 'status-neutral'}">${ig.bilibili_cookie_configured ? 'Configured (' + esc(ig.bilibili_cookie_source) + ')' : 'Not Set'}</span></td></tr>
+      <tr><td>TikTok Upstream Proxy</td><td><span class="status-dot ${ig.tiktok_proxy_configured ? 'status-ok' : 'status-neutral'}">${ig.tiktok_proxy_configured ? 'Configured' : 'Direct Connection'}</span></td></tr>
+    `;
+  }
+
+  // ==================== 8. LOAD SEO OVERVIEW ====================
+  async function loadSeo() {
+    const data = await apiFetch('/api/admin/seo?' + buildRangeQuery());
+    const t = data.technical_seo;
+    const sc = data.search_console;
+
+    $('seoTechnicalTbody').innerHTML = `
+      <tr><td>Canonical URL</td><td><span class="status-dot ${t.canonical_valid ? 'status-ok' : 'status-warn'} mono">${esc(t.canonical_url)}</span></td></tr>
+      <tr><td>HTTPS Enforced in Canonical</td><td><span class="status-dot ${t.https_enforced_in_canonical ? 'status-ok' : 'status-err'}">${t.https_enforced_in_canonical ? 'Yes (HTTPS)' : 'No'}</span></td></tr>
+      <tr><td>HTML &lt;title&gt; (${t.title_length} chars)</td><td>${esc(t.title)}</td></tr>
+      <tr><td>Meta Description (${t.meta_description_length} chars)</td><td style="font-size:12px;">${esc(t.meta_description)}</td></tr>
+      <tr><td>Meta Robots Directive</td><td class="mono">${esc(t.meta_robots)}</td></tr>
+      <tr><td>Structured Data (Schema.org JSON-LD)</td><td><span class="status-dot ${t.structured_data_json_ld ? 'status-ok' : 'status-warn'}">${t.structured_data_json_ld ? 'Present (WebApplication + FAQPage)' : 'Missing'}</span></td></tr>
+      <tr><td>XML Sitemap Endpoint</td><td><span class="status-dot ${t.sitemap_file_present ? 'status-ok' : 'status-err'} mono">${esc(t.sitemap_endpoint)}</span></td></tr>
+      <tr><td>robots.txt Endpoint</td><td><span class="status-dot ${t.robots_file_present ? 'status-ok' : 'status-err'} mono">${esc(t.robots_endpoint)}</span></td></tr>
+    `;
+
+    $('seoRobotsPre').textContent = t.robots_content || '';
+
+    $('seoGscBox').innerHTML = sc.api_active
+      ? `<div class="alert-box alert-success show">Connected to Google Search Console property <code class="mono">${esc(sc.site_url)}</code>.</div>`
+      : `<div style="font-size:12.5px;color:var(--text-secondary);background:var(--bg-canvas);padding:12px;border-radius:8px;border:1px solid var(--border-subtle);">
+          <strong>Search Console Property:</strong> <code class="mono">${esc(sc.site_url)}</code><br>
+          Service Account Configured: <strong>${sc.service_account_configured ? 'Yes' : 'No'}</strong><br>
+          <span style="color:var(--text-muted);">To pull live Search Console query/impression rows directly into this dashboard, set <code class="mono">GOOGLE_SERVICE_ACCOUNT_JSON</code> and grant the service account read access in Google Search Console.</span>
+        </div>`;
+  }
+
+  // ==================== 9. LOAD NOTIFICATIONS ====================
+  async function loadNotifications() {
+    const data = await apiFetch('/api/admin/notifications');
+    const badge = $('notifProviderBadge');
+    if (data.configured) {
+      badge.className = 'status-dot status-ok';
+      badge.textContent = 'Resend API Active';
+    } else {
+      badge.className = 'status-dot status-warn';
+      badge.textContent = 'RESEND_API_KEY Not Set';
+    }
+
+    if (!$('testEmailInput').value && data.settings?.notification_to_email) {
+      $('testEmailInput').value = data.settings.notification_to_email;
+    }
+
+    const list = data.deliveries || [];
+    $('notifDeliveriesTbody').innerHTML = list.length
+      ? list.map(d => `
+          <tr>
+            <td class="mono" style="font-size:11.5px;">${esc(d.timestamp.slice(0, 19).replace('T', ' '))}</td>
+            <td class="mono" style="font-size:12px;">${esc(d.event_type)}</td>
+            <td class="mono" style="font-size:12px;">${esc(d.recipient)}</td>
+            <td>${esc(d.subject)}</td>
+            <td><span class="status-dot ${d.status === 'sent' ? 'status-ok' : d.status === 'failed' ? 'status-err' : 'status-warn'}">${esc(d.status)}</span></td>
+            <td class="mono" style="font-size:11px;color:var(--text-secondary);">${esc(d.provider_id || d.error || '')}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="6" style="color:var(--text-muted);">No outbound email delivery events recorded yet.</td></tr>`;
+  }
+
+  $('btnSendTestEmail').addEventListener('click', async () => {
+    const fb = $('testEmailFeedback');
+    fb.className = 'alert-box';
+    const btn = $('btnSendTestEmail');
+    btn.disabled = true;
+    try {
+      const to = $('testEmailInput').value.trim();
+      const res = await apiFetch('/api/admin/notifications/test', {
+        method: 'POST',
+        body: JSON.stringify({ to })
+      });
+      fb.className = 'alert-box alert-success show';
+      fb.textContent = `Test email sent via Resend (ID: ${res.provider_id})`;
+      loadNotifications();
+    } catch (err) {
+      fb.className = 'alert-box alert-error show';
+      fb.textContent = err.message;
+      loadNotifications();
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ==================== 10. LOAD INTEGRATIONS ====================
+  async function loadIntegrations() {
+    const health = await apiFetch('/api/admin/health');
+    const ig = health.integrations;
+
+    const cards = [
+      {
+        title: '1. Resend Transactional Email API',
+        connected: ig.resend_email_configured,
+        statusText: ig.resend_email_configured ? 'Connected & Ready' : 'Not Configured (Set RESEND_API_KEY)',
+        desc: 'Dispatches real-time email notifications when visitors submit the public contact form, report feedback, or trigger repeated server failure thresholds.',
+        envVars: ['RESEND_API_KEY', 'CONTACT_TO_EMAIL', 'CONTACT_FROM_EMAIL', 'ADMIN_ALERT_EMAIL']
+      },
+      {
+        title: '2. Google Analytics 4 (Client Tag & Data API)',
+        connected: ig.ga4_data_api_configured,
+        statusText: ig.ga4_data_api_configured ? 'Client Tag + Data API Active' : 'Client Tag Active (G-S9BHCYX6EN) · Data API Optional',
+        desc: 'Collects visitor sessions, traffic channels, and custom downloader events on the frontend. Add a Google Service Account to query GA4 Data API on the server.',
+        envVars: ['GA4_MEASUREMENT_ID', 'GA4_PROPERTY_ID', 'GOOGLE_SERVICE_ACCOUNT_JSON']
+      },
+      {
+        title: '3. Google Search Console API',
+        connected: ig.search_console_api_configured,
+        statusText: ig.search_console_api_configured ? 'Connected' : 'Optional (Set GOOGLE_SERVICE_ACCOUNT_JSON)',
+        desc: 'Provides search query impressions, clicks, CTR, and average position for https://downdouyin.com/ directly inside the SEO Overview tab.',
+        envVars: ['GSC_SITE_URL', 'GOOGLE_SERVICE_ACCOUNT_JSON']
+      },
+      {
+        title: '4. Bilibili & TikTok Upstream Helpers',
+        connected: ig.bilibili_cookie_configured || ig.tiktok_proxy_configured,
+        statusText: `Bilibili Cookie: ${ig.bilibili_cookie_configured ? 'Set' : 'None'} · TikTok Proxy: ${ig.tiktok_proxy_configured ? 'Set' : 'None'}`,
+        desc: 'Optional SESSDATA cookie for 1080P60/4K Bilibili streams and optional HTTP/HTTPS upstream proxy for TikTok.',
+        envVars: ['BILIBILI_COOKIE']
+      }
+    ];
+
+    $('integrationsCardsGrid').innerHTML = cards.map(c => `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">${esc(c.title)}</div>
+          <span class="status-dot ${c.connected ? 'status-ok' : 'status-warn'}">${esc(c.statusText)}</span>
+        </div>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">${esc(c.desc)}</p>
+        <div style="font-size:11.5px;color:var(--text-muted);">
+          Environment Variables: ${c.envVars.map(v => `<code class="mono" style="margin-right:6px;">${esc(v)}</code>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ==================== 11. LOAD SECURITY & AUDIT ====================
+  async function loadSecurity() {
+    const data = await apiFetch('/api/admin/audit');
+
+    $('securitySessionsTbody').innerHTML = (data.active_sessions || []).map(s => `
+      <tr>
+        <td><strong>${esc(s.username)}</strong> <span class="source-tag">${esc(s.role)}</span> ${s.is_current ? '<span class="status-dot status-ok" style="margin-left:6px;">Current</span>' : ''}</td>
+        <td>${esc(s.user_agent_summary)}</td>
+        <td class="mono" style="font-size:11.5px;">${esc(s.last_active_at.slice(0, 19).replace('T', ' '))}</td>
+        <td class="mono" style="font-size:11.5px;">${esc(s.expires_at.slice(0, 19).replace('T', ' '))}</td>
+      </tr>
+    `).join('');
+
+    $('securityUsersTbody').innerHTML = (data.users || []).map(u => `
+      <tr>
+        <td class="mono"><strong>${esc(u.username)}</strong></td>
+        <td class="mono" style="font-size:12px;">${esc(u.email)}</td>
+        <td><span class="source-tag">${esc(u.role)}</span></td>
+        <td class="mono" style="font-size:11.5px;">${u.last_login_at ? esc(u.last_login_at.slice(0, 19).replace('T', ' ')) : 'Never'}</td>
+        <td><span class="status-dot ${u.disabled ? 'status-err' : 'status-ok'}">${u.disabled ? 'Disabled' : 'Active'}</span></td>
+      </tr>
+    `).join('');
+
+    $('securityAuditTbody').innerHTML = (data.audit_logs || []).map(a => `
+      <tr>
+        <td class="mono" style="font-size:11.5px;">${esc(a.timestamp.slice(0, 19).replace('T', ' '))}</td>
+        <td class="mono">${esc(a.actor)}</td>
+        <td class="mono">${esc(a.action)}</td>
+        <td class="mono" style="font-size:11.5px;">${esc(a.target)}</td>
+        <td class="mono" style="font-size:11.5px;color:var(--text-muted);">${esc(a.ip_hash)}</td>
+        <td><span class="status-dot ${a.status === 'success' ? 'status-ok' : a.status === 'warning' ? 'status-warn' : 'status-err'}">${esc(a.status)}</span></td>
+        <td>${esc(a.detail)}</td>
+      </tr>
+    `).join('');
+  }
+
+  $('btnRevokeAllSessions').addEventListener('click', async () => {
+    const pwd = $('revokeAllPasswordInput').value;
+    if (!pwd) {
+      showToast('Enter your current password first to revoke all sessions');
+      return;
+    }
+    try {
+      await apiFetch('/api/admin/auth/logout-all', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: pwd })
+      });
+      $('revokeAllPasswordInput').value = '';
+      showAuthScreen(false);
+      showToast('All sessions revoked. Please sign in again.');
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+
+  $('createStaffForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/api/admin/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          username: $('staffUsername').value.trim(),
+          email: $('staffEmail').value.trim(),
+          password: $('staffPassword').value,
+          role: $('staffRole').value
+        })
+      });
+      $('staffUsername').value = '';
+      $('staffEmail').value = '';
+      $('staffPassword').value = '';
+      showToast('Staff account created');
+      loadSecurity();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+
+  // ==================== 12. LOAD SETTINGS ====================
+  async function loadSettings() {
+    const data = await apiFetch('/api/admin/settings');
+    const s = data.settings;
+
+    $('setNotifToEmail').value = s.notification_to_email || '';
+    $('setNotifFromEmail').value = s.notification_from_email || '';
+    $('setAlertEmail').value = s.admin_alert_email || '';
+    $('setNotifyContact').checked = Boolean(s.notify_on_contact);
+    $('setNotifyFeedback').checked = Boolean(s.notify_on_feedback);
+    $('setNotifyErrors').checked = Boolean(s.notify_on_app_errors);
+    $('setNotifyRepeated').checked = Boolean(s.notify_on_repeated_failures);
+    $('setShortcutEnabled').checked = Boolean(s.shortcut_enabled);
+    $('setNewShortcutPhrase').value = '';
+    $('shortcutStatusHint').textContent = s.shortcut_configured
+      ? `Shortcut phrase hash is configured (${s.shortcut_enabled ? 'Enabled' : 'Disabled'}).`
+      : 'No shortcut phrase configured yet.';
+    $('setGa4PropertyId').value = s.ga4_property_id || '';
+    $('setGscSiteUrl').value = s.gsc_site_url || 'https://downdouyin.com/';
+    $('setRetentionOpDays').value = s.retention_days_operational_logs || 90;
+    $('setSessionTtlHours').value = s.session_ttl_hours || 12;
+
+    const bks = data.backups || [];
+    $('settingsBackupsTbody').innerHTML = bks.length
+      ? bks.map(b => `
+          <tr>
+            <td class="mono" style="font-size:12px;">${esc(b.filename)}</td>
+            <td class="mono" style="font-size:12px;">${esc(b.created_at.slice(0, 19).replace('T', ' '))}</td>
+            <td class="mono">${formatBytes(b.size_bytes)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="3" style="color:var(--text-muted);">No snapshot backups created yet.</td></tr>`;
+  }
+
+  $('settingsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        notification_to_email: $('setNotifToEmail').value.trim(),
+        notification_from_email: $('setNotifFromEmail').value.trim(),
+        admin_alert_email: $('setAlertEmail').value.trim(),
+        notify_on_contact: $('setNotifyContact').checked,
+        notify_on_feedback: $('setNotifyFeedback').checked,
+        notify_on_app_errors: $('setNotifyErrors').checked,
+        notify_on_repeated_failures: $('setNotifyRepeated').checked,
+        shortcut_enabled: $('setShortcutEnabled').checked,
+        ga4_property_id: $('setGa4PropertyId').value.trim(),
+        gsc_site_url: $('setGscSiteUrl').value.trim(),
+        retention_days_operational_logs: Number($('setRetentionOpDays').value),
+        session_ttl_hours: Number($('setSessionTtlHours').value)
+      };
+      const newPhrase = $('setNewShortcutPhrase').value.trim();
+      if (newPhrase) {
+        payload.new_shortcut_phrase = newPhrase;
+      }
+      await apiFetch('/api/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+      showToast('Configuration settings saved');
+      loadSettings();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+
+  $('btnCreateBackup').addEventListener('click', async () => {
+    try {
+      const res = await apiFetch('/api/admin/backups/create', { method: 'POST', body: '{}' });
+      showToast('Created backup: ' + res.backup.filename);
+      loadSettings();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+
+  $('btnRunRetention').addEventListener('click', () => {
+    const days = $('setRetentionOpDays').value || 90;
+    openConfirmModal(
+      'Run Log Retention Cleanup',
+      `Prune operational log records older than ${days} days from download-stats.jsonl, app-errors.jsonl, and visitor-events.jsonl?`,
+      async () => {
+        try {
+          const res = await apiFetch('/api/admin/retention/run', {
+            method: 'POST',
+            body: JSON.stringify({ confirm: true })
+          });
+          showToast(`Pruned ${res.pruned.download_stats + res.pruned.app_errors + res.pruned.visitor_events} expired records.`);
+        } catch (err) {
+          showToast(err.message);
+        }
+      }
+    );
+  });
+
+  $('changePasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/api/admin/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: $('cpCurrentPassword').value,
+          new_password: $('cpNewPassword').value
+        })
+      });
+      $('cpCurrentPassword').value = '';
+      $('cpNewPassword').value = '';
+      showToast('Administrator password updated');
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+
+  checkSessionOnLoad();
+})();
+</script>
+</body>
+</html>
