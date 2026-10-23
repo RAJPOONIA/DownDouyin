@@ -5,9 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DownDouyin — Download Videos from Douyin, Bilibili, TikTok and Xiaohongshu</title>
 <meta name="description" content="DownDouyin is a fast, simple, high-quality watermark-free video downloader supporting Douyin, Bilibili, TikTok, and Xiaohongshu (RedNote).">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<link rel="canonical" href="https://downdouyin.com/">
 <meta property="og:title" content="DownDouyin — Video Downloader for Douyin, Bilibili, TikTok &amp; Xiaohongshu">
 <meta property="og:description" content="Fast, simple, high-quality video, audio, and thumbnail downloads from Douyin, Bilibili, TikTok, and Xiaohongshu.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://downdouyin.com/">
+<meta property="og:site_name" content="DownDouyin">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DownDouyin — Video Downloader for Douyin, Bilibili, TikTok &amp; Xiaohongshu">
+<meta name="twitter:description" content="Fast, simple, high-quality video, audio, and thumbnail downloads from Douyin, Bilibili, TikTok, and Xiaohongshu.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "DownDouyin",
+  "url": "https://downdouyin.com/",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "All",
+  "description": "Fast, simple, high-quality watermark-free video, audio, and thumbnail downloader supporting Douyin, Bilibili, TikTok, and Xiaohongshu (RedNote).",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%235B35FF'/><stop offset='100%' stop-color='%239B51E0'/></linearGradient></defs><rect width='64' height='64' rx='16' fill='url(%23g)'/><polygon points='25,18 25,46 47,32' fill='%23ffffff'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1697,6 +1720,163 @@
     display: inline-flex;
   }
 
+  /* Extended Modal & Content Typography Styles */
+  .modal-dialog.modal-lg {
+    max-width: 780px;
+  }
+
+  .doc-section {
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .doc-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .doc-section h4 {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .doc-section p {
+    margin-bottom: 8px;
+    color: var(--text-sub);
+    font-size: 13.5px;
+  }
+
+  .doc-section ul,
+  .doc-section ol {
+    margin: 6px 0 10px 20px;
+    color: var(--text-sub);
+    font-size: 13.2px;
+  }
+
+  .doc-section li {
+    margin-bottom: 5px;
+  }
+
+  .doc-meta-banner {
+    background: var(--card-sub);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin-bottom: 16px;
+    font-size: 12.8px;
+    color: var(--text-sub);
+  }
+
+  .blog-card {
+    background: var(--card-sub);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+
+  .blog-card:last-child {
+    margin-bottom: 0;
+  }
+
+  .blog-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--purple-600);
+    background: var(--purple-soft);
+    padding: 3px 9px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  .blog-card h4 {
+    font-size: 15.5px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 6px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .form-label {
+    display: block;
+    font-weight: 700;
+    font-size: 12.8px;
+    color: var(--text-main);
+    margin-bottom: 4px;
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    background: var(--card-sub);
+    color: var(--text-main);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 12px;
+  }
+
+  .form-input:focus,
+  .form-select:focus,
+  .form-textarea:focus {
+    border-color: var(--purple-600);
+  }
+
+  .btn-settings-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--card-sub);
+    color: var(--text-main);
+    font-size: 12.8px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.18s ease;
+  }
+
+  .btn-settings-icon:hover {
+    border-color: var(--purple-500);
+    color: var(--purple-600);
+  }
+
+  .footer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-sub);
+    background: var(--card-sub);
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+
   /* Responsive Adjustments */
   @media (max-width: 1120px) {
     .hero-callout-left,
@@ -1708,15 +1888,36 @@
     }
   }
 
-  @media (max-width: 720px) {
-    .main-nav {
-      display: none;
+  @media (max-width: 860px) {
+    .header-inner {
+      height: auto;
+      min-height: 64px;
+      padding: 10px 16px;
+      flex-wrap: wrap;
+      gap: 10px;
     }
+    .main-nav {
+      order: 3;
+      width: 100%;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      justify-content: flex-start;
+      gap: 4px;
+    }
+    .nav-item {
+      white-space: nowrap;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+  }
+
+  @media (max-width: 720px) {
     .preview-split.show {
       grid-template-columns: 1fr;
     }
     .features-grid,
-    .steps-grid {
+    .steps-grid,
+    .form-grid {
       grid-template-columns: 1fr;
     }
     .step-card::after {
@@ -1744,7 +1945,7 @@
 <!-- ==================== HEADER ==================== -->
 <header class="site-header">
   <div class="header-inner">
-    <a href="#" class="brand-link" id="brandHomeLink">
+    <a href="#home" class="brand-link" id="brandHomeLink" aria-label="DownDouyin Home">
       <span class="brand-logo" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l11-6.86a1 1 0 0 0 0-1.66l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>
       </span>
@@ -1752,22 +1953,24 @@
     </a>
 
     <nav class="main-nav" aria-label="Primary Navigation">
-      <a href="#top" class="nav-item active" data-nav="home" id="navHome">Home</a>
-      <a href="#platformsRow" class="nav-item" data-nav="platforms" id="navPlatforms">Supported Platforms</a>
-      <a href="#howToSection" class="nav-item" data-nav="howto" id="navHowTo">How to Use</a>
+      <a href="#home" class="nav-item active" data-nav="home" id="navHome">Home</a>
+      <a href="#platforms" class="nav-item" data-nav="platforms" id="navPlatforms">Supported Platforms</a>
+      <a href="#how-to-use" class="nav-item" data-nav="howto" id="navHowTo">How to Use</a>
       <div class="nav-dropdown-wrap" id="toolsDropdownWrap">
-        <button type="button" class="nav-item" id="navToolsBtn">
+        <button type="button" class="nav-item" id="navToolsBtn" aria-expanded="false" aria-haspopup="true">
           <span id="navToolsLabel">Tools</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div class="nav-dropdown">
+        <div class="nav-dropdown" role="menu">
           <button type="button" class="dropdown-item" data-tool="video">🎬 High-Speed Video Downloader</button>
           <button type="button" class="dropdown-item" data-tool="audio">🎵 Original Audio / MP3 Extractor</button>
           <button type="button" class="dropdown-item" data-tool="thumb">🖼️ HD Thumbnail &amp; Gallery Grabber</button>
           <button type="button" class="dropdown-item" data-tool="settings">⚙️ Bilibili Cookie &amp; TikTok Proxy</button>
         </div>
       </div>
-      <button type="button" class="nav-item" id="navFaqBtn">FAQ</button>
+      <a href="#faq" class="nav-item" data-nav="faq" id="navFaqBtn">FAQ</a>
+      <a href="#blog" class="nav-item" data-nav="blog" id="navBlogBtn">Blog</a>
+      <a href="#contact" class="nav-item" data-nav="contact" id="navContactBtn">Contact</a>
     </nav>
 
     <div class="header-right">
@@ -1779,7 +1982,7 @@
       </button>
 
       <div class="lang-wrap" id="langWrap">
-        <button type="button" class="lang-btn" id="langBtn">
+        <button type="button" class="lang-btn" id="langBtn" aria-label="Select Language">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
           <span id="currentLangText">English</span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1790,7 +1993,12 @@
         </div>
       </div>
 
-      <button type="button" class="btn-upgrade" id="btnHeaderSettings" title="Configure Bilibili HD Cookies &amp; TikTok Proxy">
+      <button type="button" class="btn-settings-icon" id="btnOpenSettings" title="Configure Bilibili SESSDATA &amp; TikTok Proxy" aria-label="Open HD Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span id="settingsBtnText">Settings</span>
+      </button>
+
+      <button type="button" class="btn-upgrade" id="btnHeaderUpgrade" title="View Free Access &amp; Plan Information">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>
         <span id="upgradeBtnText">Upgrade</span>
       </button>
@@ -2169,7 +2377,7 @@
 <!-- ==================== FOOTER ==================== -->
 <footer class="site-footer">
   <div class="footer-inner">
-    <div class="footer-brand">
+    <a href="#home" class="footer-brand" id="footerBrandHomeLink" style="text-decoration:none;color:inherit" aria-label="DownDouyin Home">
       <span class="brand-logo" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l11-6.86a1 1 0 0 0 0-1.66l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>
       </span>
@@ -2177,41 +2385,34 @@
         <strong>DownDouyin</strong>
         <span id="footerTagline">Your All-in-One Video Downloader</span>
       </div>
-    </div>
+    </a>
 
     <div class="footer-links">
-      <a href="#top">Home</a>
+      <a href="#home" id="footerHomeLink">Home</a>
       <span class="pipe">|</span>
-      <a href="#platformsRow">Supported Platforms</a>
+      <a href="#platforms" id="footerPlatformsLink">Supported Platforms</a>
       <span class="pipe">|</span>
-      <a href="#howToSection">How to Use</a>
+      <a href="#how-to-use" id="footerHowToLink">How to Use</a>
       <span class="pipe">|</span>
-      <a href="#top" id="footerToolsLink">Tools</a>
+      <a href="#guide" id="footerDetailedGuideLink">Detailed Guide</a>
+      <span class="pipe">|</span>
+      <a href="#tools" id="footerToolsLink">Tools</a>
       <span class="pipe">|</span>
       <a href="#faq" id="footerFaqLink">FAQ</a>
       <span class="pipe">|</span>
-      <a href="#guide" id="footerGuideLink">Blog</a>
+      <a href="#blog" id="footerBlogLink">Blog</a>
       <span class="pipe">|</span>
       <a href="#privacy" id="footerPrivacyLink">Privacy Policy</a>
       <span class="pipe">|</span>
       <a href="#terms" id="footerTermsLink">Terms of Service</a>
       <span class="pipe">|</span>
-      <a href="#settings" id="footerSettingsLink">Contact</a>
+      <a href="#contact" id="footerContactLink">Contact</a>
+      <span class="pipe">|</span>
+      <a href="#settings" id="footerSettingsLink">Settings</a>
     </div>
 
     <div class="footer-right">
-      <a href="#top" class="social-link" aria-label="YouTube" title="YouTube">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.6 12 3.6 12 3.6s-7.6 0-9.5.5c-1 .3-1.7 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.5 9.5.5 9.5.5s7.6 0 9.5-.5c1-.3 1.7-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
-      </a>
-      <a href="#top" class="social-link" aria-label="X" title="X / Twitter">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      </a>
-      <a href="#top" class="social-link" aria-label="Instagram" title="Instagram">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-      </a>
-      <a href="#top" class="social-link" aria-label="Discord" title="Discord">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-      </a>
+      <span class="footer-badge">⚡ 100% Free • No Watermark</span>
       <button type="button" class="scroll-top-btn" id="btnScrollTop" aria-label="Scroll to top" title="Back to top">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
       </button>
@@ -2219,12 +2420,12 @@
   </div>
 </footer>
 
-<!-- ==================== SETTINGS & PRO MODAL ==================== -->
+<!-- ==================== 1. SETTINGS MODAL (ONLY FOR BILIBILI & TIKTOK CONFIG) ==================== -->
 <div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
   <div class="modal-dialog">
     <div class="modal-header">
       <h3 id="settingsModalTitle">DownDouyin HD Settings &amp; Configuration</h3>
-      <button type="button" class="modal-close" id="btnCloseSettings">✕</button>
+      <button type="button" class="modal-close" id="btnCloseSettings" aria-label="Close Settings">✕</button>
     </div>
     <div class="modal-body">
       <div class="modal-tabs">
@@ -2233,10 +2434,13 @@
       </div>
 
       <div id="paneBili">
-        <p style="margin-bottom:8px">Configure your Bilibili <code>SESSDATA</code> cookie to unlock 1080P &amp; 4K UHD streams. Douyin Original Quality &amp; 1080P HD extraction is already built-in automatically.</p>
+        <p style="margin-bottom:8px">Configure your optional Bilibili <code>SESSDATA</code> cookie to unlock 1080P60 &amp; 4K UHD streams. Douyin Original Quality &amp; 1080P HD extraction is already built-in automatically without any login.</p>
+        <div class="doc-meta-banner" style="margin-bottom:10px">
+          <strong>Privacy &amp; Security Note:</strong> Your Bilibili <code>SESSDATA</code> is stored locally in your browser (<code>localStorage</code>) and transmitted only when parsing Bilibili videos. Avoid pasting personal account cookies on shared or public computers.
+        </div>
         <div id="biliCfgStatus" style="padding:10px 12px;border-radius:10px;background:var(--card-sub);border:1px solid var(--border-soft);margin-bottom:10px;font-size:12.5px">Checking Bilibili configuration...</div>
         <label style="font-weight:700;font-size:13px;color:var(--text-main)" for="biliCookieInput">Paste Bilibili Cookie / SESSDATA</label>
-        <textarea id="biliCookieInput" class="cfg-field" rows="4" placeholder="Paste SESSDATA=... or cookies.txt content here"></textarea>
+        <textarea id="biliCookieInput" class="cfg-field" rows="3" placeholder="Paste SESSDATA=... or cookie string here"></textarea>
         <div style="display:flex;gap:10px;justify-content:flex-end">
           <button type="button" class="btn-row-dl" style="background:#64748B" id="btnClearBiliCookie">Clear Cookie</button>
           <button type="button" class="btn-row-dl" id="btnSaveBiliCookie">Save Cookie</button>
@@ -2244,7 +2448,7 @@
       </div>
 
       <div id="paneTiktok" style="display:none">
-        <p style="margin-bottom:8px">If your server is in a region that requires a local HTTP proxy to reach TikTok, enter your proxy URL below (leave blank for direct connection).</p>
+        <p style="margin-bottom:8px">If your server is in a region that requires an HTTP proxy to reach TikTok, enter the proxy URL below (leave blank for standard direct connection).</p>
         <div id="ttCfgStatus" style="padding:10px 12px;border-radius:10px;background:var(--card-sub);border:1px solid var(--border-soft);margin-bottom:10px;font-size:12.5px">Checking TikTok configuration...</div>
         <label style="font-weight:700;font-size:13px;color:var(--text-main)" for="ttProxyInput">HTTP Proxy URL</label>
         <input type="text" id="ttProxyInput" class="cfg-field" placeholder="http://127.0.0.1:7890">
@@ -2257,25 +2461,374 @@
   </div>
 </div>
 
-<!-- ==================== FAQ & DETAILED GUIDE MODAL ==================== -->
+<!-- ==================== 2. FAQ MODAL (DEDICATED FREQUENTLY ASKED QUESTIONS) ==================== -->
 <div class="modal-backdrop" id="faqModal" role="dialog" aria-modal="true" aria-labelledby="faqModalTitle">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-header">
-      <h3 id="faqModalTitle">How to Use &amp; Frequently Asked Questions</h3>
-      <button type="button" class="modal-close" id="btnCloseFaq">✕</button>
+      <h3 id="faqModalTitle">Frequently Asked Questions (FAQ)</h3>
+      <button type="button" class="modal-close" id="btnCloseFaq" aria-label="Close FAQ">✕</button>
     </div>
     <div class="modal-body">
-      <h4 style="color:var(--text-main);font-weight:800;margin-bottom:6px">1. Which platforms are supported?</h4>
-      <p style="margin-bottom:14px">DownDouyin supports <strong>Douyin</strong>, <strong>Bilibili</strong>, <strong>TikTok</strong>, and <strong>Xiaohongshu (RedNote)</strong>. You can paste either a direct link or the full share text copied from the mobile app.</p>
+      <div class="doc-section">
+        <h4>1. Which video and photo platforms are supported by DownDouyin?</h4>
+        <p>DownDouyin supports four major platforms: <strong>Douyin (抖音)</strong>, <strong>Bilibili (哔哩哔哩 / B站)</strong>, <strong>TikTok</strong>, and <strong>Xiaohongshu (小红书 / RedNote)</strong>. You can paste either a direct video URL, a short share URL (such as <code>v.douyin.com</code>, <code>b23.tv</code>, <code>vm.tiktok.com</code>, or <code>xhslink.com</code>), or the full share text copied from the mobile app.</p>
+      </div>
+      <div class="doc-section">
+        <h4>2. How do I fetch and download a watermark-free video?</h4>
+        <p>Copy the video link from the source app, paste it into the search input box at the top of DownDouyin, and click <strong>Fetch Video</strong>. Once the Video Preview card loads, review the available quality rows (such as <strong>Original Quality</strong>, <strong>1080p Full HD</strong>, or <strong>720p HD</strong>) and click <strong>Download</strong> next to your preferred option.</p>
+      </div>
+      <div class="doc-section">
+        <h4>3. How do the Video, Audio, and Thumbnail tabs work?</h4>
+        <p>Inside the Video Preview card, three format tabs appear based on what the source platform provides for that post:</p>
+        <ul>
+          <li><strong>Video:</strong> Lists all extracted video streams with resolution, format (MP4), and file size.</li>
+          <li><strong>Audio:</strong> Extracts the original background soundtrack or audio stream (saved as MP3) when available.</li>
+          <li><strong>Thumbnail:</strong> Lets you download the high-resolution cover image (JPG). If the post is a multi-photo album or Live Photo gallery, a full <strong>Photo Album</strong> grid and <strong>Download All (ZIP)</strong> button also appear below the preview.</li>
+        </ul>
+      </div>
+      <div class="doc-section">
+        <h4>4. Why do some videos show more quality options than others?</h4>
+        <p>Available resolutions depend on the original file uploaded by the creator and the streams exposed by the platform. For example, if a creator uploaded a 720p video, 1080p or 4K streams will not exist. On Bilibili, guest requests typically return up to 720p/1080p; configuring your optional Bilibili <code>SESSDATA</code> cookie in <strong>Settings</strong> unlocks 1080p60 and 4K UHD streams when available on the source video.</p>
+      </div>
+      <div class="doc-section">
+        <h4>5. Why can a large Original Quality download pause or take longer?</h4>
+        <p>Original Quality master files (often 50 MB to 200+ MB) are streamed from upstream CDN servers in China or overseas. Occasionally a specific CDN edge node may throttle bandwidth mid-transfer. DownDouyin automatically probes multiple CDN mirrors, displays real-time percentage progress, and uses HTTP Range resume to recover from mid-stream stalls without restarting from 0%.</p>
+      </div>
+      <div class="doc-section">
+        <h4>6. Why did my Xiaohongshu or Douyin link fail to parse?</h4>
+        <p>Common reasons include:</p>
+        <ul>
+          <li><strong>Missing <code>xsec_token</code> on Xiaohongshu:</strong> Xiaohongshu requires the security token attached to fresh share links. Copy a fresh link directly from the Xiaohongshu app or web address bar without stripping query parameters.</li>
+          <li><strong>Private, deleted, or region-restricted posts:</strong> DownDouyin can only parse publicly accessible posts. Videos set to "Friends Only" or deleted by the author cannot be fetched.</li>
+        </ul>
+      </div>
+      <div class="doc-section">
+        <h4>7. Is DownDouyin free to use, and do I need an account?</h4>
+        <p>Yes. DownDouyin is 100% free to use and requires no account registration or subscription.</p>
+      </div>
+      <div class="doc-section">
+        <h4>8. What are your privacy and copyright rules?</h4>
+        <p>DownDouyin does not store copies of downloaded videos on its servers; media streams are proxied directly to your browser. Users are responsible for respecting creator copyrights and platform terms—only download content for personal offline viewing or when you have permission from the rights holder. See our <a href="#privacy" id="faqToPrivacyLink" style="color:var(--purple-600);font-weight:700">Privacy Policy</a> and <a href="#terms" id="faqToTermsLink" style="color:var(--purple-600);font-weight:700">Terms of Service</a> for full details.</p>
+      </div>
+    </div>
+  </div>
+</div>
 
-      <h4 style="color:var(--text-main);font-weight:800;margin-bottom:6px">2. How do I download watermark-free videos in Original Quality?</h4>
-      <p style="margin-bottom:14px">Paste your video link in the search box and click <strong>Fetch Video</strong>. DownDouyin queries the stream endpoints and lists all available qualities returned by the platform (such as Original Quality, 1080p Full HD, 720p HD, 540p SD). Click <strong>Download</strong> next to your preferred quality.</p>
+<!-- ==================== 3. DETAILED DOWNLOAD GUIDE MODAL ==================== -->
+<div class="modal-backdrop" id="guideModal" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3 id="guideModalTitle">Complete Step-by-Step Download Guide</h3>
+      <button type="button" class="modal-close" id="btnCloseGuide" aria-label="Close Detailed Guide">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="doc-meta-banner">
+        Follow this step-by-step guide to copy links accurately from each platform, preview streams, and save watermark-free videos, audio tracks, and photo albums.
+      </div>
+      <div class="doc-section">
+        <h4>Step 1: How to Copy a Video Link from Douyin (抖音)</h4>
+        <p>Open the Douyin app or website, tap the <strong>Share (分享)</strong> arrow icon on the right side of the video, and select <strong>Copy Link (复制链接)</strong>. You can paste the entire share sentence (e.g., <code>7.43 复制打开抖音... https://v.douyin.com/xxxxx/</code>) directly into DownDouyin—you do not need to manually edit out the Chinese text.</p>
+      </div>
+      <div class="doc-section">
+        <h4>Step 2: How to Copy a Video Link from Bilibili (哔哩哔哩)</h4>
+        <p>On the Bilibili mobile app, tap the three-dot menu or Share button and tap <strong>Copy Link</strong> (which gives a <code>https://b23.tv/...</code> link). On desktop web, copy the browser URL containing the <code>BV...</code> ID (e.g., <code>https://www.bilibili.com/video/BV1xxxxxx</code>). For multi-part videos, a page selector dropdown (<code>P1, P2...</code>) will appear automatically in the Video Preview header.</p>
+      </div>
+      <div class="doc-section">
+        <h4>Step 3: How to Copy a Video Link from TikTok</h4>
+        <p>In the TikTok app or web player, tap <strong>Share → Copy Link</strong>. Both short links (<code>https://vm.tiktok.com/...</code> or <code>https://vt.tiktok.com/...</code>) and full desktop links (<code>https://www.tiktok.com/@creator/video/123456...</code>) are supported.</p>
+      </div>
+      <div class="doc-section">
+        <h4>Step 4: How to Copy a Share Link from Xiaohongshu (小红书 / RedNote)</h4>
+        <p>Open the Xiaohongshu note, tap the <strong>Share</strong> icon in the top-right corner, and tap <strong>Copy Link (复制链接)</strong>. <strong>Important:</strong> Always use a fresh share link or full browser URL that includes the <code>xsec_token=...</code> parameter, as Xiaohongshu blocks bare URLs without a valid security token.</p>
+      </div>
+      <div class="doc-section">
+        <h4>Step 5: Paste the Link and Click "Fetch Video"</h4>
+        <p>Paste your copied link into the input bar at the top of DownDouyin. The platform indicator button (Douyin, Bilibili, TikTok, or Xiaohongshu) will automatically highlight the detected platform. Click <strong>Fetch Video</strong> (or press <code>Enter</code>) and wait 1–3 seconds for metadata extraction.</p>
+      </div>
+      <div class="doc-section">
+        <h4>Step 6: Switch Between Video, Audio, and Thumbnail Tabs</h4>
+        <p>Once the Video Preview card loads, you can click the play button on the thumbnail to preview the video, or switch between:</p>
+        <ul>
+          <li><strong>Video Tab:</strong> View all available video resolutions, codecs, and file sizes.</li>
+          <li><strong>Audio Tab:</strong> Download the standalone audio/music track in MP3 format.</li>
+          <li><strong>Thumbnail Tab:</strong> Download the original high-definition cover image in JPG format.</li>
+        </ul>
+      </div>
+      <div class="doc-section">
+        <h4>Step 7: Select Quality and Click Download</h4>
+        <p>Click any quality row (for example, <strong>Original Quality</strong> for the highest bitrate master stream, or <strong>720p HD</strong> for a smaller file size) and click the purple <strong>⬇ Download</strong> button. The button will display live download percentage progress (<code>0% → 99% → ✓ Saved</code>) and save the file to your device's Downloads folder without navigating away from the page.</p>
+      </div>
+      <div class="doc-section">
+        <h4>Step 8: Troubleshooting Failed or Slow Downloads</h4>
+        <ul>
+          <li><strong>Link fails to parse:</strong> Verify the video is public and paste a fresh share link from the app.</li>
+          <li><strong>Download stalls on a huge 4K/Original video:</strong> Keep the browser tab open for a few seconds—DownDouyin automatically switches to backup CDN mirrors and resumes from the exact byte offset. You can also try selecting the 1080p or 720p row if your local connection is slow.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
 
-      <h4 style="color:var(--text-main);font-weight:800;margin-bottom:6px">3. Why does Xiaohongshu require a fresh share link?</h4>
-      <p style="margin-bottom:14px">Xiaohongshu links include a temporary <code>xsec_token</code> parameter for security. Copy the share link directly from the Xiaohongshu app or web page without removing URL parameters.</p>
+<!-- ==================== 4. BLOG & ARTICLES MODAL ==================== -->
+<div class="modal-backdrop" id="blogModal" role="dialog" aria-modal="true" aria-labelledby="blogModalTitle">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3 id="blogModalTitle">DownDouyin Guides &amp; Technical Articles</h3>
+      <button type="button" class="modal-close" id="btnCloseBlog" aria-label="Close Blog">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="blog-card">
+        <span class="blog-tag">Quality &amp; Codecs</span>
+        <h4>Understanding Original Quality vs. 1080p &amp; H.265/HEVC Streams</h4>
+        <p>When you fetch a Douyin or Bilibili video on DownDouyin, you will often see <strong>Original Quality</strong> alongside <strong>1080p Full HD</strong>, <strong>720p HD</strong>, and codec labels such as <strong>H.264</strong> or <strong>H.265</strong>.</p>
+        <p><strong>Original Quality</strong> represents the highest-bitrate master stream returned by the platform's API without re-encoding or watermark overlays. Lower tiers (such as 720p or 540p) are smaller transcoded versions ideal for saving mobile data or sharing on messaging apps. If two quality rows share the same resolution (e.g., 480p or 1080p), DownDouyin displays their codec and bitrate (in kbps) so you can choose between universal compatibility (H.264) and higher compression efficiency (H.265/AV1).</p>
+      </div>
 
-      <h4 style="color:var(--text-main);font-weight:800;margin-bottom:6px">4. Can I extract audio or high-res cover thumbnails?</h4>
-      <p>Yes! After fetching a video, switch between the <strong>Video</strong>, <strong>Audio</strong>, and <strong>Thumbnail</strong> tabs inside the Video Preview card to download the original soundtrack or HD cover image when provided by the source platform.</p>
+      <div class="blog-card">
+        <span class="blog-tag">Platform Tips</span>
+        <h4>Why Xiaohongshu &amp; Short Share Links Expire (And How to Fix Parse Errors)</h4>
+        <p>Short share URLs from Douyin (<code>v.douyin.com</code>), TikTok (<code>vm.tiktok.com</code>), Bilibili (<code>b23.tv</code>), and Xiaohongshu (<code>xhslink.com</code>) redirect to full URLs containing temporary tokens. In particular, Xiaohongshu enforces a dynamic <code>xsec_token</code> query parameter on web notes.</p>
+        <p>If an older bookmarked URL returns a parse error, open the post in the official app, tap <strong>Share → Copy Link</strong> to generate a fresh token, and paste the full share text directly into DownDouyin.</p>
+      </div>
+
+      <div class="blog-card">
+        <span class="blog-tag">Multi-Image &amp; Live Photos</span>
+        <h4>Downloading Douyin &amp; Xiaohongshu Photo Albums and Live Photos</h4>
+        <p>Many posts on Douyin and Xiaohongshu are multi-image carousels or <strong>Live Photo (实况动态)</strong> albums rather than single videos. When DownDouyin detects an image album, it automatically displays the <strong>Photo Album</strong> gallery below the preview card.</p>
+        <p>You can download individual high-resolution JPG images, save individual Live Photo MP4 motion clips, or click <strong>⬇ Download All (ZIP)</strong> to bundle the entire album into a single ZIP archive.</p>
+      </div>
+
+      <div class="blog-card">
+        <span class="blog-tag">Streaming Architecture</span>
+        <h4>How DownDouyin Protects Your Privacy &amp; Streams Media Without Server Storage</h4>
+        <p>Unlike services that queue your video on remote cloud disks, DownDouyin resolves media metadata in real time and streams video bytes directly through an unbuffered proxy with automatic CDN failover. Downloaded videos and photo albums are never stored permanently on our servers.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 5. PRIVACY POLICY MODAL ==================== -->
+<div class="modal-backdrop" id="privacyModal" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3 id="privacyModalTitle">Privacy Policy — DownDouyin</h3>
+      <button type="button" class="modal-close" id="btnClosePrivacy" aria-label="Close Privacy Policy">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="doc-meta-banner">
+        <strong>Website:</strong> <a href="https://downdouyin.com/" style="color:var(--purple-600)">https://downdouyin.com/</a> &nbsp;|&nbsp;
+        <strong>Last Updated:</strong> October 2026
+      </div>
+
+      <div class="doc-section">
+        <h4>1. Overview</h4>
+        <p>This Privacy Policy explains what information <strong>DownDouyin</strong> (<code>downdouyin.com</code>) processes when you use our web application to parse and download publicly accessible media from Douyin, Bilibili, TikTok, and Xiaohongshu, how that information is used, and the choices available to you.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>2. Information We Process When You Use the Downloader</h4>
+        <ul>
+          <li><strong>Submitted Video/Note Links:</strong> When you click <strong>Fetch Video</strong> or initiate a download, the share text or URL you paste is sent to our backend API (<code>/api/parse</code>, <code>/api/proxy</code>, <code>/api/download</code>, or <code>/api/zip</code>) solely to fetch metadata and stream the requested media file back to your browser. We do not store copies of the downloaded videos or photos on our server after the stream completes.</li>
+          <li><strong>Standard Technical Request Metadata:</strong> Like all web servers, our Nginx reverse proxy and Node.js server process standard HTTP request data (such as IP address, browser User-Agent, HTTP Range headers, and timestamps) to deliver responses, prevent abuse, and maintain server stability.</li>
+          <li><strong>Contact Form Submissions:</strong> If you voluntarily submit a message through our Contact form (<code>/api/contact</code>), your provided Name, Email, Category, Platform selection, and Message are recorded in a private server log file (<code>logs/contact-messages.jsonl</code>) so the site administrator can review and respond to your inquiry.</li>
+        </ul>
+      </div>
+
+      <div class="doc-section">
+        <h4>3. Google Analytics 4 (GA4) &amp; Privacy Redaction</h4>
+        <p>DownDouyin uses <strong>Google Analytics 4</strong> (Measurement ID: <code>G-S9BHCYX6EN</code>) to understand aggregate website traffic and downloader reliability. Our GA4 integration is explicitly configured to protect your privacy:</p>
+        <ul>
+          <li><strong>Events Tracked:</strong> Standard page views plus anonymized functional events: <code>downloader_link_submit</code>, <code>download_button_click</code>, <code>download_request_started</code>, <code>download_request_success</code>, and <code>download_request_failed</code>.</li>
+          <li><strong>Strict Parameter Sanitization:</strong> Only non-sensitive parameters (<code>platform</code> name, <code>download_method</code>, <code>status</code>, and generic <code>error_category</code>) are sent to Google Analytics.</li>
+          <li><strong>No Raw URLs or Tokens Sent to GA4:</strong> The full video URLs you paste, query strings, <code>xsec_token</code> parameters, and cookies are stripped and are <strong>never</strong> transmitted to Google Analytics.</li>
+        </ul>
+      </div>
+
+      <div class="doc-section">
+        <h4>4. Operational Backend Download Statistics</h4>
+        <p>To monitor upstream CDN performance and diagnose slow or failed transfers, our server records anonymized operational metrics in a private server-side file (<code>logs/download-stats.jsonl</code>). Each record contains only a timestamp, a random request ID (<code>req_...</code>), the operation type (<code>parse_request</code>, <code>file_download</code>, or <code>zip_download</code>), the platform name (<code>douyin</code>, <code>bilibili</code>, <code>tiktok</code>, or <code>xiaohongshu</code>), status (<code>success</code>, <code>failed</code>, or <code>aborted</code>), HTTP status code, generic error category, and duration in milliseconds. Raw user-submitted URLs and personal identifiers are never written to this statistics file.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>5. Browser Storage (localStorage) &amp; Optional Settings</h4>
+        <p>DownDouyin uses your browser's local storage (<code>localStorage</code>) for the following preferences:</p>
+        <ul>
+          <li><code>dd_theme</code>: Remembers your selected Light or Dark theme.</li>
+          <li><code>dd_lang</code>: Remembers your selected interface language (English or 简体中文).</li>
+          <li><code>dd_bili_cookie</code> (Optional): If you choose to enter a Bilibili <code>SESSDATA</code> cookie in the Settings modal to unlock 1080p60/4K streams, it is saved in your browser's <code>localStorage</code> and sent when you request Bilibili parses or saved to the runtime session if configured. You can clear it at any time using the <strong>Clear Cookie</strong> button.</li>
+        </ul>
+        <p><strong>Security Warning:</strong> Never enter personal cookies (such as Bilibili <code>SESSDATA</code>) on a public or shared computer, and only configure cookies on a server deployment that you trust.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>6. Third-Party Platforms &amp; External CDNs</h4>
+        <p>DownDouyin is an independent tool and is not affiliated with, endorsed by, or operated by ByteDance (Douyin / TikTok), Bilibili, or Xiaohongshu. When you fetch or download media, our server communicates with those platforms' public web endpoints and content delivery networks (CDNs) on your behalf. Your use of content from those platforms remains subject to their respective privacy policies and terms.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>7. Data Retention &amp; Security</h4>
+        <p>Media streams pass through memory in real time and are not archived on disk. Anonymized operational logs and contact submissions are retained on the host server only as long as needed for troubleshooting, security auditing, and responding to user inquiries. While we use HTTPS encryption and strict parameter sanitization, no internet transmission is 100% immune to network risks.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>8. Children's Privacy &amp; International Processing</h4>
+        <p>DownDouyin is a general-audience utility not directed at children under 13, and we do not knowingly collect personal information from children. Because our VPS hosting infrastructure and upstream platform CDNs operate globally, technical request processing may occur across international jurisdictions.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>9. Changes to This Policy &amp; How to Contact Us</h4>
+        <p>We may update this Privacy Policy periodically to reflect technical or legal changes. If you have questions about privacy, data handling, or content removal, please use our <a href="#contact" id="privacyToContactLink" style="color:var(--purple-600);font-weight:700">Contact Form</a> on this website. <em>(Site Administrator Note: If you wish to publish a dedicated direct email address or business mailing address, you may add it in the Contact &amp; Legal configuration.)</em></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 6. TERMS OF SERVICE MODAL ==================== -->
+<div class="modal-backdrop" id="termsModal" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3 id="termsModalTitle">Terms of Service — DownDouyin</h3>
+      <button type="button" class="modal-close" id="btnCloseTerms" aria-label="Close Terms of Service">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="doc-meta-banner">
+        <strong>Website:</strong> <a href="https://downdouyin.com/" style="color:var(--purple-600)">https://downdouyin.com/</a> &nbsp;|&nbsp;
+        <strong>Effective Date:</strong> October 2026
+      </div>
+
+      <div class="doc-section">
+        <h4>1. Acceptance of Terms</h4>
+        <p>By accessing or using <strong>DownDouyin</strong> (<code>downdouyin.com</code>), you agree to comply with and be bound by these Terms of Service. If you do not agree with any part of these terms, please discontinue use of the website immediately.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>2. Description of Service &amp; Permitted Use</h4>
+        <p>DownDouyin is a technical web utility that parses publicly accessible share links from Douyin, Bilibili, TikTok, and Xiaohongshu and streams available media formats to your browser. The service is provided for personal, non-commercial, lawful offline viewing, archival of your own creations, or use expressly authorized by the copyright owner.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>3. Copyright &amp; User Responsibility</h4>
+        <ul>
+          <li>All videos, music tracks, images, avatars, and text descriptions fetched through DownDouyin remain the sole intellectual property of their respective creators and source platforms.</li>
+          <li><strong>You are solely responsible</strong> for ensuring that you have the legal right or permission from the content owner before downloading, saving, or redistributing any media obtained through this tool.</li>
+          <li>You may not use DownDouyin to infringe copyright, strip creator attribution for commercial re-uploading, or violate the Terms of Service of Douyin, Bilibili, TikTok, or Xiaohongshu.</li>
+        </ul>
+      </div>
+
+      <div class="doc-section">
+        <h4>4. Prohibited Conduct &amp; Abuse Prevention</h4>
+        <p>You agree not to:</p>
+        <ul>
+          <li>Use automated bots, scrapers, or high-frequency scripts to flood <code>/api/parse</code>, <code>/api/download</code>, <code>/api/proxy</code>, or <code>/api/zip</code>.</li>
+          <li>Attempt to bypass private account restrictions, paywalls, or digital rights management (DRM) protections.</li>
+          <li>Use the proxy endpoints to relay unrelated third-party traffic or conduct network attacks.</li>
+        </ul>
+      </div>
+
+      <div class="doc-section">
+        <h4>5. Disclaimer of Warranties &amp; Availability</h4>
+        <p>DownDouyin is provided on an <strong>"AS IS" and "AS AVAILABLE"</strong> basis without warranties of any kind. Because third-party platforms frequently update their link formats, security tokens (such as <code>a_bogus</code> or <code>xsec_token</code>), and CDN rules, we do not guarantee that every link, resolution, audio track, or platform will be available at all times or that downloads will be uninterrupted.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>6. Limitation of Liability</h4>
+        <p>To the maximum extent permitted by applicable law, DownDouyin and its operators shall not be liable for any direct, indirect, incidental, consequential, or special damages arising out of your use of (or inability to use) the service, or from any copyright claims resulting from your unauthorized use of third-party media.</p>
+      </div>
+
+      <div class="doc-section">
+        <h4>7. Changes to Terms &amp; Contact Information</h4>
+        <p>We reserve the right to modify these Terms of Service or suspend access for abusive traffic at any time. For copyright inquiries, bug reports, or general support, please reach out via our <a href="#contact" id="termsToContactLink" style="color:var(--purple-600);font-weight:700">Contact Form</a>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 7. CONTACT MODAL ==================== -->
+<div class="modal-backdrop" id="contactModal" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3 id="contactModalTitle">Contact &amp; Support — DownDouyin</h3>
+      <button type="button" class="modal-close" id="btnCloseContact" aria-label="Close Contact Modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="doc-meta-banner">
+        Have a broken video link, slow download report, copyright/removal request, or general feedback? Submit the form below. Inquiries are validated and recorded directly in our server support log (<code>logs/contact-messages.jsonl</code>) with a unique reference ID for administrator review.
+      </div>
+
+      <form id="contactForm" novalidate>
+        <div class="form-grid">
+          <div>
+            <label class="form-label" for="contactName">Your Name *</label>
+            <input type="text" id="contactName" class="form-input" placeholder="Enter your name" required maxlength="80">
+          </div>
+          <div>
+            <label class="form-label" for="contactEmail">Email Address *</label>
+            <input type="email" id="contactEmail" class="form-input" placeholder="you@example.com" required maxlength="120">
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div>
+            <label class="form-label" for="contactCategory">Topic / Issue Type *</label>
+            <select id="contactCategory" class="form-select">
+              <option value="broken_link">Broken Video Link / Parse Error</option>
+              <option value="slow_download">Slow or Stalled Download</option>
+              <option value="bug_report">Website Bug Report</option>
+              <option value="copyright_request">Copyright / Content Removal Request</option>
+              <option value="general_feedback">General Feedback / Feature Request</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="contactPlatform">Related Platform (Optional)</label>
+            <select id="contactPlatform" class="form-select">
+              <option value="unknown">Not Specific / General</option>
+              <option value="douyin">Douyin (抖音)</option>
+              <option value="bilibili">Bilibili (哔哩哔哩)</option>
+              <option value="tiktok">TikTok</option>
+              <option value="xiaohongshu">Xiaohongshu (小红书)</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="form-label" for="contactMessage">Message / Details *</label>
+        <textarea id="contactMessage" class="form-textarea" rows="4" placeholder="Describe the issue, error message, or feedback in detail (at least 10 characters)..." required maxlength="2000"></textarea>
+
+        <div id="contactFeedbackBox" style="display:none;padding:12px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;font-weight:600"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--text-muted)">* Required fields. Stored securely on server for admin review.</span>
+          <button type="submit" class="btn-row-dl" style="width:auto;padding:0 20px;height:40px" id="btnSubmitContact">Submit Inquiry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 8. UPGRADE / PLANS STATUS MODAL ==================== -->
+<div class="modal-backdrop" id="upgradeModal" role="dialog" aria-modal="true" aria-labelledby="upgradeModalTitle">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="upgradeModalTitle">DownDouyin Plans &amp; Free Access Status</h3>
+      <button type="button" class="modal-close" id="btnCloseUpgrade" aria-label="Close Upgrade Modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="blog-card" style="border-color:rgba(139,92,246,0.4)">
+        <span class="blog-tag">Active Status: 100% Free</span>
+        <h4>All Core Downloader Features Are Free for Everyone</h4>
+        <p style="margin-bottom:10px">DownDouyin currently provides full, unrestricted access to all users at no cost. No credit card, subscription, or account sign-up is required:</p>
+        <ul style="margin:0 0 10px 18px;font-size:13px;color:var(--text-sub)">
+          <li><strong>Douyin Original Quality &amp; 1080p/4K Extraction:</strong> Built-in automatically.</li>
+          <li><strong>TikTok &amp; Xiaohongshu Watermark-Free Downloads:</strong> Built-in automatically.</li>
+          <li><strong>Audio (MP3), HD Cover Thumbnails &amp; Batch Album ZIP:</strong> Included free.</li>
+        </ul>
+      </div>
+
+      <div class="blog-card">
+        <span class="blog-tag">Advanced Configuration</span>
+        <h4>Looking for Bilibili 4K SESSDATA or TikTok Proxy Settings?</h4>
+        <p style="margin-bottom:12px">If you want to configure your own Bilibili <code>SESSDATA</code> cookie (to unlock member-only 1080p60/4K streams on Bilibili) or set a custom TikTok HTTP proxy, open the dedicated <strong>HD Settings</strong> panel below.</p>
+        <button type="button" class="btn-row-dl" style="width:auto;padding:0 16px" id="btnUpgradeToSettings">⚙️ Open HD Settings &amp; Configuration</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2332,6 +2885,10 @@
       navPlatforms: 'Supported Platforms',
       navHowTo: 'How to Use',
       navToolsLabel: 'Tools',
+      navFaqBtn: 'FAQ',
+      navBlogBtn: 'Blog',
+      navContactBtn: 'Contact',
+      settingsBtnText: 'Settings',
       upgradeBtnText: 'Upgrade',
       heroTitleTop: 'Download Videos from',
       heroTitleGrad: 'Douyin, Bilibili, TikTok and Xiaohongshu',
@@ -2371,9 +2928,13 @@
       navPlatforms: '支持平台',
       navHowTo: '使用教程',
       navToolsLabel: '工具箱',
-      upgradeBtnText: '高清配置',
+      navFaqBtn: '常见问题',
+      navBlogBtn: '技术专栏',
+      navContactBtn: '联系我们',
+      settingsBtnText: '高清设置',
+      upgradeBtnText: '套餐说明',
       heroTitleTop: '一键无水印解析下载',
-      heroTitleGrad: '抖音、哔哩哔哩、TikTok 与 小红书视频',
+      heroTitleGrad: '抖音、B站、TikTok 与小红书视频',
       subFast: '极速',
       subSimple: '简洁',
       subHq: '原画超清',
@@ -2428,19 +2989,26 @@
     banner.classList.add('show');
   }
 
-  function buildProxyUrl(rawUrl, platform) {
+  function buildProxyUrl(rawUrl, platform, altUrls) {
     if (!rawUrl) return '';
-    return API_BASE + '/api/proxy?url=' + encodeURIComponent(rawUrl) +
+    let u = API_BASE + '/api/proxy?url=' + encodeURIComponent(rawUrl) +
       '&platform=' + encodeURIComponent(platform || currentPlatform);
+    if (Array.isArray(altUrls) && altUrls.length > 1) {
+      u += '&alt=' + encodeURIComponent(JSON.stringify(altUrls.slice(0, 4)));
+    }
+    return u;
   }
 
-  function buildDownloadUrl(rawUrl, prefix, platform, mediaType, forceExt) {
+  function buildDownloadUrl(rawUrl, prefix, platform, mediaType, forceExt, altUrls) {
     if (!rawUrl) return '';
     let u = API_BASE + '/api/download?url=' + encodeURIComponent(rawUrl) +
       '&prefix=' + encodeURIComponent(prefix || 'DownDouyin') +
       '&platform=' + encodeURIComponent(platform || currentPlatform) +
       '&type=' + encodeURIComponent(mediaType || 'video');
     if (forceExt) u += '&ext=' + encodeURIComponent(forceExt);
+    if (Array.isArray(altUrls) && altUrls.length > 1) {
+      u += '&alt=' + encodeURIComponent(JSON.stringify(altUrls.slice(0, 4)));
+    }
     return u;
   }
 
@@ -2479,6 +3047,7 @@
     if (msg.includes('xsec_token') || msg.includes('安全限制') || msg.includes('过期')) return 'expired_or_restricted_link';
     if (msg.includes('cookie') || msg.includes('sessdata') || msg.includes('login')) return 'auth_or_cookie_required';
     if (msg.includes('404') || msg.includes('not found') || msg.includes('不存在') || msg.includes('已删除')) return 'media_not_found';
+    if (msg.includes('stalled') || msg.includes('timeout')) return 'stream_stall_or_timeout';
     if (msg.includes('chunk download failed')) return 'chunk_transfer_error';
     if (msg.includes('http 5')) return 'server_http_5xx';
     if (msg.includes('http 4')) return 'server_http_4xx';
@@ -2512,12 +3081,44 @@
     }
   }
 
+  const sizeBytesCache = {};
+  const inflightSizeProbes = {};
+
+  function readStreamChunkWithTimeout(reader, timeoutMs) {
+    let timer = null;
+    return Promise.race([
+      reader.read(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Download stream stalled')), timeoutMs);
+      })
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  }
+
+  function updateDownloadButtonProgress(btnEl, receivedBytes, totalBytes) {
+    if (!btnEl) return;
+    if (totalBytes > 0) {
+      const pct = Math.min(99, Math.max(1, Math.floor((receivedBytes / totalBytes) * 100)));
+      btnEl.innerHTML = '<span>⬇ ' + pct + '%</span>';
+    } else if (receivedBytes > 0) {
+      btnEl.innerHTML = '<span>⬇ ' + formatBytes(receivedBytes) + '</span>';
+    }
+  }
+
   /* ==================== SAFE NON-NAVIGATING DOWNLOAD HANDLER ==================== */
-  /* Uses 10MB HTTP Range chunks via /api/proxy so large Original Quality files (>32MB)
-     never hit Cloud Run's 32MB single-response HTTP 500 limit and never cause a white screen */
-  async function downloadFileSafely(targetUrl, filename, btnEl, rawMediaUrl, platform, downloadMethod) {
+  /* On production VPS (downdouyin.com), streams continuously in a single HTTP request via /api/download
+     with automatic Range resume and mirror representation verification if interrupted.
+     Compacts incoming Uint8Array chunks into Blob segments every 4MB so JS heap memory stays flat. */
+  async function downloadFileSafely(targetUrl, filename, btnEl, rawMediaUrl, platform, downloadMethod, knownSizeBytes, altUrls) {
     if (!targetUrl && !rawMediaUrl) return;
     if (btnEl && btnEl.disabled) return;
+
+    // Pause any active preview video playback so preview streaming does not compete for bandwidth
+    const activePreviewVideo = document.querySelector('#mediaStage video');
+    if (activePreviewVideo && typeof activePreviewVideo.pause === 'function') {
+      try { activePreviewVideo.pause(); } catch {}
+    }
 
     const cleanPlat = sanitizeAnalyticsPlatform(platform || currentPlatform);
     const cleanMethod = String(downloadMethod || 'video_stream').replace(/[^a-z0-9_]/gi, '_');
@@ -2542,105 +3143,215 @@
       status: 'started'
     });
 
+    const blobSegments = [];
+    const ramBatch = [];
+    let ramBatchBytes = 0;
+    const COMPACT_BATCH_BYTES = 4 * 1024 * 1024; // Compact into Blob storage every 4 MB to avoid JS heap buildup
+
+    function flushRamBatch(mimeType) {
+      if (ramBatch.length === 0) return;
+      blobSegments.push(new Blob(ramBatch, { type: mimeType || 'video/mp4' }));
+      ramBatch.length = 0;
+      ramBatchBytes = 0;
+    }
+
+    function appendChunk(u8, mimeType) {
+      ramBatch.push(u8);
+      ramBatchBytes += u8.byteLength;
+      if (ramBatchBytes >= COMPACT_BATCH_BYTES) {
+        flushRamBatch(mimeType);
+      }
+    }
+
+    function resetBuffers() {
+      blobSegments.length = 0;
+      ramBatch.length = 0;
+      ramBatchBytes = 0;
+    }
+
     try {
-      const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB per chunk (<32MB Cloud Run limit)
-      const baseProxyUrl = rawMediaUrl
-        ? buildProxyUrl(rawMediaUrl, cleanPlat)
-        : targetUrl;
-      const proxyEndpoint = baseProxyUrl +
-        (baseProxyUrl.includes('?') ? '&' : '?') +
+      const isCloudRunHost = window.location.hostname.endsWith('.run.app');
+      const CHUNK_SIZE = 16 * 1024 * 1024; // 16 MB chunk cap only used on Cloud Run (*.run.app)
+      const baseEndpoint = targetUrl || buildProxyUrl(rawMediaUrl, cleanPlat, altUrls);
+      const hasAltParam = baseEndpoint.includes('&alt=');
+      let downloadEndpoint = baseEndpoint +
+        (baseEndpoint.includes('?') ? '&' : '?') +
         'dl=1&method=' + encodeURIComponent(cleanMethod) +
         '&req_id=' + encodeURIComponent(dlReqId);
+      if (!hasAltParam && Array.isArray(altUrls) && altUrls.length > 1) {
+        downloadEndpoint += '&alt=' + encodeURIComponent(JSON.stringify(altUrls.slice(0, 5)));
+      }
 
-      let totalSize = 0;
+      let totalSize = Number(knownSizeBytes) > 0
+        ? Number(knownSizeBytes)
+        : (rawMediaUrl && sizeBytesCache[rawMediaUrl] ? sizeBytesCache[rawMediaUrl] : 0);
       let supportsRange = false;
       let contentType = 'video/mp4';
-
-      const firstResp = await fetch(proxyEndpoint, {
-        method: 'GET',
-        headers: { 'Range': 'bytes=0-' + (CHUNK_SIZE - 1) }
-      });
-
-      if (!firstResp.ok && firstResp.status !== 206) {
-        throw new Error('Download server returned HTTP ' + firstResp.status);
-      }
-
-      contentType = firstResp.headers.get('Content-Type') || contentType;
-      const contentRange = firstResp.headers.get('Content-Range') || '';
-
-      if (firstResp.status === 206 && contentRange) {
-        const m = contentRange.match(/\/(\d+)$/);
-        if (m) {
-          totalSize = parseInt(m[1], 10);
-          supportsRange = totalSize > 0;
-        }
-      } else {
-        const cl = parseInt(firstResp.headers.get('Content-Length') || '0', 10);
-        if (cl > 0) totalSize = cl;
-      }
-
-      const chunks = [];
       let received = 0;
+      let fullRestartCount = 0;
+      const MAX_FULL_RESTARTS = 1;
 
-      if (firstResp.body && typeof firstResp.body.getReader === 'function') {
-        const reader = firstResp.body.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value) {
-            chunks.push(value);
-            received += value.byteLength;
-            if (btnEl && totalSize > 0) {
-              const pct = Math.min(99, Math.round((received / totalSize) * 100));
-              btnEl.innerHTML = '<span>⬇ ' + pct + '%</span>';
-            }
-          }
+      while (true) {
+        resetBuffers();
+        received = 0;
+
+        const firstHeaders = {};
+        if (isCloudRunHost) {
+          firstHeaders['Range'] = 'bytes=0-' + (CHUNK_SIZE - 1);
         }
-      } else {
-        const buf = new Uint8Array(await firstResp.arrayBuffer());
-        chunks.push(buf);
-        received += buf.byteLength;
-      }
 
-      while (supportsRange && received < totalSize) {
-        const start = received;
-        const end = Math.min(start + CHUNK_SIZE - 1, totalSize - 1);
-        const partResp = await fetch(proxyEndpoint, {
+        const firstResp = await fetch(downloadEndpoint, {
           method: 'GET',
-          headers: { 'Range': 'bytes=' + start + '-' + end }
+          headers: firstHeaders
         });
 
-        if (!partResp.ok && partResp.status !== 206) {
-          throw new Error('Chunk download failed with HTTP ' + partResp.status);
+        if (!firstResp.ok && firstResp.status !== 206) {
+          throw new Error('Download server returned HTTP ' + firstResp.status);
         }
 
-        if (partResp.body && typeof partResp.body.getReader === 'function') {
-          const reader = partResp.body.getReader();
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value) {
-              chunks.push(value);
-              received += value.byteLength;
-              if (btnEl && totalSize > 0) {
-                const pct = Math.min(99, Math.round((received / totalSize) * 100));
-                btnEl.innerHTML = '<span>⬇ ' + pct + '%</span>';
+        contentType = firstResp.headers.get('Content-Type') || contentType;
+        const contentRange = firstResp.headers.get('Content-Range') || '';
+        const acceptRanges = (firstResp.headers.get('Accept-Ranges') || '').toLowerCase();
+        if (acceptRanges.includes('bytes') || firstResp.status === 206) {
+          supportsRange = true;
+        }
+
+        if (firstResp.status === 206 && contentRange) {
+          const m = contentRange.match(/\/(\d+)$/);
+          if (m) {
+            totalSize = parseInt(m[1], 10);
+            supportsRange = totalSize > 0;
+          }
+        } else {
+          const cl = parseInt(firstResp.headers.get('Content-Length') || '0', 10);
+          if (cl > 0) totalSize = cl;
+        }
+
+        if (firstResp.body && typeof firstResp.body.getReader === 'function') {
+          const reader = firstResp.body.getReader();
+          try {
+            while (true) {
+              const { done, value } = await readStreamChunkWithTimeout(reader, 22000);
+              if (done) break;
+              if (value && value.byteLength > 0) {
+                appendChunk(value, contentType);
+                received += value.byteLength;
+                updateDownloadButtonProgress(btnEl, received, totalSize);
               }
+            }
+          } catch (streamErr) {
+            try { await reader.cancel(); } catch {}
+            if (!supportsRange || totalSize <= 0 || received === 0) {
+              if (fullRestartCount < MAX_FULL_RESTARTS) {
+                fullRestartCount++;
+                continue;
+              }
+              throw streamErr;
             }
           }
         } else {
-          const buf = new Uint8Array(await partResp.arrayBuffer());
-          if (buf.byteLength === 0) break;
-          chunks.push(buf);
-          received += buf.byteLength;
+          const buf = new Uint8Array(await firstResp.arrayBuffer());
+          if (buf.byteLength > 0) {
+            appendChunk(buf, contentType);
+            received += buf.byteLength;
+            updateDownloadButtonProgress(btnEl, received, totalSize);
+          }
         }
+
+        // Continue fetching remaining bytes if chunked (on Cloud Run) or if a continuous stream dropped mid-transfer
+        let resumeRetries = 0;
+        const MAX_RESUME_RETRIES = 3;
+        let needFullRestart = false;
+
+        while (supportsRange && totalSize > 0 && received < totalSize) {
+          const start = received;
+          const end = isCloudRunHost
+            ? Math.min(start + CHUNK_SIZE - 1, totalSize - 1)
+            : (totalSize - 1);
+
+          try {
+            const resumeUrl = downloadEndpoint + '&expected_size=' + encodeURIComponent(String(totalSize));
+            const partResp = await fetch(resumeUrl, {
+              method: 'GET',
+              headers: { 'Range': 'bytes=' + start + '-' + end }
+            });
+
+            if (partResp.status === 409 || partResp.status === 416) {
+              // Alternate mirror has a different representation size; restart cleanly from byte 0 instead of corrupting
+              needFullRestart = true;
+              break;
+            }
+
+            if (partResp.status !== 206) {
+              throw new Error('Range resume returned HTTP ' + partResp.status);
+            }
+
+            const partCr = partResp.headers.get('Content-Range') || '';
+            const crMatch = partCr.match(/bytes\s+(\d+)-(\d+)\/(\d+)/i);
+            if (!crMatch || parseInt(crMatch[1], 10) !== start || parseInt(crMatch[3], 10) !== totalSize) {
+              needFullRestart = true;
+              try { await partResp.body?.cancel(); } catch {}
+              break;
+            }
+
+            if (partResp.body && typeof partResp.body.getReader === 'function') {
+              const reader = partResp.body.getReader();
+              let partBytes = 0;
+              try {
+                while (true) {
+                  const { done, value } = await readStreamChunkWithTimeout(reader, 22000);
+                  if (done) break;
+                  if (value && value.byteLength > 0) {
+                    appendChunk(value, contentType);
+                    received += value.byteLength;
+                    partBytes += value.byteLength;
+                    updateDownloadButtonProgress(btnEl, received, totalSize);
+                  }
+                }
+              } catch (partStreamErr) {
+                try { await reader.cancel(); } catch {}
+                if (partBytes === 0) throw partStreamErr;
+              }
+              if (partBytes === 0) {
+                throw new Error('Chunk download returned 0 bytes');
+              }
+            } else {
+              const buf = new Uint8Array(await partResp.arrayBuffer());
+              if (buf.byteLength === 0) break;
+              appendChunk(buf, contentType);
+              received += buf.byteLength;
+              updateDownloadButtonProgress(btnEl, received, totalSize);
+            }
+          } catch (resumeErr) {
+            resumeRetries++;
+            if (resumeRetries > MAX_RESUME_RETRIES) {
+              if (fullRestartCount < MAX_FULL_RESTARTS) {
+                needFullRestart = true;
+                break;
+              }
+              throw resumeErr;
+            }
+          }
+        }
+
+        if (needFullRestart && fullRestartCount < MAX_FULL_RESTARTS) {
+          fullRestartCount++;
+          continue;
+        }
+        break;
       }
 
       if (received === 0) {
         throw new Error('Download returned empty payload');
       }
+      if (totalSize > 0 && received < totalSize) {
+        throw new Error('Incomplete media transfer (' + formatBytes(received) + ' / ' + formatBytes(totalSize) + ')');
+      }
 
-      const blob = new Blob(chunks, { type: contentType });
+      flushRamBatch(contentType);
+      const blob = blobSegments.length === 1 ? blobSegments[0] : new Blob(blobSegments, { type: contentType });
+      resetBuffers();
+
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
@@ -2653,7 +3364,7 @@
         a.remove();
       }, 6000);
 
-      // 3. Track completed file transfer ONLY after full Blob is assembled and saved
+      // 3. Track completed file transfer ONLY after full verified payload is assembled and saved
       trackAnalyticsEvent('download_request_success', {
         platform: cleanPlat,
         download_method: cleanMethod,
@@ -2669,6 +3380,7 @@
       }
       showToast('Download complete: ' + (filename || 'video.mp4'));
     } catch (err) {
+      resetBuffers();
       // 4. Track failed file transfer with non-sensitive error_category
       trackAnalyticsEvent('download_request_failed', {
         platform: cleanPlat,
@@ -2765,9 +3477,16 @@
     const coverUrl = d.cover || d.cover_url || (Array.isArray(d.images) && d.images[0]) || '';
     const musicUrl = (d.music && typeof d.music === 'object' ? d.music.url : '') || d.music_url || '';
 
-    const rawQualities = Array.isArray(d.qualities) ? d.qualities : [];
+    const rawVideoUrls = Array.isArray(d.video_urls) ? d.video_urls.filter(Boolean) : [];
+    const rawQualities = (Array.isArray(d.qualities) ? d.qualities : []).map(q => {
+      if (!q || typeof q !== 'object') return q;
+      const qUrls = Array.isArray(q.urls) && q.urls.length > 0
+        ? q.urls
+        : (q.url && rawVideoUrls.includes(q.url) ? rawVideoUrls : (q.url ? [q.url] : []));
+      return { ...q, urls: qUrls };
+    });
     const primaryVideoUrl = d.video_url ||
-      (Array.isArray(d.video_urls) && d.video_urls[0]) ||
+      rawVideoUrls[0] ||
       (rawQualities[0] && rawQualities[0].url) || '';
 
     const rawLive = Array.isArray(d.live_videos)
@@ -2775,7 +3494,8 @@
       : (Array.isArray(d.live_photos) ? d.live_photos : []);
     const livePhotos = rawLive.map((lp, i) => ({
       index: lp.index || (i + 1),
-      video_url: lp.video_url || lp.url || (Array.isArray(lp.urls) && lp.urls[0]) || ''
+      video_url: lp.video_url || lp.url || (Array.isArray(lp.urls) && lp.urls[0]) || '',
+      urls: Array.isArray(lp.urls) ? lp.urls : []
     })).filter(lp => Boolean(lp.video_url));
 
     const playCount = d.stats && Number(d.stats.play) > 0 ? formatCountNumber(d.stats.play) + ' views' : '';
@@ -2791,6 +3511,7 @@
       verified: Boolean(d.verified),
       cover_url: coverUrl,
       video_url: primaryVideoUrl,
+      video_urls: rawVideoUrls,
       music_url: musicUrl,
       duration: formatDurationSeconds(d.duration),
       date: d.create_time ? formatTimestampDate(d.create_time) : (d.date ? String(d.date) : ''),
@@ -2802,38 +3523,73 @@
     };
   }
 
-  function parseQualityDisplay(q, idx) {
+  function computeBaseQualityName(q, idx) {
+    if (q && q.preserveLabel) {
+      if (currentLang === 'zh' && q.labelZh) return String(q.labelZh);
+      if (q.label) return String(q.label);
+    }
     const rawId = String(q.id || q.name || '').toLowerCase();
     const rawLabel = String(q.label || q.shortLabel || 'HD');
     const lowerLabel = rawLabel.toLowerCase();
     const resNum = Number(q.resolution) || 0;
 
-    let name = rawLabel;
-
     if (idx === 0 || rawId === 'origin' || rawId === 'original' || q.tag === 'Original' || rawLabel.includes('原画') || lowerLabel.includes('origin')) {
-      name = currentLang === 'zh' ? '原画质量 (Original)' : 'Original Quality';
-    } else if (rawId === '120' || resNum >= 2160 || lowerLabel.includes('4k') || lowerLabel.includes('2160')) {
-      name = currentLang === 'zh' ? '4K 超清' : '4K Ultra HD';
-    } else if (resNum >= 1440 || lowerLabel.includes('2k') || lowerLabel.includes('1440')) {
-      name = '2K QHD';
-    } else if (resNum >= 1080 || rawId.includes('1080') || rawLabel.includes('1080')) {
-      if (rawLabel.includes('60')) {
-        name = '1080p 60fps';
-      } else {
-        name = '1080p Full HD';
+      return currentLang === 'zh' ? '原画质量 (Original)' : 'Original Quality';
+    }
+    if (rawId === '120' || resNum >= 2160 || lowerLabel.includes('4k') || lowerLabel.includes('2160')) {
+      return currentLang === 'zh' ? '4K 超清' : '4K Ultra HD';
+    }
+    if (resNum >= 1440 || lowerLabel.includes('2k') || lowerLabel.includes('1440')) {
+      return '2K QHD';
+    }
+    if (resNum >= 1080 || rawId.includes('1080') || rawLabel.includes('1080')) {
+      return rawLabel.includes('60') ? '1080p 60fps' : '1080p Full HD';
+    }
+    if (resNum >= 720 || rawId.includes('720') || rawLabel.includes('720')) {
+      return rawLabel.includes('60') ? '720p 60fps' : '720p HD';
+    }
+    if (resNum >= 540 || rawId.includes('540') || rawLabel.includes('540') || rawLabel.includes('576')) {
+      return '540p SD';
+    }
+    if (resNum >= 480 || rawId.includes('480') || rawLabel.includes('480')) {
+      return '480p SD';
+    }
+    if (resNum >= 360 || rawId.includes('360') || rawLabel.includes('360')) {
+      return '360p SD';
+    }
+    if (rawId === 'hd' || rawId === 'default') {
+      return 'HD Quality';
+    }
+    if (rawId === 'sd') {
+      return 'SD Quality';
+    }
+    return rawLabel;
+  }
+
+  function parseQualityDisplay(q, idx, allQualities) {
+    let name = computeBaseQualityName(q, idx);
+
+    // Disambiguate if another quality row in the same list would produce the identical base name
+    if (Array.isArray(allQualities) && allQualities.length > 1) {
+      const sameNameCount = allQualities.filter((other, otherIdx) => computeBaseQualityName(other, otherIdx) === name).length;
+      if (sameNameCount > 1) {
+        const rawCodec = String(q.codec || '').toUpperCase();
+        const codecClean = rawCodec.includes('265') || rawCodec.includes('HEV')
+          ? 'H.265'
+          : rawCodec.includes('AV01') || rawCodec.includes('AV1')
+            ? 'AV1'
+            : rawCodec.includes('264') || rawCodec.includes('AVC')
+              ? 'H.264'
+              : rawCodec;
+        const br = Number(q.bit_rate || q.bandwidth || 0);
+        const kbps = br > 0 ? Math.round(br / 1000) + ' kbps' : '';
+        const detailParts = [codecClean, kbps].filter(Boolean);
+        if (detailParts.length > 0) {
+          name = `${name} (${detailParts.join(' · ')})`;
+        } else {
+          name = `${name} #${idx + 1}`;
+        }
       }
-    } else if (resNum >= 720 || rawId.includes('720') || rawLabel.includes('720')) {
-      name = '720p HD';
-    } else if (resNum >= 540 || rawId.includes('540') || rawLabel.includes('540') || rawLabel.includes('576')) {
-      name = '540p SD';
-    } else if (resNum >= 480 || rawId.includes('480') || rawLabel.includes('480')) {
-      name = '480p SD';
-    } else if (resNum >= 360 || rawId.includes('360') || rawLabel.includes('360')) {
-      name = '360p SD';
-    } else if (rawId === 'hd' || rawId === 'default') {
-      name = 'HD Quality';
-    } else if (rawId === 'sd') {
-      name = 'SD Quality';
     }
 
     let formattedSize = '';
@@ -2850,23 +3606,45 @@
     };
   }
 
-  async function probeQualitySize(rawUrl, platform, cellEl) {
+  async function probeQualitySize(rawUrl, platform, cellEl, altUrls) {
     if (!rawUrl || !cellEl) return;
     if (sizeProbeCache[rawUrl]) {
       cellEl.textContent = sizeProbeCache[rawUrl];
       return;
     }
-    try {
-      const proxyUrl = buildProxyUrl(rawUrl, platform);
-      const resp = await fetch(proxyUrl, { method: 'HEAD' });
-      const len = resp.headers.get('Content-Length');
-      const formatted = formatBytes(len);
-      if (formatted) {
-        sizeProbeCache[rawUrl] = formatted;
-        cellEl.textContent = formatted;
+    if (inflightSizeProbes[rawUrl]) {
+      try {
+        const formatted = await inflightSizeProbes[rawUrl];
+        if (formatted) cellEl.textContent = formatted;
+      } catch {}
+      return;
+    }
+    const probeTask = (async () => {
+      try {
+        const proxyUrl = buildProxyUrl(rawUrl, platform, altUrls);
+        const resp = await fetch(proxyUrl, { method: 'HEAD' });
+        const len = resp.headers.get('Content-Length');
+        const numBytes = Number(len);
+        const formatted = formatBytes(len);
+        if (formatted) {
+          sizeProbeCache[rawUrl] = formatted;
+          if (Number.isFinite(numBytes) && numBytes > 0) {
+            sizeBytesCache[rawUrl] = numBytes;
+          }
+          return formatted;
+        }
+      } catch {
+        // Leave size cell empty if upstream CDN does not expose Content-Length
+      } finally {
+        delete inflightSizeProbes[rawUrl];
       }
-    } catch {
-      // Leave size cell empty if upstream CDN does not expose Content-Length
+      return '';
+    })();
+
+    inflightSizeProbes[rawUrl] = probeTask;
+    const formatted = await probeTask;
+    if (formatted) {
+      cellEl.textContent = formatted;
     }
   }
 
@@ -3044,9 +3822,12 @@
 
     const qualities = Array.isArray(data.qualities) && data.qualities.length
       ? data.qualities
-      : (data.video_url ? [{ id: 'default', label: 'Original Quality', url: data.video_url }] : []);
+      : (data.video_url ? [{ id: 'default', label: 'Original Quality', url: data.video_url, urls: data.video_urls || [data.video_url] }] : []);
     const activeQ = qualities[selectedQualityIdx] || qualities[0];
     const rawVideoUrl = activeQ ? activeQ.url : data.video_url;
+    const activeAltUrls = activeQ && Array.isArray(activeQ.urls) && activeQ.urls.length > 0
+      ? activeQ.urls
+      : (Array.isArray(data.video_urls) ? data.video_urls : []);
 
     if (coverSrc) {
       const img = document.createElement('img');
@@ -3070,10 +3851,11 @@
         video.controls = true;
         video.autoplay = true;
         video.playsInline = true;
+        video.preload = 'metadata';
         video.style.width = '100%';
         video.style.height = '100%';
         if (coverSrc) video.poster = coverSrc;
-        video.src = buildProxyUrl(rawVideoUrl, plat);
+        video.src = buildProxyUrl(rawVideoUrl, plat, activeAltUrls);
         stage.appendChild(video);
       });
 
@@ -3149,14 +3931,14 @@
     // Video Tab: Build rows strictly from backend qualities
     const rawQualities = Array.isArray(data.qualities) && data.qualities.length
       ? data.qualities
-      : (data.video_url ? [{ id: 'origin', label: 'Original Quality', url: data.video_url }] : []);
+      : (data.video_url ? [{ id: 'origin', label: 'Original Quality', url: data.video_url, urls: data.video_urls || [data.video_url] }] : []);
 
     if (selectedQualityIdx >= rawQualities.length) {
       selectedQualityIdx = 0;
     }
 
     rawQualities.forEach((q, idx) => {
-      const info = parseQualityDisplay(q, idx);
+      const info = parseQualityDisplay(q, idx, rawQualities);
       const row = document.createElement('div');
       row.className = 'quality-row' + (idx === selectedQualityIdx ? ' selected' : '');
       row.innerHTML = `
@@ -3168,8 +3950,11 @@
       `;
 
       const sizeCell = row.querySelector('.q-size');
+      const altUrls = Array.isArray(q.urls) && q.urls.length > 0
+        ? q.urls
+        : (Array.isArray(data.video_urls) ? data.video_urls : []);
       if (!info.size && q.url) {
-        probeQualitySize(q.url, plat, sizeCell);
+        probeQualitySize(q.url, plat, sizeCell, altUrls);
       }
 
       row.addEventListener('click', () => {
@@ -3190,8 +3975,9 @@
         const targetRawUrl = q.url || data.video_url;
         const qTag = idx === 0 ? 'Original' : String(q.resolution || q.id || q.name || 'HD').replace(/[^a-zA-Z0-9]/g, '');
         const fname = `${baseName}_${qTag}.mp4`;
-        const dlUrl = buildDownloadUrl(targetRawUrl, `${baseName}_${qTag}`, plat, 'video', '.mp4');
-        downloadFileSafely(dlUrl, fname, dlBtn, targetRawUrl, plat, idx === 0 ? 'video_original_mp4' : 'video_mp4');
+        const knownBytes = (typeof q.size === 'number' && q.size > 0) ? q.size : (sizeBytesCache[targetRawUrl] || 0);
+        const dlUrl = buildDownloadUrl(targetRawUrl, `${baseName}_${qTag}`, plat, 'video', '.mp4', altUrls);
+        downloadFileSafely(dlUrl, fname, dlBtn, targetRawUrl, plat, idx === 0 ? 'video_original_mp4' : 'video_mp4', knownBytes, altUrls);
       });
 
       listEl.appendChild(row);
@@ -3361,12 +4147,14 @@
     showPreviewLoadingState();
 
     try {
+      const localBiliCookie = localStorage.getItem('dd_bili_cookie') || '';
       const resp = await fetch(API_BASE + '/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: rawText,
-          platform: currentPlatform
+          platform: currentPlatform,
+          ...(localBiliCookie ? { bili_cookie: localBiliCookie } : {})
         })
       });
 
@@ -3436,26 +4224,39 @@
 
   /* ==================== SETTINGS MODAL (BILIBILI & TIKTOK CONFIG) ==================== */
   async function refreshConfigStatus() {
+    const localBili = (localStorage.getItem('dd_bili_cookie') || '').trim();
     try {
       const bResp = await fetch(API_BASE + '/api/bili/config');
       const bData = await bResp.json();
       const bEl = $('biliCfgStatus');
       if (bEl) {
-        bEl.textContent = bData.configured
-          ? `✅ Configured (${bData.source || 'cookie'}, SESSDATA: ${bData.sessdata_preview || 'active'})`
-          : 'ℹ️ Using default guest stream (up to 720P/1080P). Add SESSDATA for 4K Ultra HD.';
+        if (localBili) {
+          const preview = localBili.length > 8 ? (localBili.slice(0, 4) + '••••' + localBili.slice(-3)) : 'active';
+          bEl.textContent = `✅ Configured in browser (${preview})`;
+        } else if (bData && bData.configured) {
+          bEl.textContent = `✅ Configured (${bData.source || 'server'}, SESSDATA: ${bData.sessdata_preview || 'active'})`;
+        } else {
+          bEl.textContent = 'ℹ️ Using default guest stream (up to 720P/1080P). Add SESSDATA for 1080P60 & 4K Ultra HD.';
+        }
       }
-    } catch {}
+    } catch {
+      const bEl = $('biliCfgStatus');
+      if (bEl) {
+        bEl.textContent = localBili
+          ? '✅ Configured in browser localStorage'
+          : 'ℹ️ Using default guest stream (up to 720P/1080P).';
+      }
+    }
 
     try {
       const tResp = await fetch(API_BASE + '/api/tiktok/config');
       const tData = await tResp.json();
       const tEl = $('ttCfgStatus');
       if (tEl) {
-        tEl.textContent = tData.configured
+        tEl.textContent = tData && tData.configured
           ? `✅ Proxy active (${tData.proxy})`
           : 'ℹ️ Direct connection mode (no proxy configured).';
-        if (tData.proxy && $('ttProxyInput')) {
+        if (tData && tData.proxy && $('ttProxyInput')) {
           $('ttProxyInput').value = tData.proxy;
         }
       }
@@ -3489,6 +4290,120 @@
     localStorage.setItem('dd_theme', t);
   }
 
+  /* ==================== MODAL & NAVIGATION CONTROLLER ==================== */
+  const MODAL_IDS = [
+    'settingsModal',
+    'faqModal',
+    'guideModal',
+    'blogModal',
+    'privacyModal',
+    'termsModal',
+    'contactModal',
+    'upgradeModal'
+  ];
+
+  function closeAllModals(clearHash) {
+    MODAL_IDS.forEach(id => {
+      const el = $(id);
+      if (el) el.classList.remove('show');
+    });
+    if (clearHash && window.location.hash && /^#(settings|faq|guide|blog|privacy|terms|contact|upgrade)$/i.test(window.location.hash)) {
+      try {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      } catch {}
+    }
+  }
+
+  function openModalById(modalId, hashSlug) {
+    closeAllModals(false);
+    const target = $(modalId);
+    if (!target) return;
+    target.classList.add('show');
+    if (modalId === 'settingsModal') {
+      refreshConfigStatus();
+    }
+    if (hashSlug && window.location.hash !== '#' + hashSlug) {
+      try {
+        history.replaceState(null, '', '#' + hashSlug);
+      } catch {}
+    }
+  }
+
+  function setPrimaryNavActive(navKey) {
+    document.querySelectorAll('.main-nav .nav-item[data-nav]').forEach(el => {
+      el.classList.toggle('active', el.dataset.nav === navKey);
+    });
+  }
+
+  function navigateToSection(sectionId, navKey, hashSlug) {
+    closeAllModals(false);
+    setPrimaryNavActive(navKey || 'home');
+    if (hashSlug) {
+      try {
+        history.replaceState(null, '', '#' + hashSlug);
+      } catch {}
+    }
+    if (!sectionId || sectionId === 'top') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const sec = $(sectionId);
+    if (sec) {
+      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function handleHashRoute() {
+    const rawHash = (window.location.hash || '').replace(/^#/, '').trim().toLowerCase();
+    if (!rawHash || rawHash === 'home' || rawHash === 'top') {
+      closeAllModals(false);
+      setPrimaryNavActive('home');
+      return;
+    }
+    if (rawHash === 'platforms' || rawHash === 'platformsrow') {
+      navigateToSection('platformsRow', 'platforms', 'platforms');
+      return;
+    }
+    if (rawHash === 'how-to-use' || rawHash === 'howtosection' || rawHash === 'howto') {
+      navigateToSection('howToSection', 'howto', 'how-to-use');
+      return;
+    }
+    if (rawHash === 'faq') {
+      setPrimaryNavActive('faq');
+      openModalById('faqModal', 'faq');
+      return;
+    }
+    if (rawHash === 'guide' || rawHash === 'detailed-guide') {
+      openModalById('guideModal', 'guide');
+      return;
+    }
+    if (rawHash === 'blog') {
+      setPrimaryNavActive('blog');
+      openModalById('blogModal', 'blog');
+      return;
+    }
+    if (rawHash === 'privacy' || rawHash === 'privacy-policy') {
+      openModalById('privacyModal', 'privacy');
+      return;
+    }
+    if (rawHash === 'terms' || rawHash === 'terms-of-service') {
+      openModalById('termsModal', 'terms');
+      return;
+    }
+    if (rawHash === 'contact') {
+      setPrimaryNavActive('contact');
+      openModalById('contactModal', 'contact');
+      return;
+    }
+    if (rawHash === 'upgrade' || rawHash === 'plans') {
+      openModalById('upgradeModal', 'upgrade');
+      return;
+    }
+    if (rawHash === 'settings') {
+      openModalById('settingsModal', 'settings');
+    }
+  }
+
   /* ==================== INITIALIZATION & EVENT LISTENERS ==================== */
   function init() {
     // Theme initialization
@@ -3517,27 +4432,37 @@
     const toolsWrap = $('toolsDropdownWrap');
     $('navToolsBtn').addEventListener('click', (e) => {
       e.stopPropagation();
-      toolsWrap.classList.toggle('open');
+      const isOpen = toolsWrap.classList.toggle('open');
+      $('navToolsBtn').setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     });
     document.querySelectorAll('.dropdown-item').forEach(item => {
       item.addEventListener('click', () => {
         toolsWrap.classList.remove('open');
+        $('navToolsBtn').setAttribute('aria-expanded', 'false');
         const tool = item.dataset.tool;
         if (tool === 'video') {
+          closeAllModals(true);
           currentMediaTab = 'video';
           if (activeMediaData) renderPreviewCard(activeMediaData);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
           $('urlInput').focus();
+          showToast('Video Downloader active — paste a link above.');
         } else if (tool === 'audio') {
+          closeAllModals(true);
           currentMediaTab = 'audio';
           if (activeMediaData) renderPreviewCard(activeMediaData);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
           $('urlInput').focus();
+          showToast('Audio / MP3 Extractor active — paste a video link above.');
         } else if (tool === 'thumb') {
+          closeAllModals(true);
           currentMediaTab = 'thumbnail';
           if (activeMediaData) renderPreviewCard(activeMediaData);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
           $('urlInput').focus();
+          showToast('HD Thumbnail & Album Grabber active — paste a link above.');
         } else if (tool === 'settings') {
-          $('settingsModal').classList.add('show');
-          refreshConfigStatus();
+          openModalById('settingsModal', 'settings');
         }
       });
     });
@@ -3545,6 +4470,7 @@
     document.addEventListener('click', () => {
       langWrap.classList.remove('open');
       toolsWrap.classList.remove('open');
+      $('navToolsBtn').setAttribute('aria-expanded', 'false');
     });
 
     // Platform selector buttons
@@ -3594,38 +4520,126 @@
       });
     });
 
-    // Modals (Settings & FAQ/Guide)
-    const openSettings = (e) => {
+    // Brand Logo & Home Links (Header + Footer)
+    const goHome = (e) => {
       if (e) e.preventDefault();
-      $('settingsModal').classList.add('show');
-      refreshConfigStatus();
+      navigateToSection('top', 'home', 'home');
     };
-    const openFaq = (e) => {
-      if (e) e.preventDefault();
-      $('faqModal').classList.add('show');
-    };
+    $('brandHomeLink').addEventListener('click', goHome);
+    $('footerBrandHomeLink').addEventListener('click', goHome);
+    $('navHome').addEventListener('click', goHome);
+    $('footerHomeLink').addEventListener('click', goHome);
 
-    $('btnHeaderSettings').addEventListener('click', openSettings);
-    $('footerSettingsLink').addEventListener('click', openSettings);
-    $('navFaqBtn').addEventListener('click', openFaq);
-    $('btnDetailedGuide').addEventListener('click', openFaq);
-    $('footerFaqLink').addEventListener('click', openFaq);
-    $('footerGuideLink').addEventListener('click', openFaq);
-    $('footerPrivacyLink').addEventListener('click', openFaq);
-    $('footerTermsLink').addEventListener('click', openFaq);
+    // Section Navigation Links (Supported Platforms & How to Use)
+    const goPlatforms = (e) => {
+      if (e) e.preventDefault();
+      navigateToSection('platformsRow', 'platforms', 'platforms');
+    };
+    $('navPlatforms').addEventListener('click', goPlatforms);
+    $('footerPlatformsLink').addEventListener('click', goPlatforms);
+
+    const goHowTo = (e) => {
+      if (e) e.preventDefault();
+      navigateToSection('howToSection', 'howto', 'how-to-use');
+    };
+    $('navHowTo').addEventListener('click', goHowTo);
+    $('footerHowToLink').addEventListener('click', goHowTo);
+
+    // Dedicated Modal Triggers (Each opens ONLY its own matching modal!)
+    const triggerFaq = (e) => {
+      if (e) e.preventDefault();
+      setPrimaryNavActive('faq');
+      openModalById('faqModal', 'faq');
+    };
+    $('navFaqBtn').addEventListener('click', triggerFaq);
+    $('footerFaqLink').addEventListener('click', triggerFaq);
+
+    const triggerGuide = (e) => {
+      if (e) e.preventDefault();
+      openModalById('guideModal', 'guide');
+    };
+    $('btnDetailedGuide').addEventListener('click', triggerGuide);
+    $('footerDetailedGuideLink').addEventListener('click', triggerGuide);
+
+    const triggerBlog = (e) => {
+      if (e) e.preventDefault();
+      setPrimaryNavActive('blog');
+      openModalById('blogModal', 'blog');
+    };
+    $('navBlogBtn').addEventListener('click', triggerBlog);
+    $('footerBlogLink').addEventListener('click', triggerBlog);
+
+    const triggerPrivacy = (e) => {
+      if (e) e.preventDefault();
+      openModalById('privacyModal', 'privacy');
+    };
+    $('footerPrivacyLink').addEventListener('click', triggerPrivacy);
+    $('faqToPrivacyLink').addEventListener('click', triggerPrivacy);
+
+    const triggerTerms = (e) => {
+      if (e) e.preventDefault();
+      openModalById('termsModal', 'terms');
+    };
+    $('footerTermsLink').addEventListener('click', triggerTerms);
+    $('faqToTermsLink').addEventListener('click', triggerTerms);
+
+    const triggerContact = (e) => {
+      if (e) e.preventDefault();
+      setPrimaryNavActive('contact');
+      openModalById('contactModal', 'contact');
+    };
+    $('navContactBtn').addEventListener('click', triggerContact);
+    $('footerContactLink').addEventListener('click', triggerContact);
+    $('privacyToContactLink').addEventListener('click', triggerContact);
+    $('termsToContactLink').addEventListener('click', triggerContact);
+
+    const triggerSettings = (e) => {
+      if (e) e.preventDefault();
+      openModalById('settingsModal', 'settings');
+    };
+    $('btnOpenSettings').addEventListener('click', triggerSettings);
+    $('footerSettingsLink').addEventListener('click', triggerSettings);
+    $('btnUpgradeToSettings').addEventListener('click', triggerSettings);
+
+    const triggerUpgrade = (e) => {
+      if (e) e.preventDefault();
+      openModalById('upgradeModal', 'upgrade');
+    };
+    $('btnHeaderUpgrade').addEventListener('click', triggerUpgrade);
+
     $('footerToolsLink').addEventListener('click', (e) => {
       e.preventDefault();
+      closeAllModals(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      $('urlInput').focus();
+      setTimeout(() => {
+        toolsWrap.classList.add('open');
+        $('navToolsBtn').setAttribute('aria-expanded', 'true');
+      }, 250);
     });
 
-    $('btnCloseSettings').addEventListener('click', () => $('settingsModal').classList.remove('show'));
-    $('btnCloseFaq').addEventListener('click', () => $('faqModal').classList.remove('show'));
+    // Close Buttons for All 8 Modals
+    $('btnCloseSettings').addEventListener('click', () => closeAllModals(true));
+    $('btnCloseFaq').addEventListener('click', () => closeAllModals(true));
+    $('btnCloseGuide').addEventListener('click', () => closeAllModals(true));
+    $('btnCloseBlog').addEventListener('click', () => closeAllModals(true));
+    $('btnClosePrivacy').addEventListener('click', () => closeAllModals(true));
+    $('btnCloseTerms').addEventListener('click', () => closeAllModals(true));
+    $('btnCloseContact').addEventListener('click', () => closeAllModals(true));
+    $('btnCloseUpgrade').addEventListener('click', () => closeAllModals(true));
 
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
       backdrop.addEventListener('click', (e) => {
-        if (e.target === backdrop) backdrop.classList.remove('show');
+        if (e.target === backdrop) closeAllModals(true);
       });
+    });
+
+    // Keyboard Accessibility: Close any open modal or dropdown on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAllModals(true);
+        langWrap.classList.remove('open');
+        toolsWrap.classList.remove('open');
+      }
     });
 
     // Settings Modal Tabs
@@ -3638,10 +4652,14 @@
       });
     });
 
-    // Save / Clear Bilibili Cookie
+    // Save / Clear Bilibili Cookie (Persists in browser localStorage + syncs runtime config)
     $('btnSaveBiliCookie').addEventListener('click', async () => {
       const val = $('biliCookieInput').value.trim();
-      if (!val) return;
+      if (!val) {
+        showError('Please paste a valid Bilibili SESSDATA cookie before saving.');
+        return;
+      }
+      localStorage.setItem('dd_bili_cookie', val);
       try {
         const r = await fetch(API_BASE + '/api/bili/config', {
           method: 'POST',
@@ -3653,21 +4671,23 @@
         showToast('Bilibili SESSDATA saved!');
         refreshConfigStatus();
       } catch (e) {
-        showError('Failed to save Bilibili cookie: ' + e.message);
+        showToast('Bilibili SESSDATA saved in browser!');
+        refreshConfigStatus();
       }
     });
 
     $('btnClearBiliCookie').addEventListener('click', async () => {
+      localStorage.removeItem('dd_bili_cookie');
+      $('biliCookieInput').value = '';
       try {
         await fetch(API_BASE + '/api/bili/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ clear: true })
         });
-        $('biliCookieInput').value = '';
-        showToast('Bilibili cookie cleared.');
-        refreshConfigStatus();
       } catch {}
+      showToast('Bilibili cookie cleared.');
+      refreshConfigStatus();
     });
 
     // Save / Clear TikTok Proxy
@@ -3701,14 +4721,81 @@
       } catch {}
     });
 
+    // Contact Form Submission (/api/contact)
+    const contactForm = $('contactForm');
+    if (contactForm) {
+      contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const feedbackBox = $('contactFeedbackBox');
+        const submitBtn = $('btnSubmitContact');
+        const name = ($('contactName').value || '').trim();
+        const email = ($('contactEmail').value || '').trim();
+        const category = ($('contactCategory').value || 'general_feedback').trim();
+        const platform = ($('contactPlatform').value || 'unknown').trim();
+        const message = ($('contactMessage').value || '').trim();
+
+        const showContactFeedback = (msg, isErr) => {
+          feedbackBox.style.display = 'block';
+          feedbackBox.style.background = isErr ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.14)';
+          feedbackBox.style.border = isErr ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)';
+          feedbackBox.style.color = isErr ? '#EF4444' : '#10B981';
+          feedbackBox.textContent = msg;
+        };
+
+        if (name.length < 2) {
+          showContactFeedback('Please enter your name (at least 2 characters).', true);
+          $('contactName').focus();
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showContactFeedback('Please enter a valid email address.', true);
+          $('contactEmail').focus();
+          return;
+        }
+        if (message.length < 10) {
+          showContactFeedback('Please enter a detailed message (at least 10 characters).', true);
+          $('contactMessage').focus();
+          return;
+        }
+
+        const origText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        try {
+          const resp = await fetch(API_BASE + '/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, category, platform, message })
+          });
+          const data = await resp.json();
+          if (!resp.ok || !data.success) {
+            throw new Error(data.error || ('Submission failed (HTTP ' + resp.status + ')'));
+          }
+          showContactFeedback(data.message || ('Inquiry logged on server (Ref: ' + data.inquiry_id + ').'), false);
+          $('contactMessage').value = '';
+          showToast('Inquiry logged (Ref: ' + (data.inquiry_id || 'saved') + ')');
+        } catch (err) {
+          showContactFeedback(err && err.message ? err.message : 'Unable to submit inquiry right now.', true);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = origText;
+        }
+      });
+    }
+
     // Scroll to top button
     $('btnScrollTop').addEventListener('click', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
+    // URL Hash Navigation Support
+    window.addEventListener('hashchange', handleHashRoute);
+
     // Apply initial language & ensure empty state is active on load
     applyLanguage(currentLang);
     showPreviewEmptyState();
+    handleHashRoute();
   }
 
   init();

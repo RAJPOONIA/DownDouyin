@@ -1,0 +1,3908 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DownDouyin — Download Videos from Douyin, Bilibili, TikTok and Xiaohongshu</title>
+<meta name="description" content="DownDouyin is a fast, simple, high-quality watermark-free video downloader supporting Douyin, Bilibili, TikTok, and Xiaohongshu (RedNote).">
+<meta property="og:title" content="DownDouyin — Video Downloader for Douyin, Bilibili, TikTok &amp; Xiaohongshu">
+<meta property="og:description" content="Fast, simple, high-quality video, audio, and thumbnail downloads from Douyin, Bilibili, TikTok, and Xiaohongshu.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%235B35FF'/><stop offset='100%' stop-color='%239B51E0'/></linearGradient></defs><rect width='64' height='64' rx='16' fill='url(%23g)'/><polygon points='25,18 25,46 47,32' fill='%23ffffff'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-S9BHCYX6EN"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  if (!window.__ddGaInitialized) {
+    window.__ddGaInitialized = true;
+    gtag('js', new Date());
+    gtag('config', 'G-S9BHCYX6EN', {
+      send_page_view: true,
+      page_location: window.location.origin + window.location.pathname
+    });
+  }
+</script>
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --bg-page: #F3F5FA;
+    --bg-header: rgba(255, 255, 255, 0.94);
+    --card-bg: #FFFFFF;
+    --card-sub: #F8FAFC;
+    --border-color: #E2E8F0;
+    --border-soft: #EDF1F7;
+    --text-main: #0F172A;
+    --text-sub: #475569;
+    --text-muted: #94A3B8;
+    --purple-600: #633BFF;
+    --purple-500: #7C4DFF;
+    --blue-500: #3B82F6;
+    --accent-grad: linear-gradient(135deg, #5B35FF 0%, #8B5CF6 100%);
+    --btn-grad: linear-gradient(90deg, #5835FF 0%, #9353FF 100%);
+    --shadow-card: 0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+    --shadow-hover: 0 14px 34px -6px rgba(99, 59, 255, 0.12);
+    --hero-bg: radial-gradient(ellipse at 50% 25%, #1A274B 0%, #0D152C 62%, #080E1F 100%);
+  }
+
+  html[data-theme="dark"] {
+    --bg-page: #0B1120;
+    --bg-header: rgba(15, 23, 42, 0.92);
+    --card-bg: #131C31;
+    --card-sub: #1A2540;
+    --border-color: #263452;
+    --border-soft: #1E2B45;
+    --text-main: #F8FAFC;
+    --text-sub: #94A3B8;
+    --text-muted: #64748B;
+    --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.35);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text-main);
+    background-color: var(--bg-page);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* ==================== TOP NAVIGATION HEADER ==================== */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-header);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .header-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    height: 68px;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    text-decoration: none;
+    color: var(--text-main);
+    font-weight: 800;
+    font-size: 21px;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+  }
+
+  .brand-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: var(--accent-grad);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(99, 59, 255, 0.32);
+    flex-shrink: 0;
+  }
+
+  .brand-logo svg {
+    width: 18px;
+    height: 18px;
+    fill: #FFFFFF;
+    margin-left: 2px;
+  }
+
+  .main-nav {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .nav-item {
+    position: relative;
+    text-decoration: none;
+    color: var(--text-sub);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 22px 2px;
+    transition: color 0.16s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+
+  .nav-item:hover,
+  .nav-item.active {
+    color: var(--purple-600);
+  }
+
+  .nav-item.active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: var(--purple-600);
+  }
+
+  /* Tools Dropdown */
+  .nav-dropdown-wrap {
+    position: relative;
+  }
+
+  .nav-dropdown {
+    position: absolute;
+    top: calc(100% - 6px);
+    left: 0;
+    min-width: 225px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+    padding: 8px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 120;
+  }
+
+  .nav-dropdown-wrap.open .nav-dropdown {
+    display: flex;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-decoration: none;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.14s ease, color 0.14s ease;
+  }
+
+  .dropdown-item:hover {
+    background: var(--card-sub);
+    color: var(--purple-600);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Theme Switch Pill */
+  .theme-pill {
+    width: 56px;
+    height: 30px;
+    border-radius: 999px;
+    background: #E2E8F0;
+    border: 1px solid var(--border-color);
+    padding: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s ease;
+  }
+
+  html[data-theme="dark"] .theme-pill {
+    background: #1E293B;
+  }
+
+  .theme-pill .sun-icon {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #F59E0B;
+    z-index: 1;
+  }
+
+  .theme-pill .knob {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+    transition: transform 0.2s ease;
+  }
+
+  html[data-theme="dark"] .theme-pill .knob {
+    transform: translateX(-26px);
+    background: #38BDF8;
+  }
+
+  /* Language Selector */
+  .lang-wrap {
+    position: relative;
+  }
+
+  .lang-btn {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+
+  .lang-btn:hover {
+    border-color: var(--purple-600);
+  }
+
+  .lang-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    min-width: 130px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    z-index: 120;
+  }
+
+  .lang-wrap.open .lang-menu {
+    display: flex;
+  }
+
+  .lang-opt {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .lang-opt:hover,
+  .lang-opt.active {
+    background: var(--card-sub);
+    color: var(--purple-600);
+  }
+
+  /* Upgrade / HD Settings Button */
+  .btn-upgrade {
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: none;
+    background: var(--btn-grad);
+    color: #FFFFFF;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(99, 59, 255, 0.28);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .btn-upgrade:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(99, 59, 255, 0.38);
+  }
+
+  /* ==================== HERO SECTION ==================== */
+  .hero-section {
+    position: relative;
+    background: var(--hero-bg);
+    color: #FFFFFF;
+    padding: 46px 28px 66px;
+    overflow: hidden;
+  }
+
+  .hero-bg-waves {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.72;
+  }
+
+  .hero-container {
+    position: relative;
+    z-index: 2;
+    max-width: 1240px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  /* Left Decorative Callout */
+  .hero-callout-left {
+    position: absolute;
+    left: 10px;
+    top: 86px;
+    text-align: left;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .hero-callout-left .callout-lines {
+    font-family: 'Caveat', cursive;
+    font-size: 23px;
+    line-height: 1.18;
+    color: #E2E8F0;
+    transform: rotate(-4deg);
+  }
+
+  .hero-callout-left .callout-lines .hl {
+    color: #A78BFA;
+    font-weight: 700;
+  }
+
+  /* Right Decorative Callout & Floating Platform Tiles */
+  .hero-deco-right {
+    position: absolute;
+    right: 6px;
+    top: 34px;
+    width: 250px;
+    height: 240px;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .hero-callout-right {
+    position: absolute;
+    left: -18px;
+    top: 52px;
+    font-family: 'Caveat', cursive;
+    font-size: 21px;
+    line-height: 1.15;
+    color: #CBD5E1;
+    text-align: left;
+    transform: rotate(-3deg);
+  }
+
+  .floating-tiles {
+    position: absolute;
+    right: 0;
+    top: 8px;
+    width: 170px;
+    height: 210px;
+  }
+
+  .float-tile {
+    position: absolute;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  .float-tile.tile-bili {
+    width: 54px;
+    height: 54px;
+    left: 26px;
+    top: 12px;
+    background: linear-gradient(135deg, #00A1D6, #0077AA);
+    transform: rotate(-14deg);
+    font-weight: 800;
+    font-size: 13px;
+    color: #fff;
+  }
+
+  .float-tile.tile-tt-top {
+    width: 60px;
+    height: 60px;
+    right: 12px;
+    top: 18px;
+    background: linear-gradient(145deg, #1E1E28, #0B0B12);
+    transform: rotate(12deg);
+  }
+
+  .float-tile.tile-dy-bot {
+    width: 56px;
+    height: 56px;
+    left: 18px;
+    top: 96px;
+    background: linear-gradient(145deg, #191A24, #0A0B10);
+    transform: rotate(-11deg);
+  }
+
+  .float-tile.tile-xhs {
+    width: 62px;
+    height: 62px;
+    right: 14px;
+    top: 102px;
+    background: linear-gradient(135deg, #FF2442, #D8112B);
+    transform: rotate(10deg);
+    font-weight: 800;
+    font-size: 14px;
+    color: #FFFFFF;
+    letter-spacing: -0.5px;
+  }
+
+  /* Hero Headings */
+  .hero-title {
+    font-size: clamp(28px, 3.3vw, 43px);
+    font-weight: 800;
+    line-height: 1.22;
+    letter-spacing: -0.025em;
+    max-width: 780px;
+    margin: 0 auto 12px;
+  }
+
+  .hero-title .grad-text {
+    background: linear-gradient(90deg, #93C5FD 0%, #C4B5FD 50%, #A78BFA 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: block;
+  }
+
+  .hero-subtitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #CBD5E1;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .hero-subtitle .dot-sep {
+    color: #8B5CF6;
+  }
+
+  /* Search Input Bar */
+  .search-bar-outer {
+    max-width: 770px;
+    margin: 0 auto 26px;
+    padding: 5px;
+    border-radius: 18px;
+    background: linear-gradient(90deg, rgba(99, 59, 255, 0.55), rgba(59, 130, 246, 0.45), rgba(139, 92, 246, 0.55));
+    box-shadow: 0 18px 46px rgba(8, 14, 31, 0.55), 0 0 28px rgba(124, 77, 255, 0.28);
+  }
+
+  .search-bar {
+    background: #FFFFFF;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    padding: 6px 6px 6px 18px;
+    gap: 10px;
+  }
+
+  .search-link-icon {
+    color: #94A3B8;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 15px;
+    font-weight: 500;
+    color: #0F172A;
+    font-family: inherit;
+    min-width: 0;
+    height: 44px;
+  }
+
+  .search-input::placeholder {
+    color: #94A3B8;
+  }
+
+  .search-clear-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: #F1F5F9;
+    color: #64748B;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+
+  .search-clear-btn.visible {
+    display: inline-flex;
+  }
+
+  .search-clear-btn:hover {
+    background: #E2E8F0;
+    color: #0F172A;
+  }
+
+  .btn-fetch {
+    height: 48px;
+    padding: 0 24px;
+    border-radius: 11px;
+    border: none;
+    background: var(--btn-grad);
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(99, 59, 255, 0.35);
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+
+  .btn-fetch:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+  }
+
+  .btn-fetch:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  /* 4 Supported Platforms Row */
+  .hero-platforms {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 36px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+
+  .plat-btn {
+    background: none;
+    border: none;
+    color: #E2E8F0;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: transform 0.16s ease, color 0.16s ease;
+    position: relative;
+    padding: 4px 8px;
+  }
+
+  .plat-btn:hover {
+    transform: translateY(-2px);
+    color: #FFFFFF;
+  }
+
+  .plat-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  }
+
+  .plat-btn.active .plat-icon-box {
+    border-color: #A78BFA;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.28), 0 10px 22px rgba(0, 0, 0, 0.4);
+  }
+
+  .plat-icon-box.douyin,
+  .plat-icon-box.tiktok {
+    background: #0F1016;
+  }
+
+  .plat-icon-box.bilibili {
+    background: #00A1D6;
+  }
+
+  .plat-icon-box.xhs {
+    background: #FF2442;
+  }
+
+  /* Curved Wave Divider at bottom of Hero */
+  .hero-wave-bottom {
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    line-height: 0;
+    pointer-events: none;
+  }
+
+  .hero-wave-bottom svg {
+    width: 100%;
+    height: 36px;
+    display: block;
+  }
+
+  .hero-wave-bottom .wave-fill {
+    fill: var(--bg-page);
+    transition: fill 0.2s ease;
+  }
+
+  /* ==================== MAIN WORKSPACE ==================== */
+  .main-workspace {
+    max-width: 1280px;
+    width: 100%;
+    margin: -18px auto 0;
+    padding: 0 28px 48px;
+    position: relative;
+    z-index: 5;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  /* Error Banner */
+  .error-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #B91C1C;
+    padding: 12px 18px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  html[data-theme="dark"] .error-banner {
+    background: rgba(185, 28, 28, 0.16);
+    border-color: rgba(248, 113, 113, 0.35);
+    color: #FCA5A5;
+  }
+
+  .error-banner.show {
+    display: flex;
+  }
+
+  /* 2-Column Main Grid */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .panel-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .preview-panel-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .section-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-bar {
+    width: 4px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--accent-grad);
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.01em;
+  }
+
+  /* ==================== VIDEO PREVIEW STATES ==================== */
+  /* Clean Professional Empty State */
+  .preview-empty-state {
+    flex: 1;
+    min-height: 310px;
+    border-radius: 16px;
+    border: 1.5px dashed var(--border-color);
+    background: var(--card-sub);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 36px 24px;
+    gap: 14px;
+  }
+
+  .empty-state-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: rgba(99, 59, 255, 0.08);
+    color: var(--purple-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  html[data-theme="dark"] .empty-state-icon {
+    background: rgba(139, 92, 246, 0.16);
+    color: #A78BFA;
+  }
+
+  .empty-state-msg {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-sub);
+    max-width: 360px;
+    line-height: 1.5;
+  }
+
+  /* Loading State inside Video Preview Card */
+  .preview-loading-state {
+    flex: 1;
+    min-height: 310px;
+    border-radius: 16px;
+    border: 1px solid var(--border-soft);
+    background: var(--card-sub);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 36px 24px;
+    gap: 14px;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid rgba(99, 59, 255, 0.18);
+    border-top-color: var(--purple-600);
+    animation: spin 0.75s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ==================== LOADED VIDEO PREVIEW CONTENT ==================== */
+  .preview-split {
+    display: none;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .preview-split.show {
+    display: grid;
+  }
+
+  /* Video Player / Thumbnail Box */
+  .media-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #0B1325;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+  }
+
+  .media-stage img,
+  .media-stage video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .media-stage video {
+    object-fit: contain;
+    background: #000;
+  }
+
+  .media-play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.38) 100%);
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    transition: background 0.18s ease;
+  }
+
+  .media-play-overlay:hover {
+    background: linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.48) 100%);
+  }
+
+  .play-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.68);
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(6px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    transition: transform 0.16s ease;
+  }
+
+  .media-play-overlay:hover .play-circle {
+    transform: scale(1.07);
+  }
+
+  .play-circle svg {
+    width: 20px;
+    height: 20px;
+    fill: #FFFFFF;
+    margin-left: 3px;
+  }
+
+  .duration-pill {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    background: rgba(11, 20, 40, 0.82);
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+  }
+
+  /* Preview Details Right Side */
+  .preview-details {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .video-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.38;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+
+  .creator-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .creator-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #E2E8F0;
+    flex-shrink: 0;
+    display: none;
+  }
+
+  .creator-icon-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(99, 59, 255, 0.1);
+    color: var(--purple-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  html[data-theme="dark"] .creator-icon-badge {
+    background: rgba(139, 92, 246, 0.2);
+    color: #C4B5FD;
+  }
+
+  .creator-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-sub);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .verified-badge {
+    width: 15px;
+    height: 15px;
+    color: #3B82F6;
+    display: none;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .stats-row {
+    display: none;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-sub);
+    margin-bottom: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-item {
+    display: none;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .stat-item svg {
+    width: 15px;
+    height: 15px;
+    color: var(--text-muted);
+  }
+
+  /* Format Mode Tabs (Video | Audio | Thumbnail) */
+  .media-tabs {
+    display: flex;
+    gap: 6px;
+    background: var(--card-sub);
+    border: 1px solid var(--border-soft);
+    padding: 4px;
+    border-radius: 11px;
+    margin-bottom: 12px;
+  }
+
+  .media-tab {
+    flex: 1;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-sub);
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .media-tab:hover {
+    color: var(--text-main);
+  }
+
+  .media-tab.active {
+    background: #E0E7FF;
+    color: #4F46E5;
+  }
+
+  html[data-theme="dark"] .media-tab.active {
+    background: rgba(99, 59, 255, 0.28);
+    color: #C4B5FD;
+  }
+
+  /* Quality Selection Table - Properly Aligned */
+  .quality-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .quality-row {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto auto 106px;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 8px 12px;
+    border-radius: 11px;
+    border: 1px solid var(--border-soft);
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .quality-row:hover {
+    border-color: #CBD5E1;
+    background: var(--card-sub);
+  }
+
+  .quality-row.selected {
+    border-color: #C7D2FE;
+    background: #F5F7FF;
+  }
+
+  html[data-theme="dark"] .quality-row.selected {
+    border-color: #4C1D95;
+    background: rgba(99, 59, 255, 0.12);
+  }
+
+  .q-radio {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #CBD5E1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .quality-row.selected .q-radio {
+    border-color: var(--purple-600);
+    background: var(--purple-600);
+  }
+
+  .quality-row.selected .q-radio::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #FFFFFF;
+  }
+
+  .q-name {
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .q-fmt {
+    color: var(--text-sub);
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--card-sub);
+    border: 1px solid var(--border-soft);
+  }
+
+  .q-size {
+    color: var(--text-sub);
+    font-weight: 500;
+    font-size: 12.5px;
+    white-space: nowrap;
+    text-align: right;
+    min-width: 48px;
+  }
+
+  .q-size:empty {
+    min-width: 0;
+    display: none;
+  }
+
+  .btn-row-dl {
+    width: 106px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: var(--btn-grad);
+    color: #FFFFFF;
+    border: none;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    justify-self: end;
+    box-shadow: 0 3px 10px rgba(99, 59, 255, 0.25);
+    transition: filter 0.15s ease, transform 0.12s ease;
+  }
+
+  .btn-row-dl:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  .btn-row-dl:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  /* Photo Gallery / Album Grid inside Preview Card */
+  .gallery-box {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+    display: none;
+  }
+
+  .gallery-box.show {
+    display: block;
+  }
+
+  .gallery-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-sub);
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+  }
+
+  .gallery-item {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 3 / 4;
+    background: #0F172A;
+    border: 1px solid var(--border-soft);
+  }
+
+  .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .gallery-item-actions {
+    position: absolute;
+    inset: auto 6px 6px 6px;
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+
+  .gallery-dl-chip {
+    background: rgba(11, 20, 40, 0.82);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .gallery-dl-chip:hover {
+    background: var(--purple-600);
+  }
+
+  /* ==================== RIGHT COLUMN: WHY CHOOSE & HOW TO DOWNLOAD ==================== */
+  .right-column-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 22px;
+  }
+
+  .section-sub {
+    font-size: 13.5px;
+    color: var(--text-sub);
+    margin-top: -10px;
+    margin-bottom: 16px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .feature-box {
+    border: 1px solid var(--border-soft);
+    background: var(--card-sub);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .feat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .feat-icon.orange {
+    background: #FFF7ED;
+    color: #F97316;
+  }
+
+  .feat-icon.green {
+    background: #ECFDF5;
+    color: #10B981;
+  }
+
+  .feat-icon.purple {
+    background: #EEF2FF;
+    color: #633BFF;
+  }
+
+  html[data-theme="dark"] .feat-icon.orange { background: rgba(249, 115, 22, 0.15); }
+  html[data-theme="dark"] .feat-icon.green { background: rgba(16, 185, 129, 0.15); }
+  html[data-theme="dark"] .feat-icon.purple { background: rgba(99, 59, 255, 0.2); }
+
+  .feat-text h4 {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 4px;
+  }
+
+  .feat-text p {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--text-sub);
+  }
+
+  /* How to Download Section */
+  .guide-link {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--purple-600);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+
+  .guide-link:hover {
+    text-decoration: underline;
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .step-card {
+    position: relative;
+    text-align: center;
+    padding: 6px 8px;
+  }
+
+  .step-card:not(:last-child)::after {
+    content: '→';
+    position: absolute;
+    right: -8px;
+    top: 22px;
+    color: #CBD5E1;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .step-top {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--purple-600);
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-ico {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #EEF2FF;
+    color: var(--purple-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  html[data-theme="dark"] .step-ico {
+    background: rgba(99, 59, 255, 0.2);
+    color: #A78BFA;
+  }
+
+  .step-card h5 {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 3px;
+  }
+
+  .step-card p {
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--text-sub);
+  }
+
+  /* ==================== FOOTER ==================== */
+  .site-footer {
+    background: #081020;
+    color: #94A3B8;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 22px 28px;
+    margin-top: auto;
+  }
+
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .footer-brand-text strong {
+    display: block;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .footer-brand-text span {
+    font-size: 12px;
+    color: #64748B;
+  }
+
+  .footer-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+  }
+
+  .footer-links a {
+    color: #CBD5E1;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .footer-links a:hover {
+    color: #FFFFFF;
+  }
+
+  .footer-links .pipe {
+    color: #334155;
+  }
+
+  .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .social-link {
+    color: #CBD5E1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+
+  .social-link:hover {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .scroll-top-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #1E293B;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #E2E8F0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .scroll-top-btn:hover {
+    background: var(--purple-600);
+    color: #FFFFFF;
+    transform: translateY(-2px);
+  }
+
+  /* ==================== MODALS (SETTINGS & FAQ/GUIDE) ==================== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(7, 13, 29, 0.65);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-backdrop.show {
+    display: flex;
+  }
+
+  .modal-dialog {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+  }
+
+  .modal-header {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-header h3 {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+
+  .modal-close:hover {
+    color: var(--text-main);
+    background: var(--card-sub);
+  }
+
+  .modal-body {
+    padding: 20px 22px;
+    max-height: 70vh;
+    overflow-y: auto;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text-sub);
+  }
+
+  .modal-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .modal-tab {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--card-sub);
+    color: var(--text-sub);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .modal-tab.active {
+    background: var(--purple-600);
+    border-color: var(--purple-600);
+    color: #FFFFFF;
+  }
+
+  .cfg-field {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    background: var(--card-sub);
+    color: var(--text-main);
+    border-radius: 11px;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+    outline: none;
+  }
+
+  .cfg-field:focus {
+    border-color: var(--purple-600);
+  }
+
+  /* Toast Notification */
+  .toast-box {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 300;
+    background: #0B1428;
+    color: #FFFFFF;
+    border: 1px solid rgba(139, 92, 246, 0.45);
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .toast-box.show {
+    display: inline-flex;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 1120px) {
+    .hero-callout-left,
+    .hero-deco-right {
+      display: none;
+    }
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .main-nav {
+      display: none;
+    }
+    .preview-split.show {
+      grid-template-columns: 1fr;
+    }
+    .features-grid,
+    .steps-grid {
+      grid-template-columns: 1fr;
+    }
+    .step-card::after {
+      display: none;
+    }
+    .quality-row {
+      grid-template-columns: 18px minmax(0, 1fr) auto 100px;
+    }
+    .q-fmt {
+      display: none;
+    }
+    .search-bar {
+      flex-wrap: wrap;
+      padding: 10px;
+    }
+    .btn-fetch {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== HEADER ==================== -->
+<header class="site-header">
+  <div class="header-inner">
+    <a href="#" class="brand-link" id="brandHomeLink">
+      <span class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l11-6.86a1 1 0 0 0 0-1.66l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>
+      </span>
+      <span>DownDouyin</span>
+    </a>
+
+    <nav class="main-nav" aria-label="Primary Navigation">
+      <a href="#top" class="nav-item active" data-nav="home" id="navHome">Home</a>
+      <a href="#platformsRow" class="nav-item" data-nav="platforms" id="navPlatforms">Supported Platforms</a>
+      <a href="#howToSection" class="nav-item" data-nav="howto" id="navHowTo">How to Use</a>
+      <div class="nav-dropdown-wrap" id="toolsDropdownWrap">
+        <button type="button" class="nav-item" id="navToolsBtn">
+          <span id="navToolsLabel">Tools</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="nav-dropdown">
+          <button type="button" class="dropdown-item" data-tool="video">🎬 High-Speed Video Downloader</button>
+          <button type="button" class="dropdown-item" data-tool="audio">🎵 Original Audio / MP3 Extractor</button>
+          <button type="button" class="dropdown-item" data-tool="thumb">🖼️ HD Thumbnail &amp; Gallery Grabber</button>
+          <button type="button" class="dropdown-item" data-tool="settings">⚙️ Bilibili Cookie &amp; TikTok Proxy</button>
+        </div>
+      </div>
+      <button type="button" class="nav-item" id="navFaqBtn">FAQ</button>
+    </nav>
+
+    <div class="header-right">
+      <button type="button" class="theme-pill" id="themeToggle" aria-label="Toggle Light/Dark Theme" title="Switch Theme">
+        <span class="sun-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+        <span class="knob"></span>
+      </button>
+
+      <div class="lang-wrap" id="langWrap">
+        <button type="button" class="lang-btn" id="langBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span id="currentLangText">English</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="lang-menu">
+          <button type="button" class="lang-opt active" data-lang="en">English</button>
+          <button type="button" class="lang-opt" data-lang="zh">简体中文</button>
+        </div>
+      </div>
+
+      <button type="button" class="btn-upgrade" id="btnHeaderSettings" title="Configure Bilibili HD Cookies &amp; TikTok Proxy">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>
+        <span id="upgradeBtnText">Upgrade</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ==================== HERO SECTION ==================== -->
+<section class="hero-section" id="top">
+  <!-- Decorative Cosmic Waves -->
+  <svg class="hero-bg-waves" viewBox="0 0 1440 360" fill="none" preserveAspectRatio="none">
+    <path d="M-80 40 C 140 120, 260 280, 480 290 C 700 300, 980 120, 1520 40" stroke="url(#gradWave1)" stroke-width="2.5" stroke-opacity="0.55"/>
+    <path d="M-60 190 C 160 90, 320 260, 580 280 C 860 300, 1150 180, 1500 90" stroke="url(#gradWave2)" stroke-width="1.8" stroke-opacity="0.4"/>
+    <defs>
+      <linearGradient id="gradWave1" x1="0" y1="0" x2="1440" y2="360" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#38BDF8"/>
+        <stop offset="50%" stop-color="#8B5CF6" stop-opacity="0.2"/>
+        <stop offset="100%" stop-color="#60A5FA"/>
+      </linearGradient>
+      <linearGradient id="gradWave2" x1="1440" y1="0" x2="0" y2="360" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#A855F7"/>
+        <stop offset="50%" stop-color="#3B82F6" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="#8B5CF6"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="hero-container">
+    <!-- Left Decorative Callout -->
+    <div class="hero-callout-left" aria-hidden="true">
+      <div class="callout-lines">
+        All<br>
+        <span class="hl">Your Favorite</span><br>
+        <span class="hl">Platforms</span><br>
+        in One Place
+      </div>
+      <svg width="58" height="58" viewBox="0 0 64 64" fill="none" style="margin-left:78px;margin-top:-12px">
+        <path d="M8 8 C 34 14, 46 32, 42 56" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+        <path d="M36 49 L 42 57 L 49 50" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <!-- Main Heading -->
+    <h1 class="hero-title">
+      <span id="heroTitleTop">Download Videos from</span>
+      <span class="grad-text" id="heroTitleGrad">Douyin, Bilibili, TikTok and Xiaohongshu</span>
+    </h1>
+
+    <div class="hero-subtitle">
+      <span id="subFast">Fast</span>
+      <span class="dot-sep">•</span>
+      <span id="subSimple">Simple</span>
+      <span class="dot-sep">•</span>
+      <span id="subHq">High Quality</span>
+    </div>
+
+    <!-- Search Input Bar -->
+    <div class="search-bar-outer">
+      <div class="search-bar">
+        <span class="search-link-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </span>
+        <input
+          type="text"
+          id="urlInput"
+          class="search-input"
+          placeholder="Paste video URL here... (Douyin, Bilibili, TikTok, Xiaohongshu etc.)"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <button type="button" class="search-clear-btn" id="btnClearInput" title="Clear input" aria-label="Clear URL input">✕</button>
+        <button type="button" class="btn-fetch" id="btnFetch">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span id="btnFetchLabel">Fetch Video</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 Supported Platforms Row -->
+    <div class="hero-platforms" id="platformsRow">
+      <button type="button" class="plat-btn active" data-platform="douyin" title="Douyin Downloader">
+        <span class="plat-icon-box douyin">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#25F4EE" transform="translate(-0.8, -0.6)"/>
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#FE2C55" transform="translate(0.8, 0.6)"/>
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#FFFFFF"/>
+          </svg>
+        </span>
+        <span>Douyin</span>
+      </button>
+
+      <button type="button" class="plat-btn" data-platform="bilibili" title="Bilibili Downloader">
+        <span class="plat-icon-box bilibili">
+          <span style="color:#fff;font-weight:800;font-size:12px;letter-spacing:-0.5px">bilibili</span>
+        </span>
+        <span>Bilibili</span>
+      </button>
+
+      <button type="button" class="plat-btn" data-platform="tiktok" title="TikTok Downloader">
+        <span class="plat-icon-box tiktok">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#25F4EE" transform="translate(-0.8, -0.6)"/>
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#FE2C55" transform="translate(0.8, 0.6)"/>
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#FFFFFF"/>
+          </svg>
+        </span>
+        <span>TikTok</span>
+      </button>
+
+      <button type="button" class="plat-btn" data-platform="xiaohongshu" title="Xiaohongshu (RedNote) Downloader">
+        <span class="plat-icon-box xhs">
+          <span style="color:#fff;font-weight:800;font-size:11.5px;letter-spacing:-0.5px">小红书</span>
+        </span>
+        <span>Xiaohongshu</span>
+      </button>
+    </div>
+
+    <!-- Right Decorative Callout & 3D Floating Platform Tiles -->
+    <div class="hero-deco-right" aria-hidden="true">
+      <div class="hero-callout-right">
+        Paste<br>a link<br>Download<br>in seconds
+        <svg width="46" height="42" viewBox="0 0 50 45" fill="none" style="display:block;margin-top:4px;margin-left:10px">
+          <path d="M36 4 C 34 22, 22 32, 6 36" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+          <path d="M13 30 L 5 36 L 14 41" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="floating-tiles">
+        <div class="float-tile tile-bili">bili</div>
+        <div class="float-tile tile-tt-top">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#25F4EE" transform="translate(-1, -0.8)"/>
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#FE2C55" transform="translate(1, 0.8)"/>
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <div class="float-tile tile-dy-bot">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#25F4EE" transform="translate(-0.9, -0.7)"/>
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#FE2C55" transform="translate(0.9, 0.7)"/>
+            <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <div class="float-tile tile-xhs">小红书</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-wave-bottom">
+    <svg viewBox="0 0 1440 48" preserveAspectRatio="none">
+      <path class="wave-fill" d="M0,12 C320,46 1120,46 1440,12 L1440,48 L0,48 Z"></path>
+    </svg>
+  </div>
+</section>
+
+<!-- ==================== MAIN CONTENT ==================== -->
+<main class="main-workspace">
+
+  <!-- Error Alert Banner -->
+  <div class="error-banner" id="errorBanner" role="alert">
+    <span id="errorText"></span>
+    <button type="button" class="modal-close" id="btnCloseError" aria-label="Dismiss error">✕</button>
+  </div>
+
+  <!-- 2-Column Primary Section -->
+  <div class="dashboard-grid">
+
+    <!-- LEFT CARD: VIDEO PREVIEW -->
+    <section class="panel-card preview-panel-card" aria-labelledby="videoPreviewTitle">
+      <div class="section-head">
+        <div class="section-title-group">
+          <span class="section-bar"></span>
+          <h2 class="section-title" id="videoPreviewTitle">Video Preview</h2>
+        </div>
+        <div id="biliPartSelectBox" style="display:none"></div>
+      </div>
+
+      <!-- Empty State (Shown on initial load before any video is fetched) -->
+      <div class="preview-empty-state" id="previewEmptyState">
+        <div class="empty-state-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="4"/>
+            <polygon points="10 8 16 12 10 16" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <p class="empty-state-msg" id="previewEmptyMsg">Paste a video link and select Fetch Video to preview details.</p>
+      </div>
+
+      <!-- Loading State (Shown while fetching from backend) -->
+      <div class="preview-loading-state" id="previewLoadingState">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <p class="empty-state-msg" id="previewLoadingMsg">Fetching video details...</p>
+      </div>
+
+      <!-- Real Fetched Video Preview Content (Hidden until backend returns valid data) -->
+      <div class="preview-split" id="previewSplit">
+        <!-- Left Media Column -->
+        <div>
+          <div class="media-stage" id="mediaStage"></div>
+        </div>
+
+        <!-- Right Metadata + Tabs + Quality Rows -->
+        <div class="preview-details">
+          <h3 class="video-title" id="previewTitle" style="display:none"></h3>
+
+          <div class="creator-row" id="creatorRow" style="display:none">
+            <img
+              id="creatorAvatar"
+              class="creator-avatar"
+              alt="Creator Avatar"
+              referrerPolicy="no-referrer"
+            >
+            <span class="creator-icon-badge" id="creatorIconBadge" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <span class="creator-name" id="creatorName"></span>
+            <span class="verified-badge" id="verifiedBadge" title="Verified Creator">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </span>
+          </div>
+
+          <div class="stats-row" id="statsRow">
+            <span class="stat-item" id="statViewsItem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span id="statViews"></span>
+            </span>
+            <span class="stat-item" id="statDateItem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span id="statDate"></span>
+            </span>
+            <span class="stat-item" id="statDurationItem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="statDuration"></span>
+            </span>
+          </div>
+
+          <!-- Video / Audio / Thumbnail Tabs -->
+          <div class="media-tabs" id="mediaTabs" role="tablist">
+            <button type="button" class="media-tab active" data-tab="video" id="tabBtnVideo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="4" width="20" height="16" rx="4"/><polygon points="10 8 16 12 10 16" fill="#fff"/></svg>
+              <span id="tabLabelVideo">Video</span>
+            </button>
+            <button type="button" class="media-tab" data-tab="audio" id="tabBtnAudio">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              <span id="tabLabelAudio">Audio</span>
+            </button>
+            <button type="button" class="media-tab" data-tab="thumbnail" id="tabBtnThumb">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span id="tabLabelThumb">Thumbnail</span>
+            </button>
+          </div>
+
+          <!-- Quality / Format Rows Container -->
+          <div class="quality-list" id="qualityList"></div>
+        </div>
+      </div>
+
+      <!-- Photo Album / Live Photo Gallery Container (shown when post has multiple images) -->
+      <div class="gallery-box" id="galleryBox">
+        <div class="gallery-head">
+          <span id="gallerySummaryText">Photo Album</span>
+          <button type="button" class="btn-row-dl" style="width:auto;padding:0 14px" id="btnDownloadZip">⬇ Download All (ZIP)</button>
+        </div>
+        <div class="gallery-grid" id="galleryGrid"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT CARD: WHY CHOOSE DOWNDOUYIN + HOW TO DOWNLOAD -->
+    <aside class="panel-card right-column-card">
+      <div>
+        <div class="section-head">
+          <div class="section-title-group">
+            <span class="section-bar"></span>
+            <h2 class="section-title" id="whyChooseTitle">Why Choose DownDouyin?</h2>
+          </div>
+        </div>
+        <p class="section-sub" id="whyChooseSub">A simple and powerful way to download your favorite videos.</p>
+
+        <div class="features-grid">
+          <div class="feature-box">
+            <div class="feat-icon orange">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="feat-text">
+              <h4 id="feat1Title">Fast &amp; Reliable</h4>
+              <p id="feat1Desc">Get your videos in seconds with stable servers.</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feat-icon green">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/></svg>
+            </div>
+            <div class="feat-text">
+              <h4 id="feat2Title">No Watermark</h4>
+              <p id="feat2Desc">Clean and high-quality downloads.</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feat-icon purple">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div class="feat-text">
+              <h4 id="feat3Title">Supports Many Platforms</h4>
+              <p id="feat3Desc">Douyin, Bilibili, TikTok and Xiaohongshu.</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feat-icon orange">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            </div>
+            <div class="feat-text">
+              <h4 id="feat4Title">100% Free to Use</h4>
+              <p id="feat4Desc">No registration required. Start downloading now.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to Download Block -->
+      <div id="howToSection">
+        <div class="section-head" style="margin-bottom:14px">
+          <div class="section-title-group">
+            <span class="section-bar"></span>
+            <h2 class="section-title" id="howToTitle">How to Download?</h2>
+          </div>
+          <button type="button" class="guide-link" id="btnDetailedGuide">
+            <span id="guideLinkText">View Detailed Guide</span>
+            <span>→</span>
+          </button>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-top">
+              <span class="step-num">1</span>
+              <span class="step-ico">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </span>
+            </div>
+            <h5 id="step1Title">Paste Link</h5>
+            <p id="step1Desc">Copy and paste the video URL above.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-top">
+              <span class="step-num">2</span>
+              <span class="step-ico">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </span>
+            </div>
+            <h5 id="step2Title">Choose Format</h5>
+            <p id="step2Desc">Select your preferred quality and format.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-top">
+              <span class="step-num">3</span>
+              <span class="step-ico">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </span>
+            </div>
+            <h5 id="step3Title">Download</h5>
+            <p id="step3Desc">Click download and enjoy your video.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+</main>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l11-6.86a1 1 0 0 0 0-1.66l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>
+      </span>
+      <div class="footer-brand-text">
+        <strong>DownDouyin</strong>
+        <span id="footerTagline">Your All-in-One Video Downloader</span>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a href="#top">Home</a>
+      <span class="pipe">|</span>
+      <a href="#platformsRow">Supported Platforms</a>
+      <span class="pipe">|</span>
+      <a href="#howToSection">How to Use</a>
+      <span class="pipe">|</span>
+      <a href="#top" id="footerToolsLink">Tools</a>
+      <span class="pipe">|</span>
+      <a href="#faq" id="footerFaqLink">FAQ</a>
+      <span class="pipe">|</span>
+      <a href="#guide" id="footerGuideLink">Blog</a>
+      <span class="pipe">|</span>
+      <a href="#privacy" id="footerPrivacyLink">Privacy Policy</a>
+      <span class="pipe">|</span>
+      <a href="#terms" id="footerTermsLink">Terms of Service</a>
+      <span class="pipe">|</span>
+      <a href="#settings" id="footerSettingsLink">Contact</a>
+    </div>
+
+    <div class="footer-right">
+      <a href="#top" class="social-link" aria-label="YouTube" title="YouTube">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.6 12 3.6 12 3.6s-7.6 0-9.5.5c-1 .3-1.7 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.5 9.5.5 9.5.5s7.6 0 9.5-.5c1-.3 1.7-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
+      </a>
+      <a href="#top" class="social-link" aria-label="X" title="X / Twitter">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="#top" class="social-link" aria-label="Instagram" title="Instagram">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </a>
+      <a href="#top" class="social-link" aria-label="Discord" title="Discord">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      </a>
+      <button type="button" class="scroll-top-btn" id="btnScrollTop" aria-label="Scroll to top" title="Back to top">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      </button>
+    </div>
+  </div>
+</footer>
+
+<!-- ==================== SETTINGS & PRO MODAL ==================== -->
+<div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="settingsModalTitle">DownDouyin HD Settings &amp; Configuration</h3>
+      <button type="button" class="modal-close" id="btnCloseSettings">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button type="button" class="modal-tab active" data-pane="bili" id="tabPaneBili">Bilibili Account (SESSDATA)</button>
+        <button type="button" class="modal-tab" data-pane="tiktok" id="tabPaneTiktok">TikTok Proxy</button>
+      </div>
+
+      <div id="paneBili">
+        <p style="margin-bottom:8px">Configure your Bilibili <code>SESSDATA</code> cookie to unlock 1080P &amp; 4K UHD streams. Douyin Original Quality &amp; 1080P HD extraction is already built-in automatically.</p>
+        <div id="biliCfgStatus" style="padding:10px 12px;border-radius:10px;background:var(--card-sub);border:1px solid var(--border-soft);margin-bottom:10px;font-size:12.5px">Checking Bilibili configuration...</div>
+        <label style="font-weight:700;font-size:13px;color:var(--text-main)" for="biliCookieInput">Paste Bilibili Cookie / SESSDATA</label>
+        <textarea id="biliCookieInput" class="cfg-field" rows="4" placeholder="Paste SESSDATA=... or cookies.txt content here"></textarea>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button type="button" class="btn-row-dl" style="background:#64748B" id="btnClearBiliCookie">Clear Cookie</button>
+          <button type="button" class="btn-row-dl" id="btnSaveBiliCookie">Save Cookie</button>
+        </div>
+      </div>
+
+      <div id="paneTiktok" style="display:none">
+        <p style="margin-bottom:8px">If your server is in a region that requires a local HTTP proxy to reach TikTok, enter your proxy URL below (leave blank for direct connection).</p>
+        <div id="ttCfgStatus" style="padding:10px 12px;border-radius:10px;background:var(--card-sub);border:1px solid var(--border-soft);margin-bottom:10px;font-size:12.5px">Checking TikTok configuration...</div>
+        <label style="font-weight:700;font-size:13px;color:var(--text-main)" for="ttProxyInput">HTTP Proxy URL</label>
+        <input type="text" id="ttProxyInput" class="cfg-field" placeholder="http://127.0.0.1:7890">
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button type="button" class="btn-row-dl" style="background:#64748B" id="btnClearTtProxy">Clear Proxy</button>
+          <button type="button" class="btn-row-dl" id="btnSaveTtProxy">Save Proxy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== FAQ & DETAILED GUIDE MODAL ==================== -->
+<div class="modal-backdrop" id="faqModal" role="dialog" aria-modal="true" aria-labelledby="faqModalTitle">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="faqModalTitle">How to Use &amp; Frequently Asked Questions</h3>
+      <button type="button" class="modal-close" id="btnCloseFaq">✕</button>
+    </div>
+    <div class="modal-body">
+      <h4 style="color:var(--text-main);font-weight:800;margin-bottom:6px">1. Which platforms are supported?</h4>
+      <p style="margin-bottom:14px">DownDouyin supports <strong>Douyin</strong>, <strong>Bilibili</strong>, <strong>TikTok</strong>, and <strong>Xiaohongshu (RedNote)</strong>. You can paste either a direct link or the full share text copied from the mobile app.</p>
+
+      <h4 style="color:var(--text-main);font-weight:800;margin-bottom:6px">2. How do I download watermark-free videos in Original Quality?</h4>
+      <p style="margin-bottom:14px">Paste your video link in the search box and click <strong>Fetch Video</strong>. DownDouyin queries the stream endpoints and lists all available qualities returned by the platform (such as Original Quality, 1080p Full HD, 720p HD, 540p SD). Click <strong>Download</strong> next to your preferred quality.</p>
+
+      <h4 style="color:var(--text-main);font-weight:800;margin-bottom:6px">3. Why does Xiaohongshu require a fresh share link?</h4>
+      <p style="margin-bottom:14px">Xiaohongshu links include a temporary <code>xsec_token</code> parameter for security. Copy the share link directly from the Xiaohongshu app or web page without removing URL parameters.</p>
+
+      <h4 style="color:var(--text-main);font-weight:800;margin-bottom:6px">4. Can I extract audio or high-res cover thumbnails?</h4>
+      <p>Yes! After fetching a video, switch between the <strong>Video</strong>, <strong>Audio</strong>, and <strong>Thumbnail</strong> tabs inside the Video Preview card to download the original soundtrack or HD cover image when provided by the source platform.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Feedback -->
+<div class="toast-box" id="toastBox" role="status" aria-live="polite"></div>
+
+<script>
+(function() {
+  const $ = id => document.getElementById(id);
+
+  /* ==================== API BASE RESOLUTION ==================== */
+  const SERVICE_PORT = '__SERVICE_PORT__';
+  const _PORT = /^\d+$/.test(SERVICE_PORT) ? SERVICE_PORT : '3000';
+  const _IS_LOCAL = location.protocol === 'file:' ||
+    ['localhost', '127.0.0.1', '0.0.0.0', '[::1]', '::1'].includes(location.hostname);
+  const API_BASE = (_IS_LOCAL && location.port && location.port !== _PORT)
+    ? 'http://127.0.0.1:' + _PORT
+    : '';
+
+  /* ==================== PLATFORM CONFIGURATION ==================== */
+  const PLATFORMS = {
+    douyin: {
+      name: 'Douyin',
+      placeholder: 'Paste video URL here... (Douyin, Bilibili, TikTok, Xiaohongshu etc.)'
+    },
+    bilibili: {
+      name: 'Bilibili',
+      placeholder: 'Paste Bilibili video URL or BV ID here...'
+    },
+    tiktok: {
+      name: 'TikTok',
+      placeholder: 'Paste TikTok video link here...'
+    },
+    xiaohongshu: {
+      name: 'Xiaohongshu',
+      placeholder: 'Paste Xiaohongshu (RedNote) share text or link here...'
+    }
+  };
+
+  /* ==================== APPLICATION STATE ==================== */
+  let currentPlatform = 'douyin';
+  let currentLang = localStorage.getItem('dd_lang') || 'en';
+  let currentMediaTab = 'video';
+  let selectedQualityIdx = 0;
+  let activeMediaData = null; // Null until a real fetch succeeds
+  let isFetching = false;
+  let sizeProbeCache = {};
+
+  /* ==================== I18N TRANSLATIONS ==================== */
+  const I18N = {
+    en: {
+      navHome: 'Home',
+      navPlatforms: 'Supported Platforms',
+      navHowTo: 'How to Use',
+      navToolsLabel: 'Tools',
+      upgradeBtnText: 'Upgrade',
+      heroTitleTop: 'Download Videos from',
+      heroTitleGrad: 'Douyin, Bilibili, TikTok and Xiaohongshu',
+      subFast: 'Fast',
+      subSimple: 'Simple',
+      subHq: 'High Quality',
+      btnFetchLabel: 'Fetch Video',
+      videoPreviewTitle: 'Video Preview',
+      previewEmptyMsg: 'Paste a video link and select Fetch Video to preview details.',
+      previewLoadingMsg: 'Fetching video details...',
+      tabLabelVideo: 'Video',
+      tabLabelAudio: 'Audio',
+      tabLabelThumb: 'Thumbnail',
+      whyChooseTitle: 'Why Choose DownDouyin?',
+      whyChooseSub: 'A simple and powerful way to download your favorite videos.',
+      feat1Title: 'Fast & Reliable',
+      feat1Desc: 'Get your videos in seconds with stable servers.',
+      feat2Title: 'No Watermark',
+      feat2Desc: 'Clean and high-quality downloads.',
+      feat3Title: 'Supports Many Platforms',
+      feat3Desc: 'Douyin, Bilibili, TikTok and Xiaohongshu.',
+      feat4Title: '100% Free to Use',
+      feat4Desc: 'No registration required. Start downloading now.',
+      howToTitle: 'How to Download?',
+      guideLinkText: 'View Detailed Guide',
+      step1Title: 'Paste Link',
+      step1Desc: 'Copy and paste the video URL above.',
+      step2Title: 'Choose Format',
+      step2Desc: 'Select your preferred quality and format.',
+      step3Title: 'Download',
+      step3Desc: 'Click download and enjoy your video.',
+      footerTagline: 'Your All-in-One Video Downloader',
+      dlBtn: 'Download'
+    },
+    zh: {
+      navHome: '首页',
+      navPlatforms: '支持平台',
+      navHowTo: '使用教程',
+      navToolsLabel: '工具箱',
+      upgradeBtnText: '高清配置',
+      heroTitleTop: '一键无水印解析下载',
+      heroTitleGrad: '抖音、哔哩哔哩、TikTok 与 小红书视频',
+      subFast: '极速',
+      subSimple: '简洁',
+      subHq: '原画超清',
+      btnFetchLabel: '解析视频',
+      videoPreviewTitle: '视频预览',
+      previewEmptyMsg: '粘贴视频链接并点击“解析视频”以预览详情。',
+      previewLoadingMsg: '正在解析视频信息...',
+      tabLabelVideo: '视频',
+      tabLabelAudio: '音频',
+      tabLabelThumb: '封面图',
+      whyChooseTitle: '为什么选择 DownDouyin？',
+      whyChooseSub: '简单高效的无水印视频直链解析下载工具。',
+      feat1Title: '极速稳定',
+      feat1Desc: '秒级响应解析，高速直链流式传输。',
+      feat2Title: '纯净无水印',
+      feat2Desc: '直接提取原画无水印高码率片源。',
+      feat3Title: '四大主流平台',
+      feat3Desc: '全面支持抖音、B站、TikTok 与小红书。',
+      feat4Title: '100% 免费使用',
+      feat4Desc: '无需注册登录，粘贴链接即可下载。',
+      howToTitle: '如何下载视频？',
+      guideLinkText: '查看详细指南',
+      step1Title: '粘贴链接',
+      step1Desc: '在上方输入框粘贴分享链接。',
+      step2Title: '选择格式画质',
+      step2Desc: '按需切换视频分辨率、音频或封面。',
+      step3Title: '立即下载',
+      step3Desc: '点击下载按钮保存到本地设备。',
+      footerTagline: '全能无水印视频解析下载站',
+      dlBtn: '下载'
+    }
+  };
+
+  /* ==================== HELPERS ==================== */
+  function showToast(msg) {
+    const box = $('toastBox');
+    if (!box) return;
+    box.textContent = msg;
+    box.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => box.classList.remove('show'), 3200);
+  }
+
+  function showError(msg) {
+    const banner = $('errorBanner');
+    const txt = $('errorText');
+    if (!msg) {
+      banner.classList.remove('show');
+      return;
+    }
+    txt.textContent = msg;
+    banner.classList.add('show');
+  }
+
+  function buildProxyUrl(rawUrl, platform, altUrls) {
+    if (!rawUrl) return '';
+    let u = API_BASE + '/api/proxy?url=' + encodeURIComponent(rawUrl) +
+      '&platform=' + encodeURIComponent(platform || currentPlatform);
+    if (Array.isArray(altUrls) && altUrls.length > 1) {
+      u += '&alt=' + encodeURIComponent(JSON.stringify(altUrls.slice(0, 4)));
+    }
+    return u;
+  }
+
+  function buildDownloadUrl(rawUrl, prefix, platform, mediaType, forceExt, altUrls) {
+    if (!rawUrl) return '';
+    let u = API_BASE + '/api/download?url=' + encodeURIComponent(rawUrl) +
+      '&prefix=' + encodeURIComponent(prefix || 'DownDouyin') +
+      '&platform=' + encodeURIComponent(platform || currentPlatform) +
+      '&type=' + encodeURIComponent(mediaType || 'video');
+    if (forceExt) u += '&ext=' + encodeURIComponent(forceExt);
+    if (Array.isArray(altUrls) && altUrls.length > 1) {
+      u += '&alt=' + encodeURIComponent(JSON.stringify(altUrls.slice(0, 4)));
+    }
+    return u;
+  }
+
+  function sanitizeFilename(raw) {
+    return String(raw || 'DownDouyin_video')
+      .replace(/[\\/:*?"<>|#\r\n]+/g, '_')
+      .trim()
+      .slice(0, 65) || 'DownDouyin_video';
+  }
+
+  function formatBytes(bytes) {
+    const n = Number(bytes);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    if (n >= 1024 * 1024) {
+      return (n / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    if (n >= 1024) {
+      return Math.round(n / 1024) + ' KB';
+    }
+    return n + ' B';
+  }
+
+  /* ==================== GOOGLE ANALYTICS 4 SAFE EVENT HELPERS ==================== */
+  const ALLOWED_PLATFORMS = ['douyin', 'tiktok', 'bilibili', 'xiaohongshu'];
+
+  function sanitizeAnalyticsPlatform(plat) {
+    const p = String(plat || currentPlatform || '').trim().toLowerCase();
+    return ALLOWED_PLATFORMS.includes(p) ? p : 'unknown';
+  }
+
+  function categorizeClientError(errOrMsg) {
+    const msg = String((errOrMsg && errOrMsg.message) ? errOrMsg.message : (errOrMsg || '')).toLowerCase();
+    if (!msg) return 'unknown_error';
+    if (msg.includes('纯数字作品') || msg.includes('ambiguous')) return 'ambiguous_numeric_id';
+    if (msg.includes('没识别出链接所属平台') || msg.includes('unsupported')) return 'unsupported_platform';
+    if (msg.includes('xsec_token') || msg.includes('安全限制') || msg.includes('过期')) return 'expired_or_restricted_link';
+    if (msg.includes('cookie') || msg.includes('sessdata') || msg.includes('login')) return 'auth_or_cookie_required';
+    if (msg.includes('404') || msg.includes('not found') || msg.includes('不存在') || msg.includes('已删除')) return 'media_not_found';
+    if (msg.includes('stalled') || msg.includes('timeout')) return 'stream_stall_or_timeout';
+    if (msg.includes('chunk download failed')) return 'chunk_transfer_error';
+    if (msg.includes('http 5')) return 'server_http_5xx';
+    if (msg.includes('http 4')) return 'server_http_4xx';
+    if (msg.includes('zip')) return 'zip_archive_error';
+    if (msg.includes('empty video data')) return 'empty_parse_data';
+    if (msg.includes('network') || msg.includes('failed to fetch') || msg.includes('load failed')) return 'network_error';
+    return 'request_error';
+  }
+
+  function trackAnalyticsEvent(eventName, rawParams) {
+    if (typeof window.gtag !== 'function') return;
+    try {
+      const safeParams = {};
+      if (rawParams && typeof rawParams === 'object') {
+        if (rawParams.platform) {
+          safeParams.platform = sanitizeAnalyticsPlatform(rawParams.platform);
+        }
+        if (rawParams.status === 'success' || rawParams.status === 'failed' || rawParams.status === 'started') {
+          safeParams.status = rawParams.status;
+        }
+        if (rawParams.error_category) {
+          safeParams.error_category = String(rawParams.error_category).replace(/[^a-z0-9_]/gi, '_').slice(0, 40);
+        }
+        if (rawParams.download_method) {
+          safeParams.download_method = String(rawParams.download_method).replace(/[^a-z0-9_]/gi, '_').slice(0, 40);
+        }
+      }
+      window.gtag('event', eventName, safeParams);
+    } catch {
+      // Never allow analytics errors to interrupt user functionality
+    }
+  }
+
+  const sizeBytesCache = {};
+  const inflightSizeProbes = {};
+
+  function readStreamChunkWithTimeout(reader, timeoutMs) {
+    let timer = null;
+    return Promise.race([
+      reader.read(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Download stream stalled')), timeoutMs);
+      })
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  }
+
+  function updateDownloadButtonProgress(btnEl, receivedBytes, totalBytes) {
+    if (!btnEl) return;
+    if (totalBytes > 0) {
+      const pct = Math.min(99, Math.max(1, Math.floor((receivedBytes / totalBytes) * 100)));
+      btnEl.innerHTML = '<span>⬇ ' + pct + '%</span>';
+    } else if (receivedBytes > 0) {
+      btnEl.innerHTML = '<span>⬇ ' + formatBytes(receivedBytes) + '</span>';
+    }
+  }
+
+  /* ==================== SAFE NON-NAVIGATING DOWNLOAD HANDLER ==================== */
+  /* On production VPS (downdouyin.com), streams continuously in a single HTTP request via /api/download
+     with automatic Range resume and mirror representation verification if interrupted.
+     Compacts incoming Uint8Array chunks into Blob segments every 4MB so JS heap memory stays flat. */
+  async function downloadFileSafely(targetUrl, filename, btnEl, rawMediaUrl, platform, downloadMethod, knownSizeBytes, altUrls) {
+    if (!targetUrl && !rawMediaUrl) return;
+    if (btnEl && btnEl.disabled) return;
+
+    // Pause any active preview video playback so preview streaming does not compete for bandwidth
+    const activePreviewVideo = document.querySelector('#mediaStage video');
+    if (activePreviewVideo && typeof activePreviewVideo.pause === 'function') {
+      try { activePreviewVideo.pause(); } catch {}
+    }
+
+    const cleanPlat = sanitizeAnalyticsPlatform(platform || currentPlatform);
+    const cleanMethod = String(downloadMethod || 'video_stream').replace(/[^a-z0-9_]/gi, '_');
+    const dlReqId = 'dl_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+
+    // 1. Track user click on download button (distinct from completed download)
+    trackAnalyticsEvent('download_button_click', {
+      platform: cleanPlat,
+      download_method: cleanMethod
+    });
+
+    const origHtml = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<span>⏳ 0%</span>';
+    }
+
+    // 2. Track actual file transfer request started
+    trackAnalyticsEvent('download_request_started', {
+      platform: cleanPlat,
+      download_method: cleanMethod,
+      status: 'started'
+    });
+
+    const blobSegments = [];
+    const ramBatch = [];
+    let ramBatchBytes = 0;
+    const COMPACT_BATCH_BYTES = 4 * 1024 * 1024; // Compact into Blob storage every 4 MB to avoid JS heap buildup
+
+    function flushRamBatch(mimeType) {
+      if (ramBatch.length === 0) return;
+      blobSegments.push(new Blob(ramBatch, { type: mimeType || 'video/mp4' }));
+      ramBatch.length = 0;
+      ramBatchBytes = 0;
+    }
+
+    function appendChunk(u8, mimeType) {
+      ramBatch.push(u8);
+      ramBatchBytes += u8.byteLength;
+      if (ramBatchBytes >= COMPACT_BATCH_BYTES) {
+        flushRamBatch(mimeType);
+      }
+    }
+
+    function resetBuffers() {
+      blobSegments.length = 0;
+      ramBatch.length = 0;
+      ramBatchBytes = 0;
+    }
+
+    try {
+      const isCloudRunHost = window.location.hostname.endsWith('.run.app');
+      const CHUNK_SIZE = 16 * 1024 * 1024; // 16 MB chunk cap only used on Cloud Run (*.run.app)
+      const baseEndpoint = targetUrl || buildProxyUrl(rawMediaUrl, cleanPlat, altUrls);
+      const hasAltParam = baseEndpoint.includes('&alt=');
+      let downloadEndpoint = baseEndpoint +
+        (baseEndpoint.includes('?') ? '&' : '?') +
+        'dl=1&method=' + encodeURIComponent(cleanMethod) +
+        '&req_id=' + encodeURIComponent(dlReqId);
+      if (!hasAltParam && Array.isArray(altUrls) && altUrls.length > 1) {
+        downloadEndpoint += '&alt=' + encodeURIComponent(JSON.stringify(altUrls.slice(0, 5)));
+      }
+
+      let totalSize = Number(knownSizeBytes) > 0
+        ? Number(knownSizeBytes)
+        : (rawMediaUrl && sizeBytesCache[rawMediaUrl] ? sizeBytesCache[rawMediaUrl] : 0);
+      let supportsRange = false;
+      let contentType = 'video/mp4';
+      let received = 0;
+      let fullRestartCount = 0;
+      const MAX_FULL_RESTARTS = 1;
+
+      while (true) {
+        resetBuffers();
+        received = 0;
+
+        const firstHeaders = {};
+        if (isCloudRunHost) {
+          firstHeaders['Range'] = 'bytes=0-' + (CHUNK_SIZE - 1);
+        }
+
+        const firstResp = await fetch(downloadEndpoint, {
+          method: 'GET',
+          headers: firstHeaders
+        });
+
+        if (!firstResp.ok && firstResp.status !== 206) {
+          throw new Error('Download server returned HTTP ' + firstResp.status);
+        }
+
+        contentType = firstResp.headers.get('Content-Type') || contentType;
+        const contentRange = firstResp.headers.get('Content-Range') || '';
+        const acceptRanges = (firstResp.headers.get('Accept-Ranges') || '').toLowerCase();
+        if (acceptRanges.includes('bytes') || firstResp.status === 206) {
+          supportsRange = true;
+        }
+
+        if (firstResp.status === 206 && contentRange) {
+          const m = contentRange.match(/\/(\d+)$/);
+          if (m) {
+            totalSize = parseInt(m[1], 10);
+            supportsRange = totalSize > 0;
+          }
+        } else {
+          const cl = parseInt(firstResp.headers.get('Content-Length') || '0', 10);
+          if (cl > 0) totalSize = cl;
+        }
+
+        if (firstResp.body && typeof firstResp.body.getReader === 'function') {
+          const reader = firstResp.body.getReader();
+          try {
+            while (true) {
+              const { done, value } = await readStreamChunkWithTimeout(reader, 22000);
+              if (done) break;
+              if (value && value.byteLength > 0) {
+                appendChunk(value, contentType);
+                received += value.byteLength;
+                updateDownloadButtonProgress(btnEl, received, totalSize);
+              }
+            }
+          } catch (streamErr) {
+            try { await reader.cancel(); } catch {}
+            if (!supportsRange || totalSize <= 0 || received === 0) {
+              if (fullRestartCount < MAX_FULL_RESTARTS) {
+                fullRestartCount++;
+                continue;
+              }
+              throw streamErr;
+            }
+          }
+        } else {
+          const buf = new Uint8Array(await firstResp.arrayBuffer());
+          if (buf.byteLength > 0) {
+            appendChunk(buf, contentType);
+            received += buf.byteLength;
+            updateDownloadButtonProgress(btnEl, received, totalSize);
+          }
+        }
+
+        // Continue fetching remaining bytes if chunked (on Cloud Run) or if a continuous stream dropped mid-transfer
+        let resumeRetries = 0;
+        const MAX_RESUME_RETRIES = 3;
+        let needFullRestart = false;
+
+        while (supportsRange && totalSize > 0 && received < totalSize) {
+          const start = received;
+          const end = isCloudRunHost
+            ? Math.min(start + CHUNK_SIZE - 1, totalSize - 1)
+            : (totalSize - 1);
+
+          try {
+            const resumeUrl = downloadEndpoint + '&expected_size=' + encodeURIComponent(String(totalSize));
+            const partResp = await fetch(resumeUrl, {
+              method: 'GET',
+              headers: { 'Range': 'bytes=' + start + '-' + end }
+            });
+
+            if (partResp.status === 409 || partResp.status === 416) {
+              // Alternate mirror has a different representation size; restart cleanly from byte 0 instead of corrupting
+              needFullRestart = true;
+              break;
+            }
+
+            if (partResp.status !== 206) {
+              throw new Error('Range resume returned HTTP ' + partResp.status);
+            }
+
+            const partCr = partResp.headers.get('Content-Range') || '';
+            const crMatch = partCr.match(/bytes\s+(\d+)-(\d+)\/(\d+)/i);
+            if (!crMatch || parseInt(crMatch[1], 10) !== start || parseInt(crMatch[3], 10) !== totalSize) {
+              needFullRestart = true;
+              try { await partResp.body?.cancel(); } catch {}
+              break;
+            }
+
+            if (partResp.body && typeof partResp.body.getReader === 'function') {
+              const reader = partResp.body.getReader();
+              let partBytes = 0;
+              try {
+                while (true) {
+                  const { done, value } = await readStreamChunkWithTimeout(reader, 22000);
+                  if (done) break;
+                  if (value && value.byteLength > 0) {
+                    appendChunk(value, contentType);
+                    received += value.byteLength;
+                    partBytes += value.byteLength;
+                    updateDownloadButtonProgress(btnEl, received, totalSize);
+                  }
+                }
+              } catch (partStreamErr) {
+                try { await reader.cancel(); } catch {}
+                if (partBytes === 0) throw partStreamErr;
+              }
+              if (partBytes === 0) {
+                throw new Error('Chunk download returned 0 bytes');
+              }
+            } else {
+              const buf = new Uint8Array(await partResp.arrayBuffer());
+              if (buf.byteLength === 0) break;
+              appendChunk(buf, contentType);
+              received += buf.byteLength;
+              updateDownloadButtonProgress(btnEl, received, totalSize);
+            }
+          } catch (resumeErr) {
+            resumeRetries++;
+            if (resumeRetries > MAX_RESUME_RETRIES) {
+              if (fullRestartCount < MAX_FULL_RESTARTS) {
+                needFullRestart = true;
+                break;
+              }
+              throw resumeErr;
+            }
+          }
+        }
+
+        if (needFullRestart && fullRestartCount < MAX_FULL_RESTARTS) {
+          fullRestartCount++;
+          continue;
+        }
+        break;
+      }
+
+      if (received === 0) {
+        throw new Error('Download returned empty payload');
+      }
+      if (totalSize > 0 && received < totalSize) {
+        throw new Error('Incomplete media transfer (' + formatBytes(received) + ' / ' + formatBytes(totalSize) + ')');
+      }
+
+      flushRamBatch(contentType);
+      const blob = blobSegments.length === 1 ? blobSegments[0] : new Blob(blobSegments, { type: contentType });
+      resetBuffers();
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename || 'DownDouyin_video.mp4';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+        a.remove();
+      }, 6000);
+
+      // 3. Track completed file transfer ONLY after full verified payload is assembled and saved
+      trackAnalyticsEvent('download_request_success', {
+        platform: cleanPlat,
+        download_method: cleanMethod,
+        status: 'success'
+      });
+
+      if (btnEl) {
+        btnEl.innerHTML = '<span>✓ Saved</span>';
+        setTimeout(() => {
+          btnEl.disabled = false;
+          btnEl.innerHTML = origHtml;
+        }, 1600);
+      }
+      showToast('Download complete: ' + (filename || 'video.mp4'));
+    } catch (err) {
+      resetBuffers();
+      // 4. Track failed file transfer with non-sensitive error_category
+      trackAnalyticsEvent('download_request_failed', {
+        platform: cleanPlat,
+        download_method: cleanMethod,
+        status: 'failed',
+        error_category: categorizeClientError(err)
+      });
+      showError('Download failed: ' + (err && err.message ? err.message : 'Network error'));
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = origHtml;
+      }
+    }
+  }
+
+  /* ==================== AUTO-DETECT PLATFORM FROM URL ==================== */
+  function detectPlatformFromText(text) {
+    const s = String(text || '').toLowerCase();
+    if (s.includes('bilibili.com') || s.includes('b23.tv') || /\bbv[0-9a-z]{10}\b/i.test(text)) {
+      return 'bilibili';
+    }
+    if (s.includes('tiktok.com')) {
+      return 'tiktok';
+    }
+    if (s.includes('xiaohongshu.com') || s.includes('xhslink.com')) {
+      return 'xiaohongshu';
+    }
+    if (s.includes('douyin.com') || s.includes('iesdouyin.com')) {
+      return 'douyin';
+    }
+    return null;
+  }
+
+  function setActivePlatform(plat) {
+    if (!PLATFORMS[plat]) return;
+    currentPlatform = plat;
+    document.querySelectorAll('.plat-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.platform === plat);
+    });
+    const input = $('urlInput');
+    if (input) {
+      input.placeholder = PLATFORMS[plat].placeholder;
+    }
+  }
+
+  /* ==================== QUALITY LABEL & REAL SIZE PROBING ==================== */
+  function formatDurationSeconds(val) {
+    if (typeof val === 'string' && val.includes(':')) return val.trim();
+    const sec = Math.round(Number(val));
+    if (!Number.isFinite(sec) || sec <= 0) return '';
+    const mins = Math.floor(sec / 60);
+    const rem = sec % 60;
+    return String(mins).padStart(2, '0') + ':' + String(rem).padStart(2, '0');
+  }
+
+  function formatTimestampDate(ts) {
+    const n = Number(ts);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    const ms = n < 1e12 ? n * 1000 : n;
+    const d = new Date(ms);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function formatCountNumber(n) {
+    const num = Number(n);
+    if (!Number.isFinite(num) || num <= 0) return '';
+    if (num >= 1e6) return (num / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return String(num);
+  }
+
+  function normalizeBackendResponse(rawJson) {
+    const d = (rawJson && typeof rawJson.data === 'object' && rawJson.data !== null)
+      ? rawJson.data
+      : rawJson;
+    if (!d || typeof d !== 'object') return null;
+
+    const plat = rawJson.platform || d.platform || currentPlatform;
+    const authorName = typeof d.author === 'string'
+      ? d.author.trim()
+      : (d.author && typeof d.author === 'object'
+        ? String(d.author.nickname || d.author.name || d.author.uniqueId || '').trim()
+        : '');
+
+    const avatarUrl = d.author_avatar ||
+      (d.author && Array.isArray(d.author.avatar) && d.author.avatar[0]) ||
+      (d.author && typeof d.author.avatar === 'string' ? d.author.avatar : '') ||
+      d.avatar || '';
+
+    const coverUrl = d.cover || d.cover_url || (Array.isArray(d.images) && d.images[0]) || '';
+    const musicUrl = (d.music && typeof d.music === 'object' ? d.music.url : '') || d.music_url || '';
+
+    const rawVideoUrls = Array.isArray(d.video_urls) ? d.video_urls.filter(Boolean) : [];
+    const rawQualities = (Array.isArray(d.qualities) ? d.qualities : []).map(q => {
+      if (!q || typeof q !== 'object') return q;
+      const qUrls = Array.isArray(q.urls) && q.urls.length > 0
+        ? q.urls
+        : (q.url && rawVideoUrls.includes(q.url) ? rawVideoUrls : (q.url ? [q.url] : []));
+      return { ...q, urls: qUrls };
+    });
+    const primaryVideoUrl = d.video_url ||
+      rawVideoUrls[0] ||
+      (rawQualities[0] && rawQualities[0].url) || '';
+
+    const rawLive = Array.isArray(d.live_videos)
+      ? d.live_videos
+      : (Array.isArray(d.live_photos) ? d.live_photos : []);
+    const livePhotos = rawLive.map((lp, i) => ({
+      index: lp.index || (i + 1),
+      video_url: lp.video_url || lp.url || (Array.isArray(lp.urls) && lp.urls[0]) || '',
+      urls: Array.isArray(lp.urls) ? lp.urls : []
+    })).filter(lp => Boolean(lp.video_url));
+
+    const playCount = d.stats && Number(d.stats.play) > 0 ? formatCountNumber(d.stats.play) + ' views' : '';
+    const diggCount = (!playCount && d.stats && Number(d.stats.digg) > 0) ? formatCountNumber(d.stats.digg) + ' likes' : '';
+
+    return {
+      platform: plat,
+      aweme_id: d.aweme_id || d.id || d.bvid || '',
+      type: d.type || (Array.isArray(d.images) && d.images.length > 0 && !primaryVideoUrl ? 'images' : 'video'),
+      desc: String(d.title || d.desc || '').trim(),
+      author: authorName,
+      avatar: avatarUrl,
+      verified: Boolean(d.verified),
+      cover_url: coverUrl,
+      video_url: primaryVideoUrl,
+      video_urls: rawVideoUrls,
+      music_url: musicUrl,
+      duration: formatDurationSeconds(d.duration),
+      date: d.create_time ? formatTimestampDate(d.create_time) : (d.date ? String(d.date) : ''),
+      views: d.views ? String(d.views) : (playCount || diggCount),
+      qualities: rawQualities,
+      images: Array.isArray(d.images) ? d.images : [],
+      live_photos: livePhotos,
+      pages: Array.isArray(d.pages) ? d.pages : []
+    };
+  }
+
+  function parseQualityDisplay(q, idx) {
+    const rawId = String(q.id || q.name || '').toLowerCase();
+    const rawLabel = String(q.label || q.shortLabel || 'HD');
+    const lowerLabel = rawLabel.toLowerCase();
+    const resNum = Number(q.resolution) || 0;
+
+    let name = rawLabel;
+
+    if (idx === 0 || rawId === 'origin' || rawId === 'original' || q.tag === 'Original' || rawLabel.includes('原画') || lowerLabel.includes('origin')) {
+      name = currentLang === 'zh' ? '原画质量 (Original)' : 'Original Quality';
+    } else if (rawId === '120' || resNum >= 2160 || lowerLabel.includes('4k') || lowerLabel.includes('2160')) {
+      name = currentLang === 'zh' ? '4K 超清' : '4K Ultra HD';
+    } else if (resNum >= 1440 || lowerLabel.includes('2k') || lowerLabel.includes('1440')) {
+      name = '2K QHD';
+    } else if (resNum >= 1080 || rawId.includes('1080') || rawLabel.includes('1080')) {
+      if (rawLabel.includes('60')) {
+        name = '1080p 60fps';
+      } else {
+        name = '1080p Full HD';
+      }
+    } else if (resNum >= 720 || rawId.includes('720') || rawLabel.includes('720')) {
+      name = '720p HD';
+    } else if (resNum >= 540 || rawId.includes('540') || rawLabel.includes('540') || rawLabel.includes('576')) {
+      name = '540p SD';
+    } else if (resNum >= 480 || rawId.includes('480') || rawLabel.includes('480')) {
+      name = '480p SD';
+    } else if (resNum >= 360 || rawId.includes('360') || rawLabel.includes('360')) {
+      name = '360p SD';
+    } else if (rawId === 'hd' || rawId === 'default') {
+      name = 'HD Quality';
+    } else if (rawId === 'sd') {
+      name = 'SD Quality';
+    }
+
+    let formattedSize = '';
+    if (typeof q.size === 'number' && q.size > 0) {
+      formattedSize = formatBytes(q.size);
+    } else if (typeof q.size === 'string' && q.size.trim() && q.size.trim() !== '0') {
+      formattedSize = /^\d+$/.test(q.size.trim()) ? formatBytes(Number(q.size.trim())) : q.size.trim();
+    }
+
+    return {
+      name,
+      format: q.format || 'MP4',
+      size: formattedSize
+    };
+  }
+
+  async function probeQualitySize(rawUrl, platform, cellEl, altUrls) {
+    if (!rawUrl || !cellEl) return;
+    if (sizeProbeCache[rawUrl]) {
+      cellEl.textContent = sizeProbeCache[rawUrl];
+      return;
+    }
+    if (inflightSizeProbes[rawUrl]) {
+      try {
+        const formatted = await inflightSizeProbes[rawUrl];
+        if (formatted) cellEl.textContent = formatted;
+      } catch {}
+      return;
+    }
+    const probeTask = (async () => {
+      try {
+        const proxyUrl = buildProxyUrl(rawUrl, platform, altUrls);
+        const resp = await fetch(proxyUrl, { method: 'HEAD' });
+        const len = resp.headers.get('Content-Length');
+        const numBytes = Number(len);
+        const formatted = formatBytes(len);
+        if (formatted) {
+          sizeProbeCache[rawUrl] = formatted;
+          if (Number.isFinite(numBytes) && numBytes > 0) {
+            sizeBytesCache[rawUrl] = numBytes;
+          }
+          return formatted;
+        }
+      } catch {
+        // Leave size cell empty if upstream CDN does not expose Content-Length
+      } finally {
+        delete inflightSizeProbes[rawUrl];
+      }
+      return '';
+    })();
+
+    inflightSizeProbes[rawUrl] = probeTask;
+    const formatted = await probeTask;
+    if (formatted) {
+      cellEl.textContent = formatted;
+    }
+  }
+
+  /* ==================== VIDEO PREVIEW STATE MANAGEMENT ==================== */
+  function stopActiveMediaPlayback() {
+    const stage = $('mediaStage');
+    if (!stage) return;
+    const vid = stage.querySelector('video');
+    if (vid) {
+      try {
+        vid.pause();
+        vid.removeAttribute('src');
+        vid.load();
+      } catch {}
+    }
+    const aud = stage.querySelector('audio');
+    if (aud) {
+      try {
+        aud.pause();
+        aud.removeAttribute('src');
+      } catch {}
+    }
+  }
+
+  function showPreviewEmptyState() {
+    stopActiveMediaPlayback();
+    activeMediaData = null;
+    $('previewEmptyState').style.display = 'flex';
+    $('previewLoadingState').style.display = 'none';
+    $('previewSplit').classList.remove('show');
+    $('galleryBox').classList.remove('show');
+    $('biliPartSelectBox').style.display = 'none';
+  }
+
+  function showPreviewLoadingState() {
+    stopActiveMediaPlayback();
+    $('previewEmptyState').style.display = 'none';
+    $('previewLoadingState').style.display = 'flex';
+    $('previewSplit').classList.remove('show');
+    $('galleryBox').classList.remove('show');
+  }
+
+  function renderPreviewCard(data) {
+    if (!data) {
+      showPreviewEmptyState();
+      return;
+    }
+
+    activeMediaData = data;
+    $('previewEmptyState').style.display = 'none';
+    $('previewLoadingState').style.display = 'none';
+    $('previewSplit').classList.add('show');
+
+    const plat = data.platform || currentPlatform;
+
+    // 1. Title (only shown if backend returned title/desc)
+    const titleEl = $('previewTitle');
+    const rawTitle = String(data.desc || '').trim();
+    if (rawTitle) {
+      titleEl.textContent = rawTitle;
+      titleEl.style.display = '-webkit-box';
+    } else {
+      titleEl.textContent = '';
+      titleEl.style.display = 'none';
+    }
+
+    // 2. Creator (only shown if backend returned author)
+    const creatorRow = $('creatorRow');
+    const creatorNameEl = $('creatorName');
+    const avatarEl = $('creatorAvatar');
+    const iconBadgeEl = $('creatorIconBadge');
+    const verifiedEl = $('verifiedBadge');
+    const rawAuthor = String(data.author || '').trim();
+
+    if (rawAuthor) {
+      creatorRow.style.display = 'flex';
+      creatorNameEl.textContent = rawAuthor;
+      if (data.avatar) {
+        avatarEl.src = buildProxyUrl(data.avatar, plat);
+        avatarEl.style.display = 'block';
+        iconBadgeEl.style.display = 'none';
+        avatarEl.onerror = () => {
+          avatarEl.style.display = 'none';
+          iconBadgeEl.style.display = 'inline-flex';
+        };
+      } else {
+        avatarEl.removeAttribute('src');
+        avatarEl.style.display = 'none';
+        iconBadgeEl.style.display = 'inline-flex';
+      }
+      verifiedEl.style.display = data.verified ? 'inline-flex' : 'none';
+    } else {
+      creatorRow.style.display = 'none';
+    }
+
+    // 3. Stats Row (only display fields that actually exist in backend response)
+    const statsRow = $('statsRow');
+    const viewsItem = $('statViewsItem');
+    const dateItem = $('statDateItem');
+    const durationItem = $('statDurationItem');
+
+    let hasAnyStat = false;
+    if (data.views) {
+      $('statViews').textContent = String(data.views);
+      viewsItem.style.display = 'inline-flex';
+      hasAnyStat = true;
+    } else {
+      viewsItem.style.display = 'none';
+    }
+
+    if (data.date) {
+      $('statDate').textContent = String(data.date);
+      dateItem.style.display = 'inline-flex';
+      hasAnyStat = true;
+    } else {
+      dateItem.style.display = 'none';
+    }
+
+    if (data.duration) {
+      $('statDuration').textContent = String(data.duration);
+      durationItem.style.display = 'inline-flex';
+      hasAnyStat = true;
+    } else {
+      durationItem.style.display = 'none';
+    }
+
+    statsRow.style.display = hasAnyStat ? 'flex' : 'none';
+
+    // 4. Configure Available Format Tabs based on actual backend response
+    const hasVideo = Boolean(
+      data.video_url ||
+      (Array.isArray(data.qualities) && data.qualities.length > 0) ||
+      (Array.isArray(data.live_photos) && data.live_photos.length > 0)
+    );
+    const hasAudio = Boolean(data.music_url);
+    const hasThumb = Boolean(
+      data.cover_url ||
+      (Array.isArray(data.images) && data.images.length > 0)
+    );
+
+    $('tabBtnVideo').style.display = hasVideo ? 'inline-flex' : 'none';
+    $('tabBtnAudio').style.display = hasAudio ? 'inline-flex' : 'none';
+    $('tabBtnThumb').style.display = hasThumb ? 'inline-flex' : 'none';
+
+    if (currentMediaTab === 'video' && !hasVideo) {
+      currentMediaTab = hasThumb ? 'thumbnail' : (hasAudio ? 'audio' : 'video');
+    } else if (currentMediaTab === 'audio' && !hasAudio) {
+      currentMediaTab = hasVideo ? 'video' : 'thumbnail';
+    } else if (currentMediaTab === 'thumbnail' && !hasThumb) {
+      currentMediaTab = hasVideo ? 'video' : 'audio';
+    }
+
+    document.querySelectorAll('.media-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === currentMediaTab);
+    });
+
+    // 5. Render Media Stage (Thumbnail + Playable Video)
+    renderMediaStage(data);
+
+    // 6. Render Quality / Format Rows
+    renderQualityRows(data);
+
+    // 7. Render Gallery Box if multi-image post (Douyin / Xiaohongshu / TikTok photo notes)
+    renderGalleryIfPresent(data);
+  }
+
+  function renderMediaStage(data) {
+    const stage = $('mediaStage');
+    if (!stage) return;
+    stage.innerHTML = '';
+
+    const plat = data.platform || currentPlatform;
+    const rawCover = data.cover_url || (Array.isArray(data.images) && data.images[0]) || '';
+    const coverSrc = rawCover ? buildProxyUrl(rawCover, plat) : '';
+
+    const qualities = Array.isArray(data.qualities) && data.qualities.length
+      ? data.qualities
+      : (data.video_url ? [{ id: 'default', label: 'Original Quality', url: data.video_url, urls: data.video_urls || [data.video_url] }] : []);
+    const activeQ = qualities[selectedQualityIdx] || qualities[0];
+    const rawVideoUrl = activeQ ? activeQ.url : data.video_url;
+    const activeAltUrls = activeQ && Array.isArray(activeQ.urls) && activeQ.urls.length > 0
+      ? activeQ.urls
+      : (Array.isArray(data.video_urls) ? data.video_urls : []);
+
+    if (coverSrc) {
+      const img = document.createElement('img');
+      img.src = coverSrc;
+      img.alt = data.desc || 'Video preview thumbnail';
+      img.referrerPolicy = 'no-referrer';
+      stage.appendChild(img);
+    }
+
+    if (rawVideoUrl && data.type !== 'images') {
+      const playOverlay = document.createElement('button');
+      playOverlay.type = 'button';
+      playOverlay.className = 'media-play-overlay';
+      playOverlay.setAttribute('aria-label', 'Play Video Preview');
+      playOverlay.innerHTML =
+        '<span class="play-circle"><svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg></span>';
+
+      playOverlay.addEventListener('click', () => {
+        stage.innerHTML = '';
+        const video = document.createElement('video');
+        video.controls = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        if (coverSrc) video.poster = coverSrc;
+        video.src = buildProxyUrl(rawVideoUrl, plat, activeAltUrls);
+        stage.appendChild(video);
+      });
+
+      stage.appendChild(playOverlay);
+    }
+
+    if (data.duration) {
+      const dur = document.createElement('span');
+      dur.className = 'duration-pill';
+      dur.textContent = data.duration;
+      stage.appendChild(dur);
+    }
+  }
+
+  function renderQualityRows(data) {
+    const listEl = $('qualityList');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    const plat = data.platform || currentPlatform;
+    const dlLabel = (I18N[currentLang] && I18N[currentLang].dlBtn) || 'Download';
+    const baseName = sanitizeFilename((data.author ? data.author + '_' : '') + (data.aweme_id || 'video'));
+
+    if (currentMediaTab === 'audio') {
+      if (!data.music_url) return;
+      const row = document.createElement('div');
+      row.className = 'quality-row selected';
+      row.innerHTML = `
+        <span class="q-radio"></span>
+        <span class="q-name">${currentLang === 'zh' ? '原声音乐 (Original Audio)' : 'Original Audio'}</span>
+        <span class="q-fmt">MP3</span>
+        <span class="q-size" id="audioSizeCell"></span>
+        <button type="button" class="btn-row-dl">⬇ ${dlLabel}</button>
+      `;
+      const sizeCell = row.querySelector('#audioSizeCell');
+      probeQualitySize(data.music_url, plat, sizeCell);
+
+      const dlBtn = row.querySelector('.btn-row-dl');
+      dlBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dlUrl = buildDownloadUrl(data.music_url, baseName + '_audio', plat, 'music', '.mp3');
+        downloadFileSafely(dlUrl, baseName + '_audio.mp3', dlBtn, data.music_url, plat, 'audio_mp3');
+      });
+      listEl.appendChild(row);
+      return;
+    }
+
+    if (currentMediaTab === 'thumbnail') {
+      const coverUrl = data.cover_url || (Array.isArray(data.images) && data.images[0]) || '';
+      if (!coverUrl) return;
+      const row = document.createElement('div');
+      row.className = 'quality-row selected';
+      row.innerHTML = `
+        <span class="q-radio"></span>
+        <span class="q-name">${currentLang === 'zh' ? '高清封面 (HD Cover)' : 'Original Thumbnail'}</span>
+        <span class="q-fmt">JPG</span>
+        <span class="q-size" id="thumbSizeCell"></span>
+        <button type="button" class="btn-row-dl">⬇ ${dlLabel}</button>
+      `;
+      const sizeCell = row.querySelector('#thumbSizeCell');
+      probeQualitySize(coverUrl, plat, sizeCell);
+
+      const dlBtn = row.querySelector('.btn-row-dl');
+      dlBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dlUrl = buildDownloadUrl(coverUrl, baseName + '_cover', plat, 'image', '.jpg');
+        downloadFileSafely(dlUrl, baseName + '_cover.jpg', dlBtn, coverUrl, plat, 'thumbnail_jpg');
+      });
+      listEl.appendChild(row);
+      return;
+    }
+
+    // Video Tab: Build rows strictly from backend qualities
+    const rawQualities = Array.isArray(data.qualities) && data.qualities.length
+      ? data.qualities
+      : (data.video_url ? [{ id: 'origin', label: 'Original Quality', url: data.video_url, urls: data.video_urls || [data.video_url] }] : []);
+
+    if (selectedQualityIdx >= rawQualities.length) {
+      selectedQualityIdx = 0;
+    }
+
+    rawQualities.forEach((q, idx) => {
+      const info = parseQualityDisplay(q, idx);
+      const row = document.createElement('div');
+      row.className = 'quality-row' + (idx === selectedQualityIdx ? ' selected' : '');
+      row.innerHTML = `
+        <span class="q-radio"></span>
+        <span class="q-name" title="${info.name}">${info.name}</span>
+        <span class="q-fmt">${info.format}</span>
+        <span class="q-size">${info.size}</span>
+        <button type="button" class="btn-row-dl">⬇ ${dlLabel}</button>
+      `;
+
+      const sizeCell = row.querySelector('.q-size');
+      const altUrls = Array.isArray(q.urls) && q.urls.length > 0
+        ? q.urls
+        : (Array.isArray(data.video_urls) ? data.video_urls : []);
+      if (!info.size && q.url) {
+        probeQualitySize(q.url, plat, sizeCell, altUrls);
+      }
+
+      row.addEventListener('click', () => {
+        selectedQualityIdx = idx;
+        document.querySelectorAll('#qualityList .quality-row').forEach((r, i) => {
+          r.classList.toggle('selected', i === idx);
+        });
+        renderMediaStage(data);
+      });
+
+      const dlBtn = row.querySelector('.btn-row-dl');
+      dlBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedQualityIdx = idx;
+        document.querySelectorAll('#qualityList .quality-row').forEach((r, i) => {
+          r.classList.toggle('selected', i === idx);
+        });
+        const targetRawUrl = q.url || data.video_url;
+        const qTag = idx === 0 ? 'Original' : String(q.resolution || q.id || q.name || 'HD').replace(/[^a-zA-Z0-9]/g, '');
+        const fname = `${baseName}_${qTag}.mp4`;
+        const knownBytes = (typeof q.size === 'number' && q.size > 0) ? q.size : (sizeBytesCache[targetRawUrl] || 0);
+        const dlUrl = buildDownloadUrl(targetRawUrl, `${baseName}_${qTag}`, plat, 'video', '.mp4', altUrls);
+        downloadFileSafely(dlUrl, fname, dlBtn, targetRawUrl, plat, idx === 0 ? 'video_original_mp4' : 'video_mp4', knownBytes, altUrls);
+      });
+
+      listEl.appendChild(row);
+    });
+  }
+
+  function renderGalleryIfPresent(data) {
+    const box = $('galleryBox');
+    const grid = $('galleryGrid');
+    const summary = $('gallerySummaryText');
+    if (!box || !grid) return;
+
+    const images = Array.isArray(data.images) ? data.images : [];
+    const livePhotos = Array.isArray(data.live_photos) ? data.live_photos : [];
+
+    if (images.length === 0 && livePhotos.length === 0) {
+      box.classList.remove('show');
+      grid.innerHTML = '';
+      return;
+    }
+
+    box.classList.add('show');
+    grid.innerHTML = '';
+    const plat = data.platform || currentPlatform;
+    const baseName = sanitizeFilename((data.author ? data.author + '_' : '') + (data.aweme_id || 'album'));
+
+    summary.textContent = livePhotos.length > 0
+      ? `Live Photo Album (${images.length} Photos + ${livePhotos.length} Live Videos)`
+      : `Photo Album (${images.length} HD Images)`;
+
+    images.forEach((imgUrl, idx) => {
+      const card = document.createElement('div');
+      card.className = 'gallery-item';
+      const proxyImg = buildProxyUrl(imgUrl, plat);
+      const matchingLive = livePhotos.find(lp => Number(lp.index) === idx + 1);
+
+      card.innerHTML = `
+        <img src="${proxyImg}" alt="Album item ${idx + 1}" loading="lazy" referrerPolicy="no-referrer">
+        <div class="gallery-item-actions">
+          <button type="button" class="gallery-dl-chip" data-kind="img">⬇ JPG</button>
+          ${matchingLive && matchingLive.video_url ? '<button type="button" class="gallery-dl-chip" data-kind="live">⬇ Live MP4</button>' : ''}
+        </div>
+      `;
+
+      const imgBtn = card.querySelector('[data-kind="img"]');
+      imgBtn.addEventListener('click', () => {
+        const dl = buildDownloadUrl(imgUrl, `${baseName}_${idx + 1}`, plat, 'image', '.jpg');
+        downloadFileSafely(dl, `${baseName}_${idx + 1}.jpg`, imgBtn, imgUrl, plat, 'gallery_jpg');
+      });
+
+      const liveBtn = card.querySelector('[data-kind="live"]');
+      if (liveBtn && matchingLive) {
+        liveBtn.addEventListener('click', () => {
+          const dl = buildDownloadUrl(matchingLive.video_url, `${baseName}_live_${idx + 1}`, plat, 'video', '.mp4');
+          downloadFileSafely(dl, `${baseName}_live_${idx + 1}.mp4`, liveBtn, matchingLive.video_url, plat, 'gallery_live_mp4');
+        });
+      }
+
+      grid.appendChild(card);
+    });
+
+    const zipBtn = $('btnDownloadZip');
+    if (zipBtn) {
+      zipBtn.onclick = async () => {
+        if (zipBtn.disabled) return;
+        const items = [];
+        images.forEach((u, i) => items.push({ url: u, name: `${baseName}_img_${i + 1}.jpg` }));
+        livePhotos.forEach((lp, i) => {
+          if (lp && lp.video_url) {
+            items.push({ url: lp.video_url, name: `${baseName}_live_${lp.index || (i + 1)}.mp4` });
+          }
+        });
+        if (!items.length) return;
+
+        const cleanPlat = sanitizeAnalyticsPlatform(plat);
+        trackAnalyticsEvent('download_button_click', {
+          platform: cleanPlat,
+          download_method: 'album_zip'
+        });
+
+        const origText = zipBtn.innerHTML;
+        zipBtn.disabled = true;
+        zipBtn.innerHTML = '⏳ Packing ZIP...';
+
+        trackAnalyticsEvent('download_request_started', {
+          platform: cleanPlat,
+          download_method: 'album_zip',
+          status: 'started'
+        });
+
+        try {
+          const resp = await fetch(API_BASE + '/api/zip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items, prefix: baseName, platform: plat })
+          });
+          if (!resp.ok) throw new Error('ZIP Error HTTP ' + resp.status);
+          const blob = await resp.blob();
+          if (!blob || blob.size === 0) throw new Error('ZIP archive returned empty payload');
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${baseName}_album.zip`;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+            a.remove();
+          }, 5000);
+
+          trackAnalyticsEvent('download_request_success', {
+            platform: cleanPlat,
+            download_method: 'album_zip',
+            status: 'success'
+          });
+          showToast('Album ZIP downloaded!');
+        } catch (e) {
+          trackAnalyticsEvent('download_request_failed', {
+            platform: cleanPlat,
+            download_method: 'album_zip',
+            status: 'failed',
+            error_category: categorizeClientError(e)
+          });
+          showError('ZIP download failed: ' + (e.message || 'Error'));
+        } finally {
+          zipBtn.disabled = false;
+          zipBtn.innerHTML = origText;
+        }
+      };
+    }
+  }
+
+  /* ==================== CORE FETCH VIDEO HANDLER (/api/parse) ==================== */
+  async function handleFetchVideo() {
+    if (isFetching) return;
+    showError('');
+
+    const inputEl = $('urlInput');
+    const rawText = (inputEl ? inputEl.value : '').trim();
+    if (!rawText) {
+      showError(currentLang === 'zh'
+        ? '请先在输入框中粘贴抖音、B站、TikTok 或小红书视频链接。'
+        : 'Please paste a Douyin, Bilibili, TikTok, or Xiaohongshu video link first.');
+      if (inputEl) inputEl.focus();
+      return;
+    }
+
+    const detected = detectPlatformFromText(rawText);
+    if (detected) {
+      setActivePlatform(detected);
+    }
+
+    const submitPlatform = sanitizeAnalyticsPlatform(detected || currentPlatform);
+
+    // Track link submission (distinct from a completed media file download)
+    trackAnalyticsEvent('downloader_link_submit', {
+      platform: submitPlatform,
+      download_method: 'link_parse'
+    });
+
+    const btn = $('btnFetch');
+    const origBtnHtml = btn.innerHTML;
+    isFetching = true;
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳ Fetching...</span>';
+
+    showPreviewLoadingState();
+
+    try {
+      const resp = await fetch(API_BASE + '/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: rawText,
+          platform: currentPlatform
+        })
+      });
+
+      const rawJson = await resp.json();
+      const isOk = resp.ok && !rawJson.error && (rawJson.success === true || rawJson.status === 'success' || Boolean(rawJson.data));
+      if (!isOk) {
+        throw new Error(rawJson.error || ('Failed to parse video (HTTP ' + resp.status + ')'));
+      }
+
+      const data = normalizeBackendResponse(rawJson);
+      if (!data) {
+        throw new Error('Empty video data returned from server.');
+      }
+
+      if (data.platform && PLATFORMS[data.platform]) {
+        setActivePlatform(data.platform);
+      }
+
+      // Check Bilibili multi-part selector if returned by backend
+      if (data.platform === 'bilibili' && Array.isArray(data.pages) && data.pages.length > 1) {
+        renderBiliPagesSelect(data.pages, rawText);
+      } else {
+        $('biliPartSelectBox').style.display = 'none';
+      }
+
+      selectedQualityIdx = 0;
+      currentMediaTab = data.type === 'images' ? 'thumbnail' : 'video';
+      renderPreviewCard(data);
+      showToast(currentLang === 'zh' ? '解析成功！请选择画质下载。' : 'Video fetched! Select a quality below to download.');
+    } catch (err) {
+      trackAnalyticsEvent('download_request_failed', {
+        platform: submitPlatform,
+        download_method: 'link_parse',
+        status: 'failed',
+        error_category: categorizeClientError(err)
+      });
+      showPreviewEmptyState();
+      showError(err && err.message ? err.message : 'Unable to parse video link.');
+    } finally {
+      isFetching = false;
+      btn.disabled = false;
+      btn.innerHTML = origBtnHtml;
+    }
+  }
+
+  function renderBiliPagesSelect(pages, rawText) {
+    const box = $('biliPartSelectBox');
+    if (!box) return;
+    box.style.display = 'block';
+    box.innerHTML = '';
+    const sel = document.createElement('select');
+    sel.style.cssText = 'padding:5px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--card-sub);color:var(--text-main);font-size:12px;font-weight:600;max-width:210px';
+    pages.forEach(pg => {
+      const opt = document.createElement('option');
+      opt.value = pg.page;
+      opt.textContent = `P${pg.page} - ${pg.part || ''}`;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => {
+      const baseClean = rawText.replace(/([?&])p=\d+/g, '');
+      const sep = baseClean.includes('?') ? '&' : '?';
+      $('urlInput').value = `${baseClean}${sep}p=${sel.value}`;
+      handleFetchVideo();
+    });
+    box.appendChild(sel);
+  }
+
+  /* ==================== SETTINGS MODAL (BILIBILI & TIKTOK CONFIG) ==================== */
+  async function refreshConfigStatus() {
+    try {
+      const bResp = await fetch(API_BASE + '/api/bili/config');
+      const bData = await bResp.json();
+      const bEl = $('biliCfgStatus');
+      if (bEl) {
+        bEl.textContent = bData.configured
+          ? `✅ Configured (${bData.source || 'cookie'}, SESSDATA: ${bData.sessdata_preview || 'active'})`
+          : 'ℹ️ Using default guest stream (up to 720P/1080P). Add SESSDATA for 4K Ultra HD.';
+      }
+    } catch {}
+
+    try {
+      const tResp = await fetch(API_BASE + '/api/tiktok/config');
+      const tData = await tResp.json();
+      const tEl = $('ttCfgStatus');
+      if (tEl) {
+        tEl.textContent = tData.configured
+          ? `✅ Proxy active (${tData.proxy})`
+          : 'ℹ️ Direct connection mode (no proxy configured).';
+        if (tData.proxy && $('ttProxyInput')) {
+          $('ttProxyInput').value = tData.proxy;
+        }
+      }
+    } catch {}
+  }
+
+  /* ==================== LANGUAGE & THEME SWITCHING ==================== */
+  function applyLanguage(lang) {
+    currentLang = I18N[lang] ? lang : 'en';
+    localStorage.setItem('dd_lang', currentLang);
+    const dict = I18N[currentLang];
+
+    Object.keys(dict).forEach(id => {
+      const el = $(id);
+      if (el) el.textContent = dict[id];
+    });
+
+    $('currentLangText').textContent = currentLang === 'zh' ? '简体中文' : 'English';
+    document.querySelectorAll('.lang-opt').forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.lang === currentLang);
+    });
+
+    if (activeMediaData) {
+      renderPreviewCard(activeMediaData);
+    }
+  }
+
+  function applyTheme(theme) {
+    const t = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('dd_theme', t);
+  }
+
+  /* ==================== INITIALIZATION & EVENT LISTENERS ==================== */
+  function init() {
+    // Theme initialization
+    const savedTheme = localStorage.getItem('dd_theme') || 'light';
+    applyTheme(savedTheme);
+
+    $('themeToggle').addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme');
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+
+    // Language dropdown
+    const langWrap = $('langWrap');
+    $('langBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      langWrap.classList.toggle('open');
+    });
+    document.querySelectorAll('.lang-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        applyLanguage(opt.dataset.lang);
+        langWrap.classList.remove('open');
+      });
+    });
+
+    // Tools dropdown
+    const toolsWrap = $('toolsDropdownWrap');
+    $('navToolsBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      toolsWrap.classList.toggle('open');
+    });
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', () => {
+        toolsWrap.classList.remove('open');
+        const tool = item.dataset.tool;
+        if (tool === 'video') {
+          currentMediaTab = 'video';
+          if (activeMediaData) renderPreviewCard(activeMediaData);
+          $('urlInput').focus();
+        } else if (tool === 'audio') {
+          currentMediaTab = 'audio';
+          if (activeMediaData) renderPreviewCard(activeMediaData);
+          $('urlInput').focus();
+        } else if (tool === 'thumb') {
+          currentMediaTab = 'thumbnail';
+          if (activeMediaData) renderPreviewCard(activeMediaData);
+          $('urlInput').focus();
+        } else if (tool === 'settings') {
+          $('settingsModal').classList.add('show');
+          refreshConfigStatus();
+        }
+      });
+    });
+
+    document.addEventListener('click', () => {
+      langWrap.classList.remove('open');
+      toolsWrap.classList.remove('open');
+    });
+
+    // Platform selector buttons
+    document.querySelectorAll('.plat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setActivePlatform(btn.dataset.platform);
+        $('urlInput').focus();
+      });
+    });
+
+    // Search Input & Fetch Button
+    const urlInput = $('urlInput');
+    const clearBtn = $('btnClearInput');
+    urlInput.addEventListener('input', () => {
+      const val = urlInput.value.trim();
+      clearBtn.classList.toggle('visible', val.length > 0);
+      const detected = detectPlatformFromText(val);
+      if (detected) setActivePlatform(detected);
+    });
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleFetchVideo();
+      }
+    });
+    clearBtn.addEventListener('click', () => {
+      urlInput.value = '';
+      clearBtn.classList.remove('visible');
+      showError('');
+      urlInput.focus();
+    });
+    $('btnFetch').addEventListener('click', handleFetchVideo);
+
+    // Dismiss Error
+    $('btnCloseError').addEventListener('click', () => showError(''));
+
+    // Format Tabs (Video | Audio | Thumbnail)
+    document.querySelectorAll('.media-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentMediaTab = btn.dataset.tab;
+        document.querySelectorAll('.media-tab').forEach(b => {
+          b.classList.toggle('active', b === btn);
+        });
+        if (activeMediaData) {
+          renderQualityRows(activeMediaData);
+        }
+      });
+    });
+
+    // Modals (Settings & FAQ/Guide)
+    const openSettings = (e) => {
+      if (e) e.preventDefault();
+      $('settingsModal').classList.add('show');
+      refreshConfigStatus();
+    };
+    const openFaq = (e) => {
+      if (e) e.preventDefault();
+      $('faqModal').classList.add('show');
+    };
+
+    $('btnHeaderSettings').addEventListener('click', openSettings);
+    $('footerSettingsLink').addEventListener('click', openSettings);
+    $('navFaqBtn').addEventListener('click', openFaq);
+    $('btnDetailedGuide').addEventListener('click', openFaq);
+    $('footerFaqLink').addEventListener('click', openFaq);
+    $('footerGuideLink').addEventListener('click', openFaq);
+    $('footerPrivacyLink').addEventListener('click', openFaq);
+    $('footerTermsLink').addEventListener('click', openFaq);
+    $('footerToolsLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      $('urlInput').focus();
+    });
+
+    $('btnCloseSettings').addEventListener('click', () => $('settingsModal').classList.remove('show'));
+    $('btnCloseFaq').addEventListener('click', () => $('faqModal').classList.remove('show'));
+
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) backdrop.classList.remove('show');
+      });
+    });
+
+    // Settings Modal Tabs
+    document.querySelectorAll('.modal-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t === tab));
+        const pane = tab.dataset.pane;
+        $('paneBili').style.display = pane === 'bili' ? 'block' : 'none';
+        $('paneTiktok').style.display = pane === 'tiktok' ? 'block' : 'none';
+      });
+    });
+
+    // Save / Clear Bilibili Cookie
+    $('btnSaveBiliCookie').addEventListener('click', async () => {
+      const val = $('biliCookieInput').value.trim();
+      if (!val) return;
+      try {
+        const r = await fetch(API_BASE + '/api/bili/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cookie: val })
+        });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        showToast('Bilibili SESSDATA saved!');
+        refreshConfigStatus();
+      } catch (e) {
+        showError('Failed to save Bilibili cookie: ' + e.message);
+      }
+    });
+
+    $('btnClearBiliCookie').addEventListener('click', async () => {
+      try {
+        await fetch(API_BASE + '/api/bili/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clear: true })
+        });
+        $('biliCookieInput').value = '';
+        showToast('Bilibili cookie cleared.');
+        refreshConfigStatus();
+      } catch {}
+    });
+
+    // Save / Clear TikTok Proxy
+    $('btnSaveTtProxy').addEventListener('click', async () => {
+      const val = $('ttProxyInput').value.trim();
+      try {
+        const r = await fetch(API_BASE + '/api/tiktok/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ proxy: val })
+        });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        showToast('TikTok proxy updated!');
+        refreshConfigStatus();
+      } catch (e) {
+        showError('Failed to save TikTok proxy: ' + e.message);
+      }
+    });
+
+    $('btnClearTtProxy').addEventListener('click', async () => {
+      try {
+        await fetch(API_BASE + '/api/tiktok/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clear: true })
+        });
+        $('ttProxyInput').value = '';
+        showToast('TikTok proxy cleared.');
+        refreshConfigStatus();
+      } catch {}
+    });
+
+    // Scroll to top button
+    $('btnScrollTop').addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Apply initial language & ensure empty state is active on load
+    applyLanguage(currentLang);
+    showPreviewEmptyState();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

@@ -3,11 +3,135 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import dns from 'dns';
+import net from 'net';
 import { fileURLToPath } from 'url';
 import archiver from 'archiver';
 import http from 'http';
 import https from 'https';
-import { ABogus, DOUYIN_BASE_PARAMS, DOUYIN_FIXED_UA, extractDouyinQualities, DouyinQualityItem } from './douyin_abogus.js';
+import { ABogus, DOUYIN_BASE_PARAMS, DOUYIN_FIXED_UA, extractDouyinQualities, DouyinQualityItem, scoreDouyinCdnUrl } from './douyin_abogus.js';
+
+// Prefer IPv4 first and use a scoped custom DNS lookup with bounded timeouts and system DNS fallback
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {}
+
+const fastDnsResolver = new dns.promises.Resolver({ timeout: 1200, tries: 1 });
+try {
+  fastDnsResolver.setServers(['1.1.1.1', '8.8.8.8', '223.5.5.5', '1.0.0.1']);
+} catch {}
+
+const DNS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_DNS_CACHE_ENTRIES = 1000;
+const dnsCache = new Map<string, { ips: string[]; expiresAt: number }>();
+const inflightDns = new Map<string, Promise<string[]>>();
+
+async function resolveFastIPv4(hostname: string): Promise<string[]> {
+  const now = Date.now();
+  const cached = dnsCache.get(hostname);
+  if (cached && cached.expiresAt > now && cached.ips.length > 0) {
+    return cached.ips;
+  }
+  const existing = inflightDns.get(hostname);
+  if (existing) return existing;
+
+  const task = (async () => {
+    try {
+      const ips = await fastDnsResolver.resolve4(hostname);
+      if (ips && ips.length > 0) {
+        if (dnsCache.size >= MAX_DNS_CACHE_ENTRIES) {
+          const oldest = dnsCache.keys().next().value;
+          if (oldest) dnsCache.delete(oldest);
+        }
+        dnsCache.set(hostname, { ips, expiresAt: Date.now() + DNS_CACHE_TTL_MS });
+        return ips;
+      }
+    } catch {
+      // Fallback to OS lookup when custom UDP DNS is unreachable or blocked
+    }
+    try {
+      const fallback = await dns.promises.lookup(hostname, { family: 4, all: true });
+      const ips = fallback.map(x => x.address).filter(Boolean);
+      if (ips.length > 0) {
+        dnsCache.set(hostname, { ips, expiresAt: Date.now() + DNS_CACHE_TTL_MS });
+        return ips;
+      }
+    } catch {}
+    const anyFallback = await dns.promises.lookup(hostname, { all: true });
+    return anyFallback.map(x => x.address).filter(Boolean);
+  })().finally(() => {
+    inflightDns.delete(hostname);
+  });
+
+  inflightDns.set(hostname, task);
+  return task;
+}
+
+function fastCachedLookup(hostname: string, options: any, callback?: any): void {
+  let cb = callback;
+  let opts = options;
+  if (typeof opts === 'function') {
+    cb = opts;
+    opts = {};
+  }
+  if (!hostname || hostname === 'localhost' || net.isIP(hostname) !== 0) {
+    dns.lookup(hostname, opts, cb);
+    return;
+  }
+  const wantAll = Boolean(opts && typeof opts === 'object' && opts.all);
+  resolveFastIPv4(hostname)
+    .then(ips => {
+      if (!ips || ips.length === 0) {
+        dns.lookup(hostname, opts, cb);
+        return;
+      }
+      if (wantAll) {
+        cb(null, ips.map(ip => ({ address: ip, family: net.isIP(ip) || 4 })));
+      } else {
+        cb(null, ips[0], net.isIP(ips[0]) || 4);
+      }
+    })
+    .catch(() => {
+      dns.lookup(hostname, opts, cb);
+    });
+}
+
+// Scoped HTTP/HTTPS agents and Undici fetch dispatcher (no global net.Socket.prototype.connect monkey patch)
+export const scopedHttpAgent = new http.Agent({
+  keepAlive: true,
+  maxSockets: 128,
+  timeout: 15000,
+  lookup: fastCachedLookup as any
+});
+
+export const scopedHttpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 128,
+  timeout: 15000,
+  lookup: fastCachedLookup as any
+});
+
+let scopedUndiciDispatcher: any = null;
+function getScopedFetchDispatcher(): any {
+  if (scopedUndiciDispatcher) return scopedUndiciDispatcher;
+  try {
+    const sym = Symbol.for('undici.globalDispatcher.1');
+    const currentDispatcher = (globalThis as any)[sym];
+    const AgentCtor = currentDispatcher?.constructor;
+    if (typeof AgentCtor === 'function') {
+      scopedUndiciDispatcher = new AgentCtor({
+        keepAliveTimeout: 30000,
+        keepAliveMaxTimeout: 60000,
+        connect: {
+          timeout: 8000,
+          lookup: fastCachedLookup
+        }
+      });
+      (globalThis as any)[sym] = scopedUndiciDispatcher;
+    }
+  } catch {}
+  return scopedUndiciDispatcher;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -419,6 +543,7 @@ let bilibiliCookie = '';
 
 // Platform detector
 function detectPlatform(text: string): string {
+  if (!text) return '';
   if (/(bilibili\.com|b23\.tv|acg\.tv|BV[0-9A-Za-z]{10})/i.test(text)) return 'bilibili';
   if (/(xiaohongshu\.com|xhslink\.(?:com|cn))/i.test(text)) return 'xiaohongshu';
   if (/(tiktok\.com|tiktokv\.com)/i.test(text)) return 'tiktok';
@@ -436,19 +561,76 @@ function cleanFilename(name: string, fallback = 'download'): string {
   return cleaned || fallback;
 }
 
-// Follow HTTP redirects
+// Fetch helper with connection/header timeout and scoped DNS lookup dispatcher (clears timer once headers arrive so body streaming is not cut off)
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 10000,
+  externalSignal?: AbortSignal
+): Promise<globalThis.Response> {
+  const controller = new AbortController();
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+    }
+  }
+  const timer = setTimeout(() => controller.abort(new Error(`Upstream connection timeout after ${timeoutMs}ms`)), timeoutMs);
+  try {
+    const dispatcher = getScopedFetchDispatcher();
+    const fetchOpts: any = { ...options, signal: controller.signal };
+    if (dispatcher) {
+      fetchOpts.dispatcher = dispatcher;
+    }
+    return await fetch(url, fetchOpts);
+  } finally {
+    clearTimeout(timer);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
+  }
+}
+
+// Read next chunk from ReadableStream reader with per-chunk stall timeout
+async function readChunkWithTimeout(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  stallTimeoutMs = 25000
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(`Upstream stream stalled for ${stallTimeoutMs}ms`));
+        }, stallTimeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+// Follow HTTP redirects with timeout and immediate body cleanup
 async function followRedirects(initialUrl: string, headers: Record<string, string> = {}): Promise<string> {
   let currentUrl = initialUrl;
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     try {
-      const resp = await fetch(currentUrl, {
-        method: 'HEAD',
+      const resp = await fetchWithTimeout(currentUrl, {
+        method: 'GET',
         redirect: 'manual',
         headers
-      });
+      }, 5000);
+      try { await resp.body?.cancel(); } catch {}
       const location = resp.headers.get('location');
       if (!location) break;
       currentUrl = new URL(location, currentUrl).href;
+      // Stop immediately if we already resolved the video/note ID in the URL
+      if (/(?:modal_id=\d{15,25}|\/(?:video|note|slides)\/\d{15,25}|BV[0-9A-Za-z]{10}|\/explore\/[0-9a-f]{24})/i.test(currentUrl)) {
+        break;
+      }
     } catch {
       break;
     }
@@ -465,7 +647,7 @@ async function getOrRegisterTtwid(): Promise<string> {
     return cachedTtwid;
   }
   try {
-    const resp = await fetch('https://ttwid.bytedance.com/ttwid/union/register/', {
+    const resp = await fetchWithTimeout('https://ttwid.bytedance.com/ttwid/union/register/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -477,7 +659,8 @@ async function getOrRegisterTtwid(): Promise<string> {
         cbUrlProtocol: 'https',
         union: 'true'
       })
-    });
+    }, 4000);
+    try { await resp.body?.cancel(); } catch {}
     const cookie = resp.headers.get('set-cookie') || '';
     const m = cookie.match(/ttwid=[^;]+/);
     if (m) {
@@ -485,11 +668,19 @@ async function getOrRegisterTtwid(): Promise<string> {
       cachedTtwidTime = now;
       return cachedTtwid;
     }
-  } catch (e) {
-    console.warn('Failed to register ttwid:', e);
+  } catch (e: any) {
+    console.warn('Failed to register ttwid:', e?.message || 'request failed');
   }
   return cachedTtwid || 'ttwid=1%7CzzIK3ggFOa1x91nAf-Xss7yxH80zgakKT6c8xgo5S2k%7C1792559933%7C5ae56e7c9774827680986b694b7d7247fc3343c1d63733992d5126e51d8df50f';
 }
+
+// Pre-warm Undici dispatcher and ttwid asynchronously on startup so first Douyin parse does not wait for registration
+setImmediate(() => {
+  fetch('http://127.0.0.1:1').catch(() => {}).finally(() => {
+    getScopedFetchDispatcher();
+    getOrRegisterTtwid().catch(() => {});
+  });
+});
 
 async function fetchDouyinHDDetail(awemeId: string): Promise<{ detail: any; qualities: DouyinQualityItem[] } | null> {
   try {
@@ -500,7 +691,7 @@ async function fetchDouyinHDDetail(awemeId: string): Promise<{ detail: any; qual
     const aBogus = bogus.getValue(paramsStr);
     const url = `https://www.douyin.com/aweme/v1/web/aweme/detail/?${paramsStr}&a_bogus=${encodeURIComponent(aBogus)}`;
 
-    const resp = await fetch(url, {
+    const resp = await fetchWithTimeout(url, {
       headers: {
         'User-Agent': DOUYIN_FIXED_UA,
         'Referer': 'https://www.douyin.com/',
@@ -509,7 +700,7 @@ async function fetchDouyinHDDetail(awemeId: string): Promise<{ detail: any; qual
         'x-tt-argus': '1',
         ...(ttwid ? { 'Cookie': ttwid.startsWith('ttwid=') ? ttwid : `ttwid=${ttwid}` } : {})
       }
-    });
+    }, 7000);
 
     if (resp.ok) {
       const json = await resp.json();
@@ -517,9 +708,11 @@ async function fetchDouyinHDDetail(awemeId: string): Promise<{ detail: any; qual
         const qualities = extractDouyinQualities(json.aweme_detail.video);
         return { detail: json.aweme_detail, qualities };
       }
+    } else {
+      try { await resp.body?.cancel(); } catch {}
     }
-  } catch (err) {
-    console.warn('Douyin HD detail fetch error:', err);
+  } catch (err: any) {
+    console.warn('Douyin HD detail fetch warning:', err?.message || 'request error');
   }
   return null;
 }
@@ -533,19 +726,34 @@ async function parseDouyin(text: string) {
   let ttwidCookie = '';
 
   if (url.includes('v.douyin.com')) {
-    const resp = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: {
-        'User-Agent': UA_MOBILE_IOS,
-        'Referer': 'https://www.douyin.com/'
+    // Use manual redirect hops so we extract aweme_id from Location header in ~150ms without downloading full HTML page
+    let currentUrl = url;
+    for (let hop = 0; hop < 4; hop++) {
+      try {
+        const resp = await fetchWithTimeout(currentUrl, {
+          method: 'GET',
+          redirect: 'manual',
+          headers: {
+            'User-Agent': UA_MOBILE_IOS,
+            'Referer': 'https://www.douyin.com/'
+          }
+        }, 5000);
+        try { await resp.body?.cancel(); } catch {}
+        const setCookie = resp.headers.get('set-cookie');
+        if (setCookie && setCookie.includes('ttwid=')) {
+          const match = setCookie.match(/ttwid=([^;]+)/);
+          if (match) ttwidCookie = match[0];
+        }
+        const loc = resp.headers.get('location');
+        if (!loc) break;
+        currentUrl = new URL(loc, currentUrl).href;
+        targetUrl = currentUrl;
+        if (/modal_id=\d{15,25}/.test(targetUrl) || /\d{15,25}/.test(targetUrl.split('?')[0])) {
+          break;
+        }
+      } catch {
+        break;
       }
-    });
-    targetUrl = resp.url;
-    const setCookie = resp.headers.get('set-cookie');
-    if (setCookie && setCookie.includes('ttwid=')) {
-      const match = setCookie.match(/ttwid=([^;]+)/);
-      if (match) ttwidCookie = match[0];
     }
   }
 
@@ -571,7 +779,7 @@ async function parseDouyin(text: string) {
   const hdQualities = hdResult?.qualities || [];
 
   if (!item) {
-    // Fallback: Request share page with 2-attempt session
+    // Fallback: Request share page with bounded timeout
     const shareUrls = [
       `https://www.iesdouyin.com/share/video/${awemeId}/`,
       `https://www.iesdouyin.com/share/slides/${awemeId}/`
@@ -581,7 +789,7 @@ async function parseDouyin(text: string) {
     for (const sUrl of shareUrls) {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const resp = await fetch(sUrl, {
+          const resp = await fetchWithTimeout(sUrl, {
             headers: {
               'User-Agent': UA_MOBILE_IOS,
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -589,7 +797,7 @@ async function parseDouyin(text: string) {
               'Referer': 'https://www.douyin.com/',
               ...(ttwidCookie ? { 'Cookie': ttwidCookie } : {})
             }
-          });
+          }, 6000);
           const sc = resp.headers.get('set-cookie');
           if (sc && sc.includes('ttwid=')) {
             const match = sc.match(/ttwid=([^;]+)/);
@@ -601,6 +809,8 @@ async function parseDouyin(text: string) {
               rawHtml = textResp;
               break;
             }
+          } else {
+            try { await resp.body?.cancel(); } catch {}
           }
         } catch {}
       }
@@ -656,10 +866,14 @@ async function parseDouyin(text: string) {
     const res: string[] = [];
     for (const u of list) {
       if (typeof u === 'string' && u.startsWith('http')) {
-        const clean = u.replace(/playwm/g, 'play');
+        let clean = u.trim().replace(/playwm/g, 'play').replace(/\/playwm\//g, '/play/');
+        if (clean.startsWith('http://') && (clean.includes('douyinvod.com') || clean.includes('iesdouyin.com') || clean.includes('douyin.com'))) {
+          clean = 'https://' + clean.slice(7);
+        }
         if (!res.includes(clean)) res.push(clean);
       }
     }
+    res.sort((a, b) => scoreDouyinCdnUrl(a) - scoreDouyinCdnUrl(b));
     return res;
   };
 
@@ -884,12 +1098,12 @@ async function parseTikTok(text: string) {
   // Try items API first
   try {
     const apiUrl = `https://www.tiktok.com/player/api/v1/items?item_ids=${videoId}&aid=1988`;
-    const resp = await fetch(apiUrl, {
+    const resp = await fetchWithTimeout(apiUrl, {
       headers: {
         'User-Agent': UA_CHROME_DESKTOP,
         'Referer': 'https://www.tiktok.com/'
       }
-    });
+    }, 7000);
     if (resp.ok) {
       const json = await resp.json();
       if (json.items && json.items.length > 0) {
@@ -901,13 +1115,13 @@ async function parseTikTok(text: string) {
   // Fallback to fetch HTML page
   let webStruct: any = null;
   try {
-    const pageResp = await fetch(targetUrl, {
+    const pageResp = await fetchWithTimeout(targetUrl, {
       headers: {
         'User-Agent': UA_CHROME_DESKTOP,
         'Referer': 'https://www.tiktok.com/',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       }
-    });
+    }, 7000);
     if (pageResp.ok) {
       const pageText = await pageResp.text();
       const rehydrationMatch = pageText.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/s);
@@ -998,50 +1212,39 @@ async function parseTikTok(text: string) {
   const fallbackUrls = webStruct?.video?.playAddr ? [webStruct.video.playAddr] : [];
   const videoUrls = qualities.length > 0 ? qualities[0].urls : fallbackUrls;
 
-  // If qualities is still single/empty, add multiple resolution choices
-  if (videoUrls.length > 0 && qualities.length <= 1) {
-    const mainUrl = videoUrls[0];
-    qualities.length = 0;
-    qualities.push({
-      name: '1080p',
-      label: '1080P 原画超清 (Original 1080P)',
-      shortLabel: '1080P Original',
+  // Sort descending by resolution then bitrate
+  qualities.sort((a, b) => {
+    const resDiff = (b.resolution || 720) - (a.resolution || 720);
+    if (resDiff !== 0) return resDiff;
+    return (b.bit_rate || 0) - (a.bit_rate || 0);
+  });
+
+  // Deduplicate by resolution + codec so identical quality tiers do not repeat
+  const seenTikTokKeys = new Set<string>();
+  const dedupedQualities: any[] = [];
+  for (const q of qualities) {
+    const codecNorm = q.is_h265 ? 'h265' : 'h264';
+    const key = `${q.resolution || 720}_${codecNorm}`;
+    if (seenTikTokKeys.has(key)) continue;
+    seenTikTokKeys.add(key);
+    dedupedQualities.push(q);
+  }
+
+  if (dedupedQualities.length === 0 && videoUrls.length > 0) {
+    dedupedQualities.push({
+      id: 'origin',
+      name: 'origin',
+      label: 'Original Quality (MP4)',
+      shortLabel: 'Original Quality',
       tag: 'Original',
       icon: '🌟',
       resolution: 1080,
-      url: mainUrl,
+      url: videoUrls[0],
       urls: videoUrls,
       codec: 'h264',
       is_h265: false
     });
-    qualities.push({
-      name: '720p',
-      label: '720P 高清 (HD 720P)',
-      shortLabel: '720P HD',
-      tag: '720P',
-      icon: '🎬',
-      resolution: 720,
-      url: videoUrls[1] || mainUrl,
-      urls: [videoUrls[1] || mainUrl],
-      codec: 'h264',
-      is_h265: false
-    });
-    qualities.push({
-      name: '480p',
-      label: '480P 流畅 (Standard 480P)',
-      shortLabel: '480P SD',
-      tag: '480P',
-      icon: '⚡',
-      resolution: 480,
-      url: mainUrl,
-      urls: [mainUrl],
-      codec: 'h264',
-      is_h265: false
-    });
   }
-
-  // Sort descending
-  qualities.sort((a, b) => (b.resolution || 720) - (a.resolution || 720));
 
   return {
     id: videoId,
@@ -1070,22 +1273,25 @@ async function parseTikTok(text: string) {
       play: webStruct?.stats?.playCount || 0
     },
     video_urls: videoUrls,
-    qualities: qualities.length > 0 ? qualities : [{
-      name: 'default',
-      label: '高清无水印',
-      url: videoUrls[0],
-      urls: videoUrls,
-      codec: 'h264',
-      is_h265: false
-    }],
+    qualities: dedupedQualities,
     images: []
   };
 }
 
+function formatBiliCookieHeader(rawCookie?: string): string {
+  const trimmed = (rawCookie || bilibiliCookie || process.env.BILIBILI_COOKIE || '').trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('SESSDATA=')) return trimmed;
+  return `SESSDATA=${trimmed}`;
+}
+
 // ---------------- Bilibili Parser ----------------
-async function parseBilibili(text: string, page = 0) {
+async function parseBilibili(text: string, page = 0, requestBiliCookie?: string) {
   const bvMatch = text.match(/BV[0-9A-Za-z]{10}/i) || text.match(/av(\d+)/i);
   let bvid = bvMatch ? bvMatch[0] : '';
+
+  const pageMatch = text.match(/[?&]p=(\d+)/i);
+  const pageIdx = page > 0 ? page - 1 : (pageMatch ? Math.max(0, parseInt(pageMatch[1], 10) - 1) : 0);
 
   if (!bvid) {
     const url = extractFirstUrl(text);
@@ -1098,48 +1304,120 @@ async function parseBilibili(text: string, page = 0) {
 
   if (!bvid) throw new Error('未识别到 B站 视频 BV 号或有效链接');
 
-  const viewResp = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`, {
-    headers: { 'User-Agent': UA_CHROME_DESKTOP, 'Referer': 'https://www.bilibili.com/' }
-  });
+  const cookieHeader = formatBiliCookieHeader(requestBiliCookie);
+  const reqHeaders: Record<string, string> = {
+    'User-Agent': UA_CHROME_DESKTOP,
+    'Referer': 'https://www.bilibili.com/'
+  };
+  if (cookieHeader) {
+    reqHeaders['Cookie'] = cookieHeader;
+  }
+
+  const viewResp = await fetchWithTimeout(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`, {
+    headers: reqHeaders
+  }, 7000);
   const viewJson = await viewResp.json();
   if (viewJson.code !== 0 || !viewJson.data) {
     throw new Error(viewJson.message || '获取 B站 视频信息失败');
   }
 
   const vData = viewJson.data;
-  const cid = vData.cid || (vData.pages && vData.pages[page]?.cid) || 0;
+  const pagesList = Array.isArray(vData.pages) ? vData.pages : [];
+  const selectedPageObj = pagesList[pageIdx] || pagesList[0];
+  const cid = selectedPageObj?.cid || vData.cid || 0;
 
-  // Fetch playurl
-  const playResp = await fetch(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=16`, {
-    headers: { 'User-Agent': UA_CHROME_DESKTOP, 'Referer': 'https://www.bilibili.com/' }
-  });
-  const playJson = await playResp.json();
-  const playData = playJson.data || {};
+  // Fetch progressive MP4 (durl, fnval=1) and DASH streams (fnval=4048) in parallel so we have both muxed MP4 and high-res DASH options
+  const qnTarget = cookieHeader ? 120 : 80;
+  const [durlResult, dashResult] = await Promise.allSettled([
+    fetchWithTimeout(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=${qnTarget}&fnval=1&fourk=1`, {
+      headers: reqHeaders
+    }, 6500).then(r => r.json()),
+    fetchWithTimeout(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=${qnTarget}&fnval=4048&fourk=1`, {
+      headers: reqHeaders
+    }, 6500).then(r => r.json())
+  ]);
+
+  const durlData = durlResult.status === 'fulfilled' ? (durlResult.value?.data || {}) : {};
+  const dashData = dashResult.status === 'fulfilled' ? (dashResult.value?.data || {}) : {};
+
+  const BILI_QN_MAP: Record<number, { label: string; res: number }> = {
+    127: { label: '8K Ultra HD', res: 4320 },
+    126: { label: 'Dolby Vision', res: 2160 },
+    125: { label: '4K HDR', res: 2160 },
+    120: { label: '4K Ultra HD', res: 2160 },
+    116: { label: '1080p 60fps', res: 1080 },
+    112: { label: '1080p+ High Bitrate', res: 1080 },
+    80:  { label: '1080p Full HD', res: 1080 },
+    74:  { label: '720p 60fps', res: 720 },
+    64:  { label: '720p HD', res: 720 },
+    32:  { label: '480p SD', res: 480 },
+    16:  { label: '360p SD', res: 360 }
+  };
 
   const qualities: any[] = [];
-  if (playData.durl) {
-    for (const d of playData.durl) {
+
+  if (Array.isArray(durlData.durl) && durlData.durl.length > 0) {
+    const qn = Number(durlData.quality) || 64;
+    const qMeta = BILI_QN_MAP[qn] || { label: 'Standard MP4', res: 720 };
+    const d = durlData.durl[0];
+    if (d && d.url) {
       qualities.push({
-        name: 'default',
-        label: '标准高清 (MP4)',
+        id: `mp4_${qn}`,
+        name: `mp4_${qn}`,
+        label: `${qMeta.label} (Full Video + Audio)`,
+        resolution: qMeta.res,
+        size: d.size || 0,
         url: d.url,
         urls: [d.url, ...(d.backup_url || [])],
-        size: d.size,
-        codec: 'h264'
+        codec: 'H.264',
+        format: 'MP4'
       });
     }
-  } else if (playData.dash?.video) {
-    for (const v of playData.dash.video) {
+  }
+
+  if (Array.isArray(dashData.dash?.video)) {
+    const seenStreamKeys = new Set<string>();
+    for (const v of dashData.dash.video) {
+      const primaryUrl = v.baseUrl || v.base_url;
+      if (!primaryUrl) continue;
+      const qn = Number(v.id) || 32;
+      const qMeta = BILI_QN_MAP[qn] || { label: `${v.height || 480}p`, res: v.height || 480 };
+      const rawCodecs = String(v.codecs || '').toLowerCase();
+      const codecLabel = rawCodecs.includes('hev') || rawCodecs.includes('hvc') || v.codecid === 12
+        ? 'H.265'
+        : rawCodecs.includes('av01') || v.codecid === 13
+          ? 'AV1'
+          : 'H.264';
+      const streamKey = `${qn}_${codecLabel}`;
+      if (seenStreamKeys.has(streamKey)) continue;
+      seenStreamKeys.add(streamKey);
+
+      const kbps = v.bandwidth ? Math.round(Number(v.bandwidth) / 1000) : 0;
+      const estSize = (v.bandwidth && vData.duration) ? Math.round((Number(v.bandwidth) / 8) * Number(vData.duration)) : 0;
+
       qualities.push({
-        name: `qn_${v.id}`,
-        label: `${v.id >= 80 ? '1080P' : v.id >= 64 ? '720P' : '480P'} (DASH)`,
-        url: v.baseUrl || v.base_url,
-        urls: [v.baseUrl || v.base_url, ...(v.backupUrl || v.backup_url || [])],
-        bandwidth: v.bandwidth,
-        codec: v.codecs || 'h264',
+        id: `dash_${qn}_${codecLabel.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+        name: `qn_${qn}_${codecLabel}`,
+        label: `${qMeta.label} (${codecLabel}${kbps ? ' · ' + kbps + ' kbps' : ''})`,
+        resolution: qMeta.res,
+        width: v.width || 0,
+        height: v.height || 0,
+        bit_rate: v.bandwidth || 0,
+        size: estSize,
+        url: primaryUrl,
+        urls: [primaryUrl, ...(v.backupUrl || v.backup_url || [])],
+        codec: codecLabel,
+        format: 'MP4',
         muxable: false
       });
     }
+  }
+
+  // Extract Bilibili DASH audio track if present so the Audio tab is populated
+  let audioUrl = '';
+  if (Array.isArray(dashData.dash?.audio) && dashData.dash.audio.length > 0) {
+    const sortedAudio = [...dashData.dash.audio].sort((a, b) => (Number(b.bandwidth) || 0) - (Number(a.bandwidth) || 0));
+    audioUrl = sortedAudio[0]?.baseUrl || sortedAudio[0]?.base_url || '';
   }
 
   return {
@@ -1151,12 +1429,19 @@ async function parseBilibili(text: string, page = 0) {
     cover: vData.pic,
     cover_proxy: '/api/proxy?url=' + encodeURIComponent(vData.pic) + '&platform=bilibili',
     duration: vData.duration,
+    create_time: vData.pubdate || vData.ctime || 0,
+    pages: pagesList.map((p: any) => ({ page: p.page, part: p.part, cid: p.cid })),
     author: {
       nickname: vData.owner?.name || '',
       uid: vData.owner?.mid || '',
       avatar: [vData.owner?.face || '']
     },
     author_avatar: vData.owner?.face || '',
+    music: {
+      title: vData.title || '',
+      author: vData.owner?.name || '',
+      url: audioUrl
+    },
     stats: {
       play: vData.stat?.view || 0,
       danmaku: vData.stat?.danmaku || 0,
@@ -1164,6 +1449,7 @@ async function parseBilibili(text: string, page = 0) {
       collect: vData.stat?.favorite || 0,
       digg: vData.stat?.like || 0
     },
+    video_urls: qualities.length > 0 ? qualities[0].urls : [],
     qualities,
     muxer: { available: false, backend: 'none', reason: 'Web runtime' },
     ffmpeg: { available: false, path: null }
@@ -1180,13 +1466,13 @@ async function parseXiaohongshu(text: string) {
     targetUrl = await followRedirects(url, { 'User-Agent': UA_MOBILE_ANDROID });
   }
 
-  const resp = await fetch(targetUrl, {
+  const resp = await fetchWithTimeout(targetUrl, {
     headers: {
       'User-Agent': UA_MOBILE_ANDROID,
       'Referer': 'https://www.xiaohongshu.com/',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
     }
-  });
+  }, 7000);
 
   const html = await resp.text();
   const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*(.*?);?<\/script>/s);
@@ -1331,6 +1617,60 @@ app.get(['/', '/index.html'], (req: Request, res: Response) => {
   res.send(html);
 });
 
+// Serve XML Sitemap at /sitemap.xml
+const CANONICAL_SITE_ORIGIN = 'https://downdouyin.com';
+app.get('/sitemap.xml', (req: Request, res: Response) => {
+  let lastModDate = '2026-10-23';
+  try {
+    const indexPath = path.join(STATIC_DIR, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      const mtime = fs.statSync(indexPath).mtime;
+      if (mtime && !Number.isNaN(mtime.getTime())) {
+        lastModDate = mtime.toISOString().slice(0, 10);
+      }
+    }
+  } catch {}
+
+  const xml = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    '  <url>',
+    `    <loc>${CANONICAL_SITE_ORIGIN}/</loc>`,
+    `    <lastmod>${lastModDate}</lastmod>`,
+    '    <changefreq>weekly</changefreq>',
+    '    <priority>1.0</priority>',
+    '  </url>',
+    '</urlset>',
+    ''
+  ].join('\n');
+
+  res.status(200);
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(xml);
+});
+
+// Serve robots.txt at /robots.txt
+app.get('/robots.txt', (req: Request, res: Response) => {
+  const robotsPath = path.join(STATIC_DIR, 'robots.txt');
+  res.status(200);
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  if (fs.existsSync(robotsPath)) {
+    return res.send(fs.readFileSync(robotsPath, 'utf-8'));
+  }
+  res.send(
+    [
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /api/',
+      '',
+      `Sitemap: ${CANONICAL_SITE_ORIGIN}/sitemap.xml`,
+      ''
+    ].join('\n')
+  );
+});
+
 // Serve other static files
 app.use('/static', express.static(STATIC_DIR));
 
@@ -1374,7 +1714,8 @@ app.post('/api/parse', async (req: Request, res: Response) => {
     } else if (platform === 'tiktok') {
       resultData = await parseTikTok(text);
     } else if (platform === 'bilibili') {
-      resultData = await parseBilibili(text, req.body?.page || 0);
+      const reqBiliCookie = typeof req.body?.bili_cookie === 'string' ? req.body.bili_cookie : '';
+      resultData = await parseBilibili(text, Number(req.body?.page) || 0, reqBiliCookie);
     } else if (platform === 'xiaohongshu') {
       resultData = await parseXiaohongshu(text);
     } else if (/^\d{15,25}$/.test(text)) {
@@ -1409,7 +1750,7 @@ app.post('/api/parse', async (req: Request, res: Response) => {
       return res.json({
         success: false,
         platform: '',
-        error: '没识别出链接所属平台，目前支持抖音、B站、TikTok 与 小红书 链接'
+        error: '没识别出链接所属平台，目前支持抖音、B站、TikTok 与小红书链接'
       });
     }
 
@@ -1450,14 +1791,492 @@ app.post('/api/parse', async (req: Request, res: Response) => {
   }
 });
 
-// 2. /api/proxy (Range support for video preview + anti-hotlink bypass)
-app.get('/api/proxy', async (req: Request, res: Response) => {
+// Runtime CDN mirror health and latency tracker (dynamically demotes slow or failing CDN hosts)
+interface CdnHostHealth {
+  ewmaTtfbMs: number;
+  consecutiveFailures: number;
+  updatedAt: number;
+}
+const cdnHostHealth = new Map<string, CdnHostHealth>();
+const CDN_HEALTH_TTL_MS = 10 * 60 * 1000;
+
+function extractHostnameSafe(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function recordCdnHostSuccess(rawUrl: string, ttfbMs: number): void {
+  const host = extractHostnameSafe(rawUrl);
+  if (!host) return;
+  const prev = cdnHostHealth.get(host);
+  const clamped = Math.max(10, Math.min(15000, ttfbMs));
+  const ewma = prev ? Math.round(prev.ewmaTtfbMs * 0.6 + clamped * 0.4) : clamped;
+  cdnHostHealth.set(host, {
+    ewmaTtfbMs: ewma,
+    consecutiveFailures: 0,
+    updatedAt: Date.now()
+  });
+}
+
+function recordCdnHostFailure(rawUrl: string): void {
+  const host = extractHostnameSafe(rawUrl);
+  if (!host) return;
+  const prev = cdnHostHealth.get(host);
+  cdnHostHealth.set(host, {
+    ewmaTtfbMs: prev ? prev.ewmaTtfbMs : 3000,
+    consecutiveFailures: Math.min(10, (prev ? prev.consecutiveFailures : 0) + 1),
+    updatedAt: Date.now()
+  });
+}
+
+function getDynamicHostScore(rawUrl: string): number {
+  const base = scoreDouyinCdnUrl(rawUrl);
+  const host = extractHostnameSafe(rawUrl);
+  if (!host) return base;
+  const health = cdnHostHealth.get(host);
+  if (!health || Date.now() - health.updatedAt > CDN_HEALTH_TTL_MS) {
+    return base;
+  }
+  const failurePenalty = health.consecutiveFailures * 45;
+  const latencyPenalty = Math.min(40, Math.round(health.ewmaTtfbMs / 80));
+  return base + failurePenalty + latencyPenalty;
+}
+
+// Helper: build prioritized list of candidate media URLs from primary `url` and optional `alt` backup URLs
+function buildCandidateMediaUrls(primaryUrl: string, rawAlt: unknown, platform?: string): string[] {
+  const candidates: string[] = [];
+  const addUrl = (u: unknown) => {
+    if (typeof u !== 'string') return;
+    let trimmed = u.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return;
+    if (trimmed.startsWith('http://') && (trimmed.includes('douyinvod.com') || trimmed.includes('iesdouyin.com') || trimmed.includes('douyin.com'))) {
+      trimmed = 'https://' + trimmed.slice(7);
+    }
+    if (!candidates.includes(trimmed)) {
+      candidates.push(trimmed);
+    }
+  };
+  addUrl(primaryUrl);
+  if (Array.isArray(rawAlt)) {
+    rawAlt.forEach(addUrl);
+  } else if (typeof rawAlt === 'string' && rawAlt.trim()) {
+    const s = rawAlt.trim();
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) parsed.forEach(addUrl);
+      } catch {}
+    } else {
+      addUrl(s);
+    }
+  }
+  if (candidates.length > 1) {
+    candidates.sort((a, b) => getDynamicHostScore(a) - getDynamicHostScore(b));
+  }
+  return candidates.slice(0, 6);
+}
+
+interface ParsedRangeSpec {
+  start: number;
+  end: number | null;
+}
+
+function parseRangeHeaderSpec(rangeHeader?: string): ParsedRangeSpec | null {
+  if (!rangeHeader) return null;
+  const m = rangeHeader.match(/bytes=(\d+)-(\d*)/i);
+  if (!m) return null;
+  const start = parseInt(m[1], 10);
+  const end = m[2] ? parseInt(m[2], 10) : null;
+  if (!Number.isFinite(start) || start < 0) return null;
+  return { start, end: end !== null && Number.isFinite(end) ? end : null };
+}
+
+interface MediaRepresentationMeta {
+  totalBytes: number;
+  startByte: number;
+  endByte: number;
+  etag: string;
+}
+
+function inspectMediaResponse(
+  resp: globalThis.Response,
+  rangeHeader?: string,
+  expectedTotalBytes = 0
+): { valid: boolean; meta: MediaRepresentationMeta; reason?: string } {
+  const emptyMeta: MediaRepresentationMeta = { totalBytes: 0, startByte: 0, endByte: -1, etag: '' };
+  if (!resp.ok && resp.status !== 206) {
+    return { valid: false, meta: emptyMeta, reason: `http_${resp.status}` };
+  }
+  if (!resp.body) {
+    return { valid: false, meta: emptyMeta, reason: 'empty_body' };
+  }
+  const ctype = (resp.headers.get('content-type') || '').toLowerCase();
+  if (ctype.includes('text/html') || ctype.includes('application/json')) {
+    return { valid: false, meta: emptyMeta, reason: 'invalid_content_type' };
+  }
+
+  const reqRange = parseRangeHeaderSpec(rangeHeader);
+  const cr = resp.headers.get('content-range') || '';
+  const cl = parseInt(resp.headers.get('content-length') || '0', 10);
+  const etag = (resp.headers.get('etag') || '').trim();
+
+  let totalBytes = 0;
+  let startByte = 0;
+  let endByte = -1;
+
+  if (resp.status === 206 && cr) {
+    const m = cr.match(/bytes\s+(\d+)-(\d+)\/(\d+|\*)/i);
+    if (m) {
+      startByte = parseInt(m[1], 10);
+      endByte = parseInt(m[2], 10);
+      if (m[3] !== '*') {
+        totalBytes = parseInt(m[3], 10);
+      }
+    }
+  } else if (cl > 0) {
+    totalBytes = cl;
+    startByte = 0;
+    endByte = cl - 1;
+  }
+
+  // If a non-zero offset Range was requested, upstream MUST return 206 starting at the exact requested offset
+  if (reqRange && reqRange.start > 0) {
+    if (resp.status !== 206 || startByte !== reqRange.start) {
+      return { valid: false, meta: emptyMeta, reason: 'range_offset_mismatch' };
+    }
+  }
+
+  // Verify representation consistency when resuming against an alternate mirror
+  if (expectedTotalBytes > 0) {
+    if (totalBytes <= 0 || totalBytes !== expectedTotalBytes) {
+      return { valid: false, meta: emptyMeta, reason: 'representation_size_mismatch' };
+    }
+  }
+
+  return {
+    valid: true,
+    meta: {
+      totalBytes,
+      startByte,
+      endByte,
+      etag
+    }
+  };
+}
+
+// Helper: handle lightweight HEAD size/header probes without downloading full media bodies
+async function handleMediaHeadProbe(candidates: string[], platform: string, res: Response, clientSignal: AbortSignal): Promise<void> {
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Cache-Control', 'no-store, no-transform');
+
+  for (const candidateUrl of candidates) {
+    if (clientSignal.aborted) break;
+    const headers = getPlatformHeaders(candidateUrl, platform);
+    const t0 = Date.now();
+
+    // 1. Try fast upstream HEAD first
+    try {
+      const headResp = await fetchWithTimeout(candidateUrl, { method: 'HEAD', headers }, 4500, clientSignal);
+      try { await headResp.body?.cancel(); } catch {}
+      const clen = parseInt(headResp.headers.get('content-length') || '0', 10);
+      const ctype = (headResp.headers.get('content-type') || '').toLowerCase();
+      if (headResp.ok && clen > 0 && !ctype.includes('text/html')) {
+        recordCdnHostSuccess(candidateUrl, Date.now() - t0);
+        res.status(200);
+        if (ctype) res.setHeader('Content-Type', headResp.headers.get('content-type')!);
+        res.setHeader('Content-Length', String(clen));
+        res.setHeader('Accept-Ranges', headResp.headers.get('accept-ranges') || 'bytes');
+        res.end();
+        return;
+      }
+    } catch {}
+
+    // 2. Fallback: 1-byte Range GET (bytes=0-0) to extract total size from Content-Range without downloading the file
+    if (clientSignal.aborted) break;
+    try {
+      const rangeHeaders = { ...headers, Range: 'bytes=0-0' };
+      const rangeResp = await fetchWithTimeout(candidateUrl, { method: 'GET', headers: rangeHeaders }, 5500, clientSignal);
+      try { await rangeResp.body?.cancel(); } catch {}
+      const ctype = (rangeResp.headers.get('content-type') || '').toLowerCase();
+      if ((rangeResp.ok || rangeResp.status === 206) && !ctype.includes('text/html')) {
+        const cr = rangeResp.headers.get('content-range') || '';
+        const m = cr.match(/\/(\d+)$/);
+        const totalBytes = m ? parseInt(m[1], 10) : parseInt(rangeResp.headers.get('content-length') || '0', 10);
+        if (totalBytes > 0) {
+          recordCdnHostSuccess(candidateUrl, Date.now() - t0);
+          res.status(200);
+          if (ctype) res.setHeader('Content-Type', rangeResp.headers.get('content-type')!);
+          res.setHeader('Content-Length', String(totalBytes));
+          res.setHeader('Accept-Ranges', 'bytes');
+          res.end();
+          return;
+        }
+      }
+    } catch {
+      recordCdnHostFailure(candidateUrl);
+    }
+  }
+
+  if (!res.headersSent) {
+    res.status(200).end();
+  } else if (!res.writableEnded) {
+    res.end();
+  }
+}
+
+// Helper: connect to upstream media URL with staggered/hedged probing, automatic failover, and strict representation verification
+async function fetchUpstreamMediaWithFailover(
+  candidates: string[],
+  platform: string,
+  rangeHeader: string | undefined,
+  clientSignal: AbortSignal,
+  expectedTotalBytes = 0
+): Promise<{ upstream: globalThis.Response; usedUrl: string; meta: MediaRepresentationMeta }> {
+  let lastError: any = null;
+  let lastRejectedUpstream: globalThis.Response | null = null;
+  let lastUsedUrl = candidates[0] || '';
+
+  const attemptSingleCandidate = async (
+    candidateUrl: string,
+    timeoutMs: number,
+    abortSignal: AbortSignal
+  ): Promise<{ upstream: globalThis.Response; usedUrl: string; meta: MediaRepresentationMeta }> => {
+    const t0 = Date.now();
+    const headers = getPlatformHeaders(candidateUrl, platform);
+    if (rangeHeader) headers['Range'] = rangeHeader;
+    const upstream = await fetchWithTimeout(candidateUrl, { headers }, timeoutMs, abortSignal);
+    const check = inspectMediaResponse(upstream, rangeHeader, expectedTotalBytes);
+    if (check.valid) {
+      recordCdnHostSuccess(candidateUrl, Date.now() - t0);
+      return { upstream, usedUrl: candidateUrl, meta: check.meta };
+    }
+    recordCdnHostFailure(candidateUrl);
+    if (check.reason === 'representation_size_mismatch' || check.reason === 'range_offset_mismatch') {
+      try { await upstream.body?.cancel(); } catch {}
+      const mismatchErr: any = new Error(`Mirror representation mismatch (${check.reason})`);
+      mismatchErr.code = check.reason;
+      throw mismatchErr;
+    }
+    if (!lastRejectedUpstream) {
+      lastRejectedUpstream = upstream;
+      lastUsedUrl = candidateUrl;
+    } else {
+      try { await upstream.body?.cancel(); } catch {}
+    }
+    throw new Error(`Mirror returned invalid response (${check.reason || upstream.status})`);
+  };
+
+  // If at least 2 mirrors exist, use staggered hedging on the top 2 mirrors (starts #1 if #0 hasn't responded within 1200ms)
+  let startIndex = 0;
+  if (candidates.length >= 2 && !clientSignal.aborted) {
+    startIndex = 2;
+    const ctrl0 = new AbortController();
+    const ctrl1 = new AbortController();
+    const onClientAbort = () => {
+      ctrl0.abort();
+      ctrl1.abort();
+    };
+    clientSignal.addEventListener('abort', onClientAbort, { once: true });
+
+    let hedgeTimer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      const winner = await new Promise<{ upstream: globalThis.Response; usedUrl: string; meta: MediaRepresentationMeta }>((resolve, reject) => {
+        let settled = false;
+        let pendingCount = 1;
+        let secondStarted = false;
+
+        const handleSuccess = (resObj: { upstream: globalThis.Response; usedUrl: string; meta: MediaRepresentationMeta }, winnerIdx: number) => {
+          if (settled) {
+            try { resObj.upstream.body?.cancel(); } catch {}
+            return;
+          }
+          settled = true;
+          if (hedgeTimer) clearTimeout(hedgeTimer);
+          if (winnerIdx === 0) ctrl1.abort();
+          else ctrl0.abort();
+          resolve(resObj);
+        };
+
+        const handleFailure = (err: any) => {
+          lastError = err;
+          pendingCount--;
+          if (!secondStarted && !settled && !clientSignal.aborted) {
+            if (hedgeTimer) clearTimeout(hedgeTimer);
+            startSecond();
+            return;
+          }
+          if (pendingCount <= 0 && !settled) {
+            settled = true;
+            reject(lastError || new Error('Top hedged mirrors failed'));
+          }
+        };
+
+        const startSecond = () => {
+          if (secondStarted || settled || clientSignal.aborted) return;
+          secondStarted = true;
+          pendingCount++;
+          attemptSingleCandidate(candidates[1], 6500, ctrl1.signal)
+            .then(r => handleSuccess(r, 1))
+            .catch(handleFailure);
+        };
+
+        hedgeTimer = setTimeout(startSecond, 1200);
+
+        attemptSingleCandidate(candidates[0], 6500, ctrl0.signal)
+          .then(r => handleSuccess(r, 0))
+          .catch(handleFailure);
+      });
+
+      return winner;
+    } catch (err) {
+      lastError = err;
+    } finally {
+      if (hedgeTimer) clearTimeout(hedgeTimer);
+      clientSignal.removeEventListener('abort', onClientAbort);
+    }
+  }
+
+  for (let i = startIndex; i < candidates.length; i++) {
+    if (clientSignal.aborted) throw new Error('Client aborted');
+    const candidateUrl = candidates[i];
+    const hasMoreMirrors = i < candidates.length - 1;
+    const connectTimeoutMs = hasMoreMirrors ? 6500 : 11000;
+    try {
+      return await attemptSingleCandidate(candidateUrl, connectTimeoutMs, clientSignal);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (lastRejectedUpstream && expectedTotalBytes === 0) {
+    return {
+      upstream: lastRejectedUpstream,
+      usedUrl: lastUsedUrl,
+      meta: { totalBytes: 0, startByte: 0, endByte: -1, etag: '' }
+    };
+  }
+  throw lastError || new Error('All upstream media mirrors failed');
+}
+
+// Helper: stream upstream body to Express response with backpressure and transparent server-side Range resume on mid-stream stall
+async function streamUpstreamWithMidStreamRecovery(
+  initialUpstream: globalThis.Response,
+  initialMeta: MediaRepresentationMeta,
+  candidates: string[],
+  platform: string,
+  res: Response,
+  clientSignal: AbortSignal,
+  isClientAborted: () => boolean
+): Promise<{ bytesWritten: number; completedFullOrRequestedRange: boolean }> {
+  let currentUpstream: globalThis.Response | null = initialUpstream;
+  let bytesWritten = 0;
+  const startOffset = initialMeta.startByte || 0;
+  const totalBytes = initialMeta.totalBytes || 0;
+  const targetEndByte = initialMeta.endByte >= startOffset
+    ? initialMeta.endByte
+    : (totalBytes > 0 ? totalBytes - 1 : -1);
+  const expectedTransferLength = targetEndByte >= startOffset ? (targetEndByte - startOffset + 1) : 0;
+
+  let serverResumeCount = 0;
+  const MAX_SERVER_RESUMES = 2;
+
+  while (currentUpstream && currentUpstream.body) {
+    const reader = currentUpstream.body.getReader();
+    let streamStalledOrErrored = false;
+
+    try {
+      while (true) {
+        const { done, value } = await readChunkWithTimeout(reader, 20000);
+        if (done) break;
+        if (isClientAborted() || res.destroyed) {
+          try { await reader.cancel(); } catch {}
+          break;
+        }
+        if (value && value.byteLength > 0) {
+          bytesWritten += value.byteLength;
+          if (!res.write(value)) {
+            await new Promise<void>(resolve => {
+              const onDrain = () => { cleanup(); resolve(); };
+              const onClose = () => { cleanup(); resolve(); };
+              const cleanup = () => {
+                res.removeListener('drain', onDrain);
+                res.removeListener('close', onClose);
+              };
+              res.once('drain', onDrain);
+              res.once('close', onClose);
+            });
+          }
+        }
+      }
+    } catch {
+      streamStalledOrErrored = true;
+      try { await reader.cancel(); } catch {}
+    } finally {
+      if (isClientAborted() || res.destroyed) {
+        try { await reader.cancel(); } catch {}
+      }
+    }
+
+    currentUpstream = null;
+
+    if (isClientAborted() || res.destroyed) {
+      break;
+    }
+
+    // Check if we already transferred all expected bytes
+    if (expectedTransferLength > 0 && bytesWritten >= expectedTransferLength) {
+      break;
+    }
+
+    // If the stream ended prematurely or stalled mid-transfer and we know exact totalBytes, try transparent Range resume on a healthy mirror
+    if ((streamStalledOrErrored || (expectedTransferLength > 0 && bytesWritten < expectedTransferLength)) &&
+        totalBytes > 0 &&
+        targetEndByte >= startOffset + bytesWritten &&
+        serverResumeCount < MAX_SERVER_RESUMES) {
+      serverResumeCount++;
+      const nextByte = startOffset + bytesWritten;
+      const resumeRange = `bytes=${nextByte}-${targetEndByte}`;
+      try {
+        const resumed = await fetchUpstreamMediaWithFailover(
+          candidates,
+          platform,
+          resumeRange,
+          clientSignal,
+          totalBytes
+        );
+        currentUpstream = resumed.upstream;
+        continue;
+      } catch {
+        break;
+      }
+    }
+
+    break;
+  }
+
+  const completedFullOrRequestedRange = expectedTransferLength > 0
+    ? bytesWritten >= expectedTransferLength
+    : bytesWritten > 0;
+
+  return { bytesWritten, completedFullOrRequestedRange };
+}
+
+// 2. /api/proxy (Range support for video preview + anti-hotlink bypass + 0-byte HEAD probe)
+async function handleProxyRequest(req: Request, res: Response) {
   const targetUrl = req.query.url as string;
   const platform = req.query.platform as string;
-  const isDownloadTransfer = req.query.dl === '1';
+  const isHeadRequest = req.method === 'HEAD';
+  const isDownloadTransfer = !isHeadRequest && req.query.dl === '1';
   const dlMethod = String(req.query.method || 'range_chunk_stream').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'range_chunk_stream';
   const requestId = String(req.query.req_id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || generateRequestId();
+  const expectedSizeParam = parseInt(String(req.query.expected_size || '0'), 10) || 0;
   const normalizedPlat = normalizePlatformName(platform, targetUrl);
+
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Cache-Control', 'no-store, no-transform');
 
   let transferStartTime = Date.now();
   if (isDownloadTransfer) {
@@ -1494,29 +2313,46 @@ app.get('/api/proxy', async (req: Request, res: Response) => {
     return res.status(400).send('Missing url parameter');
   }
 
-  const headers = getPlatformHeaders(targetUrl, platform);
-  const range = req.headers.range;
-  if (range) headers['Range'] = range;
-
+  const clientAbortController = new AbortController();
   let clientAborted = false;
-  req.on('aborted', () => {
-    clientAborted = true;
-  });
-  res.on('close', () => {
+  const markClientAborted = () => {
     if (!res.writableEnded) {
       clientAborted = true;
+      clientAbortController.abort();
     }
-  });
+  };
+  req.on('aborted', markClientAborted);
+  res.on('close', markClientAborted);
+
+  const candidates = buildCandidateMediaUrls(targetUrl, req.query.alt, platform);
+
+  // Fast path for HEAD requests (e.g. probeQualitySize): never download the full video body!
+  if (isHeadRequest) {
+    await handleMediaHeadProbe(candidates, platform, res, clientAbortController.signal);
+    return;
+  }
+
+  const range = typeof req.headers.range === 'string' ? req.headers.range : undefined;
 
   try {
-    const upstream = await fetch(targetUrl, { headers });
+    const { upstream, meta } = await fetchUpstreamMediaWithFailover(
+      candidates,
+      platform,
+      range,
+      clientAbortController.signal,
+      expectedSizeParam
+    );
+
     res.status(upstream.status);
 
-    const passHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+    const passHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag'];
     passHeaders.forEach(h => {
       const v = upstream.headers.get(h);
       if (v) res.setHeader(h, v);
     });
+    if (!res.getHeader('Accept-Ranges')) {
+      res.setHeader('Accept-Ranges', 'bytes');
+    }
 
     if (!upstream.ok && upstream.status !== 206) {
       recordProxyStatOnce('failed', upstream.status, upstream.status >= 500 ? 'upstream_http_5xx' : 'upstream_http_4xx');
@@ -1529,6 +2365,8 @@ app.get('/api/proxy', async (req: Request, res: Response) => {
       recordProxyStatOnce('failed', upstream.status, 'empty_upstream_body');
       return res.end();
     }
+
+    res.flushHeaders();
 
     let isFinalChunkOrFullFile = upstream.status === 200;
     const contentRange = upstream.headers.get('content-range') || '';
@@ -1543,31 +2381,15 @@ app.get('/api/proxy', async (req: Request, res: Response) => {
       }
     }
 
-    const reader = upstream.body.getReader();
-    let bytesWritten = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (clientAborted || res.destroyed) {
-        try { await reader.cancel(); } catch {}
-        break;
-      }
-      if (value) {
-        bytesWritten += value.byteLength;
-        if (!res.write(value)) {
-          await new Promise<void>(resolve => {
-            const onDrain = () => { cleanup(); resolve(); };
-            const onClose = () => { cleanup(); resolve(); };
-            const cleanup = () => {
-              res.removeListener('drain', onDrain);
-              res.removeListener('close', onClose);
-            };
-            res.once('drain', onDrain);
-            res.once('close', onClose);
-          });
-        }
-      }
-    }
+    const { bytesWritten, completedFullOrRequestedRange } = await streamUpstreamWithMidStreamRecovery(
+      upstream,
+      meta,
+      candidates,
+      platform,
+      res,
+      clientAbortController.signal,
+      () => clientAborted
+    );
 
     if (!res.writableEnded) {
       res.end();
@@ -1577,49 +2399,73 @@ app.get('/api/proxy', async (req: Request, res: Response) => {
       recordProxyStatOnce('aborted', upstream.status, 'client_aborted');
     } else if (bytesWritten === 0) {
       recordProxyStatOnce('failed', upstream.status, 'empty_upstream_body');
+    } else if (!completedFullOrRequestedRange) {
+      recordProxyStatOnce('failed', upstream.status, 'incomplete_upstream_stream');
     } else if (isFinalChunkOrFullFile) {
       recordProxyStatOnce('success', upstream.status, null);
     }
   } catch (err: any) {
+    const statusCode = (err?.code === 'representation_size_mismatch' || err?.code === 'range_offset_mismatch') ? 409 : 502;
     if (clientAborted) {
       recordProxyStatOnce('aborted', 499, 'client_aborted');
     } else {
-      recordProxyStatOnce('failed', 502, categorizeError(err, 502));
+      recordProxyStatOnce('failed', statusCode, categorizeError(err, statusCode));
     }
     if (!res.headersSent) {
-      res.status(502).send(`Proxy fetch failed: ${err.message}`);
+      res.status(statusCode).send(`Proxy fetch failed: ${err.message}`);
     } else if (!res.writableEnded) {
       res.end();
     }
   }
-});
+}
+app.head('/api/proxy', handleProxyRequest);
+app.get('/api/proxy', handleProxyRequest);
 
-// 3. /api/download (Attachment download streaming with custom filename)
-app.get('/api/download', async (req: Request, res: Response) => {
-  const startTime = Date.now();
-  const requestId = generateRequestId();
-  res.setHeader('X-Request-Id', requestId);
-
+// 3. /api/download (Attachment download streaming with Range support, CDN mirror failover, and Nginx unbuffered streaming)
+async function handleDownloadRequest(req: Request, res: Response) {
   const targetUrl = req.query.url as string;
   const filename = (req.query.name as string) || (req.query.prefix ? String(req.query.prefix) + String(req.query.ext || '.mp4') : 'download.mp4');
   const platform = req.query.platform as string;
   const mediaType = String(req.query.type || 'video').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'video';
+  const dlMethod = String(req.query.method || `attachment_${mediaType}`).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || `attachment_${mediaType}`;
+  const isHeadRequest = req.method === 'HEAD';
+  const requestId = String(req.query.req_id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || generateRequestId();
+  const expectedSizeParam = parseInt(String(req.query.expected_size || '0'), 10) || 0;
   const normalizedPlat = normalizePlatformName(platform, targetUrl);
+
+  res.setHeader('X-Request-Id', requestId);
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Cache-Control', 'no-store, no-transform');
+
+  let transferStartTime = Date.now();
+  if (!isHeadRequest) {
+    const existing = activeRangeTransfers.get(requestId);
+    if (existing) {
+      transferStartTime = existing.startTime;
+    } else {
+      activeRangeTransfers.set(requestId, { startTime: transferStartTime });
+      if (activeRangeTransfers.size > MAX_TRACKED_TRANSFERS) {
+        const oldestKey = activeRangeTransfers.keys().next().value;
+        if (oldestKey) activeRangeTransfers.delete(oldestKey);
+      }
+    }
+  }
 
   let statRecorded = false;
   const recordDownloadOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
-    if (statRecorded) return;
+    if (isHeadRequest || statRecorded) return;
+    if (markTransferFinalized(requestId)) return;
     statRecorded = true;
     recordDownloadStat({
       timestamp: new Date().toISOString(),
       request_id: requestId,
       operation: 'file_download',
       platform: normalizedPlat,
-      download_method: `attachment_${mediaType}`,
+      download_method: dlMethod,
       status,
       http_status: httpStatus,
       error_category: errorCategory,
-      duration_ms: Math.max(0, Date.now() - startTime)
+      duration_ms: Math.max(0, Date.now() - transferStartTime)
     });
   };
 
@@ -1628,22 +2474,38 @@ app.get('/api/download', async (req: Request, res: Response) => {
     return res.status(400).send('Missing url parameter');
   }
 
+  const clientAbortController = new AbortController();
   let clientAborted = false;
-  req.on('aborted', () => {
-    clientAborted = true;
-  });
-  res.on('close', () => {
+  const markClientAborted = () => {
     if (!res.writableEnded) {
       clientAborted = true;
+      clientAbortController.abort();
     }
-  });
+  };
+  req.on('aborted', markClientAborted);
+  res.on('close', markClientAborted);
 
-  const headers = getPlatformHeaders(targetUrl, platform);
+  const candidates = buildCandidateMediaUrls(targetUrl, req.query.alt, platform);
+
+  if (isHeadRequest) {
+    await handleMediaHeadProbe(candidates, platform, res, clientAbortController.signal);
+    return;
+  }
+
+  const range = typeof req.headers.range === 'string' ? req.headers.range : undefined;
 
   try {
-    const upstream = await fetch(targetUrl, { headers });
-    if (!upstream.ok) {
+    const { upstream, meta } = await fetchUpstreamMediaWithFailover(
+      candidates,
+      platform,
+      range,
+      clientAbortController.signal,
+      expectedSizeParam
+    );
+
+    if (!upstream.ok && upstream.status !== 206) {
       recordDownloadOnce('failed', upstream.status, upstream.status >= 500 ? 'upstream_http_5xx' : 'upstream_http_4xx');
+      try { await upstream.body?.cancel(); } catch {}
       return res.status(upstream.status).send(`Upstream returned HTTP ${upstream.status}`);
     }
 
@@ -1660,36 +2522,39 @@ app.get('/api/download', async (req: Request, res: Response) => {
     const encodedName = encodeURIComponent(filename);
     res.setHeader('Content-Disposition', `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedName}`);
 
-    const ctype = upstream.headers.get('content-type');
-    if (ctype) res.setHeader('Content-Type', ctype);
-    const clen = upstream.headers.get('content-length');
-    if (clen) res.setHeader('Content-Length', clen);
+    const passHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag'];
+    passHeaders.forEach(h => {
+      const v = upstream.headers.get(h);
+      if (v) res.setHeader(h, v);
+    });
+    if (!res.getHeader('Accept-Ranges')) {
+      res.setHeader('Accept-Ranges', 'bytes');
+    }
 
-    const reader = upstream.body.getReader();
-    let bytesWritten = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (clientAborted || res.destroyed) {
-        try { await reader.cancel(); } catch {}
-        break;
-      }
-      if (value) {
-        bytesWritten += value.byteLength;
-        if (!res.write(value)) {
-          await new Promise<void>(resolve => {
-            const onDrain = () => { cleanup(); resolve(); };
-            const onClose = () => { cleanup(); resolve(); };
-            const cleanup = () => {
-              res.removeListener('drain', onDrain);
-              res.removeListener('close', onClose);
-            };
-            res.once('drain', onDrain);
-            res.once('close', onClose);
-          });
+    res.flushHeaders();
+
+    let isFinalChunkOrFullFile = upstream.status === 200;
+    const contentRange = upstream.headers.get('content-range') || '';
+    if (upstream.status === 206 && contentRange) {
+      const m = contentRange.match(/bytes\s+\d+-(\d+)\/(\d+)/i);
+      if (m) {
+        const endByte = parseInt(m[1], 10);
+        const totalBytes = parseInt(m[2], 10);
+        if (totalBytes > 0 && endByte + 1 >= totalBytes) {
+          isFinalChunkOrFullFile = true;
         }
       }
     }
+
+    const { bytesWritten, completedFullOrRequestedRange } = await streamUpstreamWithMidStreamRecovery(
+      upstream,
+      meta,
+      candidates,
+      platform,
+      res,
+      clientAbortController.signal,
+      () => clientAborted
+    );
 
     if (!res.writableEnded) {
       res.end();
@@ -1699,28 +2564,34 @@ app.get('/api/download', async (req: Request, res: Response) => {
       recordDownloadOnce('aborted', upstream.status, 'client_aborted');
     } else if (bytesWritten === 0) {
       recordDownloadOnce('failed', upstream.status, 'empty_upstream_body');
-    } else {
+    } else if (!completedFullOrRequestedRange) {
+      recordDownloadOnce('failed', upstream.status, 'incomplete_upstream_stream');
+    } else if (isFinalChunkOrFullFile) {
       recordDownloadOnce('success', upstream.status, null);
     }
   } catch (err: any) {
+    const statusCode = (err?.code === 'representation_size_mismatch' || err?.code === 'range_offset_mismatch') ? 409 : 502;
     if (clientAborted) {
       recordDownloadOnce('aborted', 499, 'client_aborted');
     } else {
-      recordDownloadOnce('failed', 502, categorizeError(err, 502));
+      recordDownloadOnce('failed', statusCode, categorizeError(err, statusCode));
     }
     if (!res.headersSent) {
-      res.status(502).send(`Download failed: ${err.message}`);
+      res.status(statusCode).send(`Download failed: ${err.message}`);
     } else if (!res.writableEnded) {
       res.end();
     }
   }
-});
+}
+app.head('/api/download', handleDownloadRequest);
+app.get('/api/download', handleDownloadRequest);
 
 // 4. /api/zip (Streaming multi-item ZIP archive)
 app.post('/api/zip', async (req: Request, res: Response) => {
   const startTime = Date.now();
   const requestId = generateRequestId();
   res.setHeader('X-Request-Id', requestId);
+  res.setHeader('X-Accel-Buffering', 'no');
 
   const items: Array<{ url: string; name: string }> = req.body?.items || [];
   const zipName = cleanFilename(req.body?.zip_name || req.body?.prefix || 'photos', 'photos') + '.zip';
@@ -1766,7 +2637,7 @@ app.post('/api/zip', async (req: Request, res: Response) => {
       if (!item || !item.url) continue;
       try {
         const headers = getPlatformHeaders(item.url, normalizedPlat);
-        const upstream = await fetch(item.url, { headers });
+        const upstream = await fetchWithTimeout(item.url, { headers }, 12000);
         if (upstream.ok) {
           const arrayBuf = await upstream.arrayBuffer();
           if (arrayBuf.byteLength > 0) {
@@ -1878,7 +2749,7 @@ app.post('/api/zip/prepare', async (req: Request, res: Response) => {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         try {
-          const upstream = await fetch(item.url, { headers: getPlatformHeaders(item.url) });
+          const upstream = await fetchWithTimeout(item.url, { headers: getPlatformHeaders(item.url) }, 12000);
           if (upstream.ok) {
             const arrayBuf = await upstream.arrayBuffer();
             archive.append(Buffer.from(arrayBuf), { name: item.name || `item_${i + 1}.jpg` });
@@ -1946,29 +2817,149 @@ app.post('/api/save/cancel', (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-// 7. Config endpoints
+// 7. Config endpoints & Contact endpoint
+let tiktokProxyUrl = '';
+
+function maskSecretPreview(raw: string): string {
+  const clean = (raw || '').replace(/^SESSDATA=/i, '').trim();
+  if (!clean) return '';
+  if (clean.length <= 8) return '****';
+  return clean.slice(0, 4) + '••••' + clean.slice(-3);
+}
+
 app.get('/api/bili/config', (req: Request, res: Response) => {
-  res.json({ cookie: bilibiliCookie ? 'configured' : '' });
+  res.setHeader('Cache-Control', 'no-store');
+  const active = (bilibiliCookie || process.env.BILIBILI_COOKIE || '').trim();
+  res.json({
+    success: true,
+    configured: Boolean(active),
+    source: bilibiliCookie ? 'runtime_cookie' : (process.env.BILIBILI_COOKIE ? 'env_cookie' : 'none'),
+    sessdata_preview: maskSecretPreview(active)
+  });
 });
+
 app.post('/api/bili/config', (req: Request, res: Response) => {
-  bilibiliCookie = req.body?.cookie || '';
-  res.json({ success: true });
+  if (req.body?.clear) {
+    bilibiliCookie = '';
+    return res.json({ success: true, configured: false, sessdata_preview: '' });
+  }
+  const raw = typeof req.body?.cookie === 'string' ? req.body.cookie.trim() : '';
+  if (raw.length > 4096) {
+    return res.status(400).json({ error: 'Cookie value is too long' });
+  }
+  bilibiliCookie = raw;
+  res.json({
+    success: true,
+    configured: Boolean(bilibiliCookie),
+    source: bilibiliCookie ? 'runtime_cookie' : 'none',
+    sessdata_preview: maskSecretPreview(bilibiliCookie)
+  });
 });
+
 app.delete('/api/bili/config', (req: Request, res: Response) => {
   bilibiliCookie = '';
-  res.json({ success: true });
+  res.json({ success: true, configured: false });
 });
 
 app.get('/api/tiktok/config', (req: Request, res: Response) => {
-  res.json({ cookie: tiktokCookie ? 'configured' : '' });
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    success: true,
+    configured: Boolean(tiktokProxyUrl),
+    proxy: tiktokProxyUrl
+  });
 });
+
 app.post('/api/tiktok/config', (req: Request, res: Response) => {
-  tiktokCookie = req.body?.cookie || '';
-  res.json({ success: true });
+  if (req.body?.clear) {
+    tiktokProxyUrl = '';
+    tiktokCookie = '';
+    return res.json({ success: true, configured: false, proxy: '' });
+  }
+  const rawProxy = typeof req.body?.proxy === 'string' ? req.body.proxy.trim() : '';
+  if (rawProxy && !/^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(rawProxy)) {
+    return res.status(400).json({ error: 'Invalid HTTP/HTTPS proxy URL format (example: http://127.0.0.1:7890)' });
+  }
+  tiktokProxyUrl = rawProxy;
+  if (typeof req.body?.cookie === 'string') {
+    tiktokCookie = req.body.cookie.trim();
+  }
+  res.json({
+    success: true,
+    configured: Boolean(tiktokProxyUrl),
+    proxy: tiktokProxyUrl
+  });
 });
+
 app.delete('/api/tiktok/config', (req: Request, res: Response) => {
+  tiktokProxyUrl = '';
   tiktokCookie = '';
-  res.json({ success: true });
+  res.json({ success: true, configured: false, proxy: '' });
+});
+
+// Rate-limited Contact Inquiry endpoint (stores sanitized inquiries in logs/contact-messages.jsonl)
+const CONTACT_LOG_FILE = path.join(LOGS_DIR, 'contact-messages.jsonl');
+const contactRateLimitMap = new Map<string, number[]>();
+
+app.post('/api/contact', (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const clientIp = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000;
+  const recentHits = (contactRateLimitMap.get(clientIp) || []).filter(ts => now - ts < windowMs);
+  if (recentHits.length >= 6) {
+    return res.status(429).json({
+      success: false,
+      error: 'Too many submissions in a short period. Please wait a few minutes and try again.'
+    });
+  }
+
+  const name = String(req.body?.name || '').trim().slice(0, 80);
+  const email = String(req.body?.email || '').trim().slice(0, 120);
+  const category = String(req.body?.category || 'general_feedback').trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48);
+  const platform = normalizePlatformName(String(req.body?.platform || ''));
+  const message = String(req.body?.message || '').trim().slice(0, 2000);
+
+  if (!name || name.length < 2) {
+    return res.status(400).json({ success: false, error: 'Please enter your name (at least 2 characters).' });
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, error: 'Please enter a valid email address.' });
+  }
+  if (!message || message.length < 10) {
+    return res.status(400).json({ success: false, error: 'Please enter a detailed message (at least 10 characters).' });
+  }
+
+  recentHits.push(now);
+  contactRateLimitMap.set(clientIp, recentHits);
+
+  const inquiryId = 'inq_' + crypto.randomBytes(6).toString('hex');
+  const record = {
+    inquiry_id: inquiryId,
+    timestamp: new Date(now).toISOString(),
+    category,
+    platform,
+    name,
+    email,
+    message
+  };
+
+  try {
+    fs.mkdirSync(LOGS_DIR, { recursive: true });
+    fs.appendFileSync(CONTACT_LOG_FILE, JSON.stringify(record) + '\n', 'utf8');
+  } catch {
+    return res.status(500).json({
+      success: false,
+      error: 'Unable to record inquiry on server disk at this time.'
+    });
+  }
+
+  return res.json({
+    success: true,
+    inquiry_id: inquiryId,
+    storage_mode: 'server_inbox_log',
+    message: `Your message has been logged on the DownDouyin server (Reference ID: ${inquiryId}). Note: Automated outbound email notification is not enabled; the site administrator reviews logged inquiries directly on the server.`
+  });
 });
 
 // 8. Bilibili tracks & audio stubs

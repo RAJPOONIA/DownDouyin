@@ -262,16 +262,50 @@ export interface DouyinQualityItem {
   is_h265: boolean;
 }
 
+export function scoreDouyinCdnUrl(u: string): number {
+  const lower = u.toLowerCase();
+  let score = 30;
+
+  if (lower.includes('v3-web.douyinvod.com') || lower.includes('v16-web.douyinvod.com') || lower.includes('v95-web.douyinvod.com')) {
+    score = 10;
+  } else if (lower.includes('douyinvod.com')) {
+    if (lower.includes('v26-web.douyinvod.com')) score = 35;
+    else if (lower.includes('v9-web.douyinvod.com')) score = 45;
+    else if (lower.includes('v5-web.douyinvod.com')) score = 55;
+    else if (lower.includes('v6-web.douyinvod.com')) score = 65;
+    else if (lower.includes('v11-web.douyinvod.com')) score = 75;
+    else score = 20;
+  } else if (lower.includes('/aweme/v1/play')) {
+    score = 25;
+  }
+
+  // Prefer HTTPS URLs over plain HTTP
+  if (lower.startsWith('http://')) {
+    score += 8;
+  }
+
+  // Avoid watermarked or degraded endpoints unless no clean alternative exists
+  if (lower.includes('playwm') || lower.includes('watermark') || lower.includes('dy-water') || lower.includes('webapp-prime')) {
+    score += 100;
+  }
+
+  return score;
+}
+
 function cleanUrls(raw: any): string[] {
   if (!raw) return [];
   const list = Array.isArray(raw) ? raw : [raw];
   const res: string[] = [];
   for (const u of list) {
     if (typeof u === 'string' && u.startsWith('http')) {
-      const clean = u.replace(/playwm/g, 'play').replace(/\/playwm\//g, '/play/');
+      let clean = u.trim().replace(/playwm/g, 'play').replace(/\/playwm\//g, '/play/');
+      if (clean.startsWith('http://') && (clean.includes('douyinvod.com') || clean.includes('iesdouyin.com') || clean.includes('douyin.com'))) {
+        clean = 'https://' + clean.slice(7);
+      }
       if (!res.includes(clean)) res.push(clean);
     }
   }
+  res.sort((a, b) => scoreDouyinCdnUrl(a) - scoreDouyinCdnUrl(b));
   return res;
 }
 

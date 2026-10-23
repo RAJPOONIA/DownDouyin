@@ -1,0 +1,2738 @@
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
+import dns from 'dns';
+import net from 'net';
+import { fileURLToPath } from 'url';
+import archiver from 'archiver';
+import http from 'http';
+import https from 'https';
+import { ABogus, DOUYIN_BASE_PARAMS, DOUYIN_FIXED_UA, extractDouyinQualities, DouyinQualityItem, scoreDouyinCdnUrl } from './douyin_abogus.js';
+
+// Prefer IPv4 first and use a scoped custom DNS lookup with bounded timeouts and system DNS fallback
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {}
+
+const fastDnsResolver = new dns.promises.Resolver({ timeout: 1200, tries: 1 });
+try {
+  fastDnsResolver.setServers(['1.1.1.1', '8.8.8.8', '223.5.5.5', '1.0.0.1']);
+} catch {}
+
+const DNS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_DNS_CACHE_ENTRIES = 1000;
+const dnsCache = new Map<string, { ips: string[]; expiresAt: number }>();
+const inflightDns = new Map<string, Promise<string[]>>();
+
+async function resolveFastIPv4(hostname: string): Promise<string[]> {
+  const now = Date.now();
+  const cached = dnsCache.get(hostname);
+  if (cached && cached.expiresAt > now && cached.ips.length > 0) {
+    return cached.ips;
+  }
+  const existing = inflightDns.get(hostname);
+  if (existing) return existing;
+
+  const task = (async () => {
+    try {
+      const ips = await fastDnsResolver.resolve4(hostname);
+      if (ips && ips.length > 0) {
+        if (dnsCache.size >= MAX_DNS_CACHE_ENTRIES) {
+          const oldest = dnsCache.keys().next().value;
+          if (oldest) dnsCache.delete(oldest);
+        }
+        dnsCache.set(hostname, { ips, expiresAt: Date.now() + DNS_CACHE_TTL_MS });
+        return ips;
+      }
+    } catch {
+      // Fallback to OS lookup when custom UDP DNS is unreachable or blocked
+    }
+    try {
+      const fallback = await dns.promises.lookup(hostname, { family: 4, all: true });
+      const ips = fallback.map(x => x.address).filter(Boolean);
+      if (ips.length > 0) {
+        dnsCache.set(hostname, { ips, expiresAt: Date.now() + DNS_CACHE_TTL_MS });
+        return ips;
+      }
+    } catch {}
+    const anyFallback = await dns.promises.lookup(hostname, { all: true });
+    return anyFallback.map(x => x.address).filter(Boolean);
+  })().finally(() => {
+    inflightDns.delete(hostname);
+  });
+
+  inflightDns.set(hostname, task);
+  return task;
+}
+
+function fastCachedLookup(hostname: string, options: any, callback?: any): void {
+  let cb = callback;
+  let opts = options;
+  if (typeof opts === 'function') {
+    cb = opts;
+    opts = {};
+  }
+  if (!hostname || hostname === 'localhost' || net.isIP(hostname) !== 0) {
+    dns.lookup(hostname, opts, cb);
+    return;
+  }
+  const wantAll = Boolean(opts && typeof opts === 'object' && opts.all);
+  resolveFastIPv4(hostname)
+    .then(ips => {
+      if (!ips || ips.length === 0) {
+        dns.lookup(hostname, opts, cb);
+        return;
+      }
+      if (wantAll) {
+        cb(null, ips.map(ip => ({ address: ip, family: net.isIP(ip) || 4 })));
+      } else {
+        cb(null, ips[0], net.isIP(ips[0]) || 4);
+      }
+    })
+    .catch(() => {
+      dns.lookup(hostname, opts, cb);
+    });
+}
+
+// Scoped HTTP/HTTPS agents and Undici fetch dispatcher (no global net.Socket.prototype.connect monkey patch)
+export const scopedHttpAgent = new http.Agent({
+  keepAlive: true,
+  maxSockets: 128,
+  timeout: 15000,
+  lookup: fastCachedLookup as any
+});
+
+export const scopedHttpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 128,
+  timeout: 15000,
+  lookup: fastCachedLookup as any
+});
+
+let scopedUndiciDispatcher: any = null;
+function getScopedFetchDispatcher(): any {
+  if (scopedUndiciDispatcher) return scopedUndiciDispatcher;
+  try {
+    const sym = Symbol.for('undici.globalDispatcher.1');
+    const currentDispatcher = (globalThis as any)[sym];
+    const AgentCtor = currentDispatcher?.constructor;
+    if (typeof AgentCtor === 'function') {
+      scopedUndiciDispatcher = new AgentCtor({
+        keepAliveTimeout: 30000,
+        keepAliveMaxTimeout: 60000,
+        connect: {
+          timeout: 8000,
+          lookup: fastCachedLookup
+        }
+      });
+      (globalThis as any)[sym] = scopedUndiciDispatcher;
+    }
+  } catch {}
+  return scopedUndiciDispatcher;
+}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Resolve project root (compatible with both `tsx server.ts` in /var/www/DownDouyin and `node dist/server.js` in /var/www/DownDouyin/dist)
+const PROJECT_ROOT = fs.existsSync(path.join(__dirname, 'static')) ? __dirname : path.resolve(__dirname, '..');
+const STATIC_DIR = path.join(PROJECT_ROOT, 'static');
+const LOGS_DIR = path.join(PROJECT_ROOT, 'logs');
+const STATS_LOG_FILE = path.join(LOGS_DIR, 'download-stats.jsonl');
+
+// Load .env file from PROJECT_ROOT if present (without overriding existing process.env variables)
+function loadDotEnvIfPresent(): void {
+  const envPath = path.join(PROJECT_ROOT, '.env');
+  try {
+    if (!fs.existsSync(envPath)) return;
+    const raw = fs.readFileSync(envPath, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx <= 0) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      let val = trimmed.slice(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (key && process.env[key] === undefined) {
+        process.env[key] = val;
+      }
+    }
+  } catch {
+    // Ignore .env read errors so server startup is never blocked
+  }
+}
+loadDotEnvIfPresent();
+
+const app = express();
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const HOST = process.env.HOST || '0.0.0.0';
+
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+export type SupportedPlatform = 'douyin' | 'tiktok' | 'bilibili' | 'xiaohongshu' | 'unknown';
+export type StatOperation = 'parse_request' | 'file_download' | 'zip_download';
+export type StatStatus = 'success' | 'failed' | 'aborted';
+
+export interface DownloadStatRecord {
+  timestamp: string;
+  request_id: string;
+  operation: StatOperation;
+  platform: SupportedPlatform;
+  download_method: string;
+  status: StatStatus;
+  http_status: number;
+  error_category: string | null;
+  duration_ms: number;
+}
+
+interface PlatformBreakdown {
+  parse_success: number;
+  parse_failed: number;
+  file_download_success: number;
+  file_download_failed: number;
+  file_download_aborted: number;
+  zip_download_success: number;
+  zip_download_failed: number;
+  zip_download_aborted: number;
+}
+
+interface CumulativeStatsSummary {
+  total_records_loaded: number;
+  parse_requests: { total: number; success: number; failed: number };
+  file_downloads: { total: number; success: number; failed: number; aborted: number };
+  zip_downloads: { total: number; success: number; failed: number; aborted: number };
+  by_platform: Record<SupportedPlatform, PlatformBreakdown>;
+}
+
+const MAX_RECENT_STATS = 500;
+const MAX_STARTUP_LOG_BYTES = 5 * 1024 * 1024; // Read up to last 5 MB on startup
+const MAX_STARTUP_RECORDS = 10000;
+const recentDownloadStats: DownloadStatRecord[] = [];
+
+function createEmptyPlatformBreakdown(): PlatformBreakdown {
+  return {
+    parse_success: 0,
+    parse_failed: 0,
+    file_download_success: 0,
+    file_download_failed: 0,
+    file_download_aborted: 0,
+    zip_download_success: 0,
+    zip_download_failed: 0,
+    zip_download_aborted: 0
+  };
+}
+
+const cumulativeSummary: CumulativeStatsSummary = {
+  total_records_loaded: 0,
+  parse_requests: { total: 0, success: 0, failed: 0 },
+  file_downloads: { total: 0, success: 0, failed: 0, aborted: 0 },
+  zip_downloads: { total: 0, success: 0, failed: 0, aborted: 0 },
+  by_platform: {
+    douyin: createEmptyPlatformBreakdown(),
+    tiktok: createEmptyPlatformBreakdown(),
+    bilibili: createEmptyPlatformBreakdown(),
+    xiaohongshu: createEmptyPlatformBreakdown(),
+    unknown: createEmptyPlatformBreakdown()
+  }
+};
+
+function normalizePlatformName(raw?: string, fallbackUrl?: string): SupportedPlatform {
+  const p = (raw || '').trim().toLowerCase();
+  if (p === 'douyin' || p === 'tiktok' || p === 'bilibili' || p === 'xiaohongshu') {
+    return p;
+  }
+  if (fallbackUrl) {
+    const detected = detectPlatform(fallbackUrl);
+    if (detected === 'douyin' || detected === 'tiktok' || detected === 'bilibili' || detected === 'xiaohongshu') {
+      return detected;
+    }
+  }
+  return 'unknown';
+}
+
+function generateRequestId(): string {
+  try {
+    return 'req_' + crypto.randomBytes(8).toString('hex');
+  } catch {
+    return 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
+  }
+}
+
+function categorizeError(errOrMsg: unknown, httpStatus = 500): string {
+  const msg = String((errOrMsg as any)?.message || errOrMsg || '').toLowerCase();
+  if (!msg) return httpStatus >= 500 ? 'server_error' : 'request_error';
+  if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('abort')) return 'upstream_timeout';
+  if (msg.includes('cookie') || msg.includes('sessdata') || msg.includes('login')) return 'auth_or_cookie_required';
+  if (msg.includes('xsec_token') || msg.includes('安全限制') || msg.includes('过期')) return 'expired_or_restricted_link';
+  if (msg.includes('404') || msg.includes('not found') || msg.includes('不存在') || msg.includes('已删除')) return 'media_not_found';
+  if (msg.includes('403') || msg.includes('forbidden')) return 'upstream_forbidden';
+  if (msg.includes('network') || msg.includes('fetch failed') || msg.includes('econnreset')) return 'upstream_network_error';
+  if (httpStatus === 400) return 'invalid_request';
+  if (httpStatus === 502 || httpStatus === 504) return 'upstream_gateway_error';
+  return 'parse_or_stream_error';
+}
+
+function applyRecordToSummary(entry: DownloadStatRecord): void {
+  cumulativeSummary.total_records_loaded++;
+  const platBucket = cumulativeSummary.by_platform[entry.platform] || cumulativeSummary.by_platform.unknown;
+
+  if (entry.operation === 'parse_request') {
+    cumulativeSummary.parse_requests.total++;
+    if (entry.status === 'success') {
+      cumulativeSummary.parse_requests.success++;
+      platBucket.parse_success++;
+    } else {
+      cumulativeSummary.parse_requests.failed++;
+      platBucket.parse_failed++;
+    }
+  } else if (entry.operation === 'zip_download') {
+    cumulativeSummary.zip_downloads.total++;
+    if (entry.status === 'success') {
+      cumulativeSummary.zip_downloads.success++;
+      platBucket.zip_download_success++;
+    } else if (entry.status === 'aborted') {
+      cumulativeSummary.zip_downloads.aborted++;
+      platBucket.zip_download_aborted++;
+    } else {
+      cumulativeSummary.zip_downloads.failed++;
+      platBucket.zip_download_failed++;
+    }
+  } else {
+    cumulativeSummary.file_downloads.total++;
+    if (entry.status === 'success') {
+      cumulativeSummary.file_downloads.success++;
+      platBucket.file_download_success++;
+    } else if (entry.status === 'aborted') {
+      cumulativeSummary.file_downloads.aborted++;
+      platBucket.file_download_aborted++;
+    } else {
+      cumulativeSummary.file_downloads.failed++;
+      platBucket.file_download_failed++;
+    }
+  }
+
+  recentDownloadStats.push(entry);
+  if (recentDownloadStats.length > MAX_RECENT_STATS) {
+    recentDownloadStats.shift();
+  }
+}
+
+function sanitizeLoadedRecord(raw: any): DownloadStatRecord | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const op = raw.operation;
+  if (op !== 'parse_request' && op !== 'file_download' && op !== 'zip_download') return null;
+  const st = raw.status;
+  if (st !== 'success' && st !== 'failed' && st !== 'aborted') return null;
+  const plat = normalizePlatformName(typeof raw.platform === 'string' ? raw.platform : '');
+  const timestamp = typeof raw.timestamp === 'string' && raw.timestamp.length >= 10
+    ? raw.timestamp.slice(0, 40)
+    : new Date().toISOString();
+  const requestId = typeof raw.request_id === 'string' && raw.request_id
+    ? raw.request_id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48)
+    : generateRequestId();
+  const downloadMethod = typeof raw.download_method === 'string' && raw.download_method
+    ? raw.download_method.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40)
+    : 'unknown';
+  const httpStatus = Number.isFinite(Number(raw.http_status)) ? Number(raw.http_status) : 200;
+  const errorCategory = typeof raw.error_category === 'string' && raw.error_category
+    ? raw.error_category.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48)
+    : null;
+  const durationMs = Number.isFinite(Number(raw.duration_ms)) && Number(raw.duration_ms) >= 0
+    ? Math.round(Number(raw.duration_ms))
+    : 0;
+
+  return {
+    timestamp,
+    request_id: requestId,
+    operation: op,
+    platform: plat,
+    download_method: downloadMethod,
+    status: st,
+    http_status: httpStatus,
+    error_category: errorCategory,
+    duration_ms: durationMs
+  };
+}
+
+function loadHistoricalStatsFromDisk(): void {
+  try {
+    if (!fs.existsSync(STATS_LOG_FILE)) return;
+    const stat = fs.statSync(STATS_LOG_FILE);
+    if (!stat.isFile() || stat.size <= 0) return;
+
+    let content = '';
+    if (stat.size > MAX_STARTUP_LOG_BYTES) {
+      const fd = fs.openSync(STATS_LOG_FILE, 'r');
+      try {
+        const buf = Buffer.alloc(MAX_STARTUP_LOG_BYTES);
+        const startOffset = stat.size - MAX_STARTUP_LOG_BYTES;
+        const bytesRead = fs.readSync(fd, buf, 0, MAX_STARTUP_LOG_BYTES, startOffset);
+        content = buf.toString('utf8', 0, bytesRead);
+        // Drop partial first line when reading from an offset
+        const firstNewline = content.indexOf('\n');
+        if (firstNewline >= 0) {
+          content = content.slice(firstNewline + 1);
+        }
+      } finally {
+        fs.closeSync(fd);
+      }
+    } else {
+      content = fs.readFileSync(STATS_LOG_FILE, 'utf8');
+    }
+
+    const lines = content.split(/\r?\n/);
+    const startIdx = Math.max(0, lines.length - MAX_STARTUP_RECORDS);
+    for (let i = startIdx; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      try {
+        const parsed = JSON.parse(line);
+        const validRecord = sanitizeLoadedRecord(parsed);
+        if (validRecord) {
+          applyRecordToSummary(validRecord);
+        }
+      } catch {
+        // Safely skip malformed JSON lines
+      }
+    }
+  } catch {
+    // Safely ignore missing file or permission errors on startup
+  }
+}
+loadHistoricalStatsFromDisk();
+
+function recordDownloadStat(entry: DownloadStatRecord): void {
+  const sanitized = sanitizeLoadedRecord(entry);
+  if (!sanitized) return;
+  applyRecordToSummary(sanitized);
+
+  const line = JSON.stringify(sanitized) + '\n';
+  fs.mkdir(LOGS_DIR, { recursive: true }, (dirErr) => {
+    if (dirErr) return;
+    fs.appendFile(STATS_LOG_FILE, line, 'utf8', () => {
+      // Non-blocking append; ignore file write errors so downloads are never impacted
+    });
+  });
+}
+
+// Track multi-chunk range transfers by req_id so each file download is counted once with accurate total duration
+const activeRangeTransfers = new Map<string, { startTime: number }>();
+const finalizedTransferIds = new Set<string>();
+const MAX_TRACKED_TRANSFERS = 2000;
+
+function markTransferFinalized(reqId: string): boolean {
+  if (!reqId) return false;
+  if (finalizedTransferIds.has(reqId)) return true;
+  finalizedTransferIds.add(reqId);
+  activeRangeTransfers.delete(reqId);
+  if (finalizedTransferIds.size > MAX_TRACKED_TRANSFERS) {
+    const oldest = finalizedTransferIds.values().next().value;
+    if (oldest) finalizedTransferIds.delete(oldest);
+  }
+  return false;
+}
+
+// Constant-time admin token verification for GET /api/stats/downloads
+function verifyAdminStatsRequest(req: Request, res: Response): boolean {
+  const configuredToken = (process.env.ADMIN_STATS_TOKEN || '').trim();
+  if (!configuredToken || configuredToken.length < 8) {
+    res.status(403).json({
+      success: false,
+      error: 'Statistics endpoint is disabled. Set a strong ADMIN_STATS_TOKEN (at least 8 characters) in the server environment.'
+    });
+    return false;
+  }
+
+  let providedToken = '';
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.toLowerCase().startsWith('bearer ')) {
+    providedToken = authHeader.slice(7).trim();
+  } else if (typeof req.headers['x-admin-token'] === 'string') {
+    providedToken = req.headers['x-admin-token'].trim();
+  }
+
+  if (!providedToken) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="DownDouyin Admin Statistics"');
+    res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Missing admin authentication token.'
+    });
+    return false;
+  }
+
+  const expectedHash = crypto.createHash('sha256').update(configuredToken, 'utf8').digest();
+  const actualHash = crypto.createHash('sha256').update(providedToken, 'utf8').digest();
+  if (!crypto.timingSafeEqual(expectedHash, actualHash)) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="DownDouyin Admin Statistics"');
+    res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Invalid admin authentication token.'
+    });
+    return false;
+  }
+
+  return true;
+}
+
+// Common User Agents
+const UA_MOBILE_IOS = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/121.0.2277.107 Version/17.0 Mobile/15E148 Safari/604.1';
+const UA_CHROME_DESKTOP = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+const UA_MOBILE_ANDROID = 'Mozilla/5.0 (Linux; Android 13; SM-S9110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36';
+
+// Helper to determine platform headers for CDN media requests
+function getPlatformHeaders(url: string, platformHint?: string): Record<string, string> {
+  const p = (platformHint || '').toLowerCase();
+  const lowerUrl = url.toLowerCase();
+
+  if (p === 'bilibili' || lowerUrl.includes('bilibili.com') || lowerUrl.includes('bilivideo') || lowerUrl.includes('hdslb.com')) {
+    return {
+      'User-Agent': UA_CHROME_DESKTOP,
+      'Referer': 'https://www.bilibili.com/',
+      'Origin': 'https://www.bilibili.com',
+      'Accept': '*/*'
+    };
+  }
+  if (p === 'tiktok' || lowerUrl.includes('tiktok') || lowerUrl.includes('byteoversea')) {
+    return {
+      'User-Agent': UA_CHROME_DESKTOP,
+      'Referer': 'https://www.tiktok.com/',
+      'Origin': 'https://www.tiktok.com',
+      'Accept': '*/*'
+    };
+  }
+  if (p === 'xiaohongshu' || lowerUrl.includes('xhscdn') || lowerUrl.includes('xiaohongshu')) {
+    return {
+      'User-Agent': UA_MOBILE_ANDROID,
+      'Referer': 'https://www.xiaohongshu.com/',
+      'Origin': 'https://www.xiaohongshu.com',
+      'Accept': '*/*'
+    };
+  }
+  // Default to Douyin
+  return {
+    'User-Agent': UA_MOBILE_IOS,
+    'Referer': 'https://www.douyin.com/',
+    'Accept': '*/*'
+  };
+}
+
+// In-memory token stores for background tasks
+interface SaveTask {
+  id: string;
+  url: string;
+  name: string;
+  platform: string;
+  status: 'pending' | 'downloading' | 'completed' | 'failed' | 'cancelled';
+  progress: number;
+  totalSize: number;
+  downloadedSize: number;
+  error?: string;
+  createdAt: number;
+}
+const saveTasks = new Map<string, SaveTask>();
+const zipArchives = new Map<string, { buffer: Buffer; filename: string; ready: boolean; error?: string }>();
+let tiktokCookie = '';
+let bilibiliCookie = '';
+
+// Platform detector
+function detectPlatform(text: string): string {
+  if (/(bilibili\.com|b23\.tv|acg\.tv|BV[0-9A-Za-z]{10})/i.test(text)) return 'bilibili';
+  if (/(xiaohongshu\.com|xhslink\.(?:com|cn))/i.test(text)) return 'xiaohongshu';
+  if (/(tiktok\.com|tiktokv\.com)/i.test(text)) return 'tiktok';
+  if (/(douyin\.com|iesdouyin\.com)/i.test(text)) return 'douyin';
+  return '';
+}
+
+function extractFirstUrl(text: string): string {
+  const match = text.match(/https?:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/);
+  return match ? match[0].replace(/[.,;]+$/, '') : '';
+}
+
+function cleanFilename(name: string, fallback = 'download'): string {
+  const cleaned = (name || '').replace(/[\\/:*?"<>|\r\n\t]/g, '_').trim().slice(0, 80).replace(/[ .]+$/, '');
+  return cleaned || fallback;
+}
+
+// Fetch helper with connection/header timeout and scoped DNS lookup dispatcher (clears timer once headers arrive so body streaming is not cut off)
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 10000,
+  externalSignal?: AbortSignal
+): Promise<globalThis.Response> {
+  const controller = new AbortController();
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+    }
+  }
+  const timer = setTimeout(() => controller.abort(new Error(`Upstream connection timeout after ${timeoutMs}ms`)), timeoutMs);
+  try {
+    const dispatcher = getScopedFetchDispatcher();
+    const fetchOpts: any = { ...options, signal: controller.signal };
+    if (dispatcher) {
+      fetchOpts.dispatcher = dispatcher;
+    }
+    return await fetch(url, fetchOpts);
+  } finally {
+    clearTimeout(timer);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
+  }
+}
+
+// Read next chunk from ReadableStream reader with per-chunk stall timeout
+async function readChunkWithTimeout(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  stallTimeoutMs = 25000
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(`Upstream stream stalled for ${stallTimeoutMs}ms`));
+        }, stallTimeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+// Follow HTTP redirects with timeout and immediate body cleanup
+async function followRedirects(initialUrl: string, headers: Record<string, string> = {}): Promise<string> {
+  let currentUrl = initialUrl;
+  for (let i = 0; i < 5; i++) {
+    try {
+      const resp = await fetchWithTimeout(currentUrl, {
+        method: 'GET',
+        redirect: 'manual',
+        headers
+      }, 5000);
+      try { await resp.body?.cancel(); } catch {}
+      const location = resp.headers.get('location');
+      if (!location) break;
+      currentUrl = new URL(location, currentUrl).href;
+      // Stop immediately if we already resolved the video/note ID in the URL
+      if (/(?:modal_id=\d{15,25}|\/(?:video|note|slides)\/\d{15,25}|BV[0-9A-Za-z]{10}|\/explore\/[0-9a-f]{24})/i.test(currentUrl)) {
+        break;
+      }
+    } catch {
+      break;
+    }
+  }
+  return currentUrl;
+}
+
+let cachedTtwid = '';
+let cachedTtwidTime = 0;
+
+async function getOrRegisterTtwid(): Promise<string> {
+  const now = Date.now();
+  if (cachedTtwid && (now - cachedTtwidTime < 3600000)) {
+    return cachedTtwid;
+  }
+  try {
+    const resp = await fetchWithTimeout('https://ttwid.bytedance.com/ttwid/union/register/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        region: 'cn',
+        aid: 6383,
+        needFid: 'false',
+        service: 'www.ixigua.com',
+        migrate_info: { ticket: '', src: 'uc' },
+        cbUrlProtocol: 'https',
+        union: 'true'
+      })
+    }, 4000);
+    try { await resp.body?.cancel(); } catch {}
+    const cookie = resp.headers.get('set-cookie') || '';
+    const m = cookie.match(/ttwid=[^;]+/);
+    if (m) {
+      cachedTtwid = m[0];
+      cachedTtwidTime = now;
+      return cachedTtwid;
+    }
+  } catch (e: any) {
+    console.warn('Failed to register ttwid:', e?.message || 'request failed');
+  }
+  return cachedTtwid || 'ttwid=1%7CzzIK3ggFOa1x91nAf-Xss7yxH80zgakKT6c8xgo5S2k%7C1792559933%7C5ae56e7c9774827680986b694b7d7247fc3343c1d63733992d5126e51d8df50f';
+}
+
+// Pre-warm Undici dispatcher and ttwid asynchronously on startup so first Douyin parse does not wait for registration
+setImmediate(() => {
+  fetch('http://127.0.0.1:1').catch(() => {}).finally(() => {
+    getScopedFetchDispatcher();
+    getOrRegisterTtwid().catch(() => {});
+  });
+});
+
+async function fetchDouyinHDDetail(awemeId: string): Promise<{ detail: any; qualities: DouyinQualityItem[] } | null> {
+  try {
+    const ttwid = await getOrRegisterTtwid();
+    const bogus = new ABogus();
+    const params = { ...DOUYIN_BASE_PARAMS, aweme_id: awemeId };
+    const paramsStr = new URLSearchParams(params).toString();
+    const aBogus = bogus.getValue(paramsStr);
+    const url = `https://www.douyin.com/aweme/v1/web/aweme/detail/?${paramsStr}&a_bogus=${encodeURIComponent(aBogus)}`;
+
+    const resp = await fetchWithTimeout(url, {
+      headers: {
+        'User-Agent': DOUYIN_FIXED_UA,
+        'Referer': 'https://www.douyin.com/',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'zh-CN,zh;q=0.8',
+        'x-tt-argus': '1',
+        ...(ttwid ? { 'Cookie': ttwid.startsWith('ttwid=') ? ttwid : `ttwid=${ttwid}` } : {})
+      }
+    }, 7000);
+
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.aweme_detail && (json.aweme_detail.video || json.aweme_detail.images)) {
+        const qualities = extractDouyinQualities(json.aweme_detail.video);
+        return { detail: json.aweme_detail, qualities };
+      }
+    } else {
+      try { await resp.body?.cancel(); } catch {}
+    }
+  } catch (err: any) {
+    console.warn('Douyin HD detail fetch warning:', err?.message || 'request error');
+  }
+  return null;
+}
+
+// ---------------- Douyin Parser ----------------
+async function parseDouyin(text: string) {
+  const url = extractFirstUrl(text);
+  if (!url) throw new Error('未在内容中识别到链接，请复制完整的抖音分享文案后重试');
+
+  let targetUrl = url;
+  let ttwidCookie = '';
+
+  if (url.includes('v.douyin.com')) {
+    // Use manual redirect hops so we extract aweme_id from Location header in ~150ms without downloading full HTML page
+    let currentUrl = url;
+    for (let hop = 0; hop < 4; hop++) {
+      try {
+        const resp = await fetchWithTimeout(currentUrl, {
+          method: 'GET',
+          redirect: 'manual',
+          headers: {
+            'User-Agent': UA_MOBILE_IOS,
+            'Referer': 'https://www.douyin.com/'
+          }
+        }, 5000);
+        try { await resp.body?.cancel(); } catch {}
+        const setCookie = resp.headers.get('set-cookie');
+        if (setCookie && setCookie.includes('ttwid=')) {
+          const match = setCookie.match(/ttwid=([^;]+)/);
+          if (match) ttwidCookie = match[0];
+        }
+        const loc = resp.headers.get('location');
+        if (!loc) break;
+        currentUrl = new URL(loc, currentUrl).href;
+        targetUrl = currentUrl;
+        if (/modal_id=\d{15,25}/.test(targetUrl) || /\d{15,25}/.test(targetUrl.split('?')[0])) {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+  }
+
+  // Extract aweme_id
+  let awemeId = '';
+  const modalMatch = targetUrl.match(/modal_id=(\d{15,25})/);
+  if (modalMatch) {
+    awemeId = modalMatch[1];
+  } else {
+    const idMatches = targetUrl.split('?')[0].match(/\d{15,25}/g);
+    if (idMatches && idMatches.length > 0) {
+      awemeId = idMatches.reduce((max, cur) => cur.length > max.length ? cur : max, '');
+    }
+  }
+
+  if (!awemeId) {
+    throw new Error(`无法从链接中识别作品 ID：${targetUrl}`);
+  }
+
+  // 1. Try Douyin HD Detail Channel with ABogus for 4K (2160P), 2K (1440P), 1080P bitrates!
+  const hdResult = await fetchDouyinHDDetail(awemeId);
+  let item = hdResult?.detail || null;
+  const hdQualities = hdResult?.qualities || [];
+
+  if (!item) {
+    // Fallback: Request share page with bounded timeout
+    const shareUrls = [
+      `https://www.iesdouyin.com/share/video/${awemeId}/`,
+      `https://www.iesdouyin.com/share/slides/${awemeId}/`
+    ];
+
+    let rawHtml = '';
+    for (const sUrl of shareUrls) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const resp = await fetchWithTimeout(sUrl, {
+            headers: {
+              'User-Agent': UA_MOBILE_IOS,
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'zh-CN,zh;q=0.9',
+              'Referer': 'https://www.douyin.com/',
+              ...(ttwidCookie ? { 'Cookie': ttwidCookie } : {})
+            }
+          }, 6000);
+          const sc = resp.headers.get('set-cookie');
+          if (sc && sc.includes('ttwid=')) {
+            const match = sc.match(/ttwid=([^;]+)/);
+            if (match) ttwidCookie = match[0];
+          }
+          if (resp.ok) {
+            const textResp = await resp.text();
+            if (textResp.includes('_ROUTER_DATA')) {
+              rawHtml = textResp;
+              break;
+            }
+          } else {
+            try { await resp.body?.cancel(); } catch {}
+          }
+        } catch {}
+      }
+      if (rawHtml) break;
+    }
+
+    if (rawHtml) {
+      const routerMatch = rawHtml.match(/window\._ROUTER_DATA\s*=\s*(\{.*?\})<\/script>/s) ||
+                         rawHtml.match(/window\._ROUTER_DATA\s*=\s*(.*?);<\/script>/s);
+      if (routerMatch) {
+        try {
+          const routerData = JSON.parse(routerMatch[1].trim());
+          const loader = routerData?.loaderData || {};
+          for (const key of ['video_(id)/page', 'note_(id)/page']) {
+            const node = loader[key];
+            const info = node?.videoInfoRes || node?.videoInfo || {};
+            if (info.item_list && info.item_list.length > 0) {
+              item = info.item_list[0];
+              break;
+            }
+          }
+          if (!item) {
+            const deepFind = (obj: any, depth = 0): any => {
+              if (depth > 8 || !obj || typeof obj !== 'object') return null;
+              if (obj.aweme_id && (obj.video || obj.images)) return obj;
+              for (const k of Object.keys(obj)) {
+                const found = deepFind(obj[k], depth + 1);
+                if (found) return found;
+              }
+              return null;
+            };
+            item = deepFind(routerData);
+          }
+        } catch {}
+      }
+    }
+  }
+
+  if (!item) {
+    throw new Error('作品不存在、已删除，或作者设置了私密/仅好友可见');
+  }
+
+  // Normalize
+  const video = item.video || {};
+  const music = item.music || {};
+  const author = item.author || {};
+  const stats = item.statistics || {};
+  const cover = video.cover || video.origin_cover || item.cover || {};
+
+  const cleanUrls = (raw: any): string[] => {
+    if (!raw) return [];
+    const list = Array.isArray(raw) ? raw : [raw];
+    const res: string[] = [];
+    for (const u of list) {
+      if (typeof u === 'string' && u.startsWith('http')) {
+        let clean = u.trim().replace(/playwm/g, 'play').replace(/\/playwm\//g, '/play/');
+        if (clean.startsWith('http://') && (clean.includes('douyinvod.com') || clean.includes('iesdouyin.com') || clean.includes('douyin.com'))) {
+          clean = 'https://' + clean.slice(7);
+        }
+        if (!res.includes(clean)) res.push(clean);
+      }
+    }
+    res.sort((a, b) => scoreDouyinCdnUrl(a) - scoreDouyinCdnUrl(b));
+    return res;
+  };
+
+  let videoUrls = cleanUrls(video.play_addr?.url_list);
+  if (videoUrls.length === 0) {
+    videoUrls = cleanUrls(video.download_addr?.url_list);
+  }
+
+  const rawImages = item.images || [];
+  const images: string[] = [];
+  const imageItems: any[] = [];
+  const liveVideos: any[] = [];
+
+  for (let i = 0; i < rawImages.length; i++) {
+    const img = rawImages[i];
+    const candidateLists = [
+      img.watermark_free_download_url_list,
+      img.origin_image?.url_list,
+      img.display_image?.url_list,
+      img.url_list,
+      img.download_url ? [img.download_url] : null,
+      img.download_url_list
+    ];
+    let bestUrl = '';
+    for (const clist of candidateLists) {
+      const urls = cleanUrls(clist);
+      const cleanOnes = urls.filter(u => !u.toLowerCase().includes('watermark') && !u.toLowerCase().includes('dy-water'));
+      if (cleanOnes.length > 0) {
+        bestUrl = cleanOnes[cleanOnes.length - 1];
+        break;
+      }
+      if (!bestUrl && urls.length > 0) {
+        bestUrl = urls[urls.length - 1];
+      }
+    }
+
+    if (bestUrl) {
+      images.push(bestUrl);
+      const entry: any = {
+        index: i + 1,
+        url: bestUrl,
+        width: img.width || 0,
+        height: img.height || 0,
+        watermark: bestUrl.includes('watermark')
+      };
+      if (img.video?.play_addr?.url_list) {
+        const liveUrls = cleanUrls(img.video.play_addr.url_list);
+        if (liveUrls.length > 0) {
+          const live = {
+            url: liveUrls[0],
+            urls: liveUrls,
+            label: '实况动态',
+            duration: Math.round(((img.video.duration || 0) / 1000) * 10) / 10
+          };
+          entry.live = live;
+          liveVideos.push({ index: i + 1, ...live });
+        }
+      }
+      imageItems.push(entry);
+    }
+  }
+
+  const coverUrls = cleanUrls(cover?.url_list);
+  const musicUrls = cleanUrls(music?.play_url?.url_list);
+  const desc = (item.desc || '').trim();
+  const title = desc || `抖音作品_${awemeId}`;
+
+  // Extract and build multiple qualities
+  let qualities: any[] = [];
+
+  if (hdQualities && hdQualities.length > 0) {
+    qualities = [...hdQualities];
+  } else {
+    const rawBitrates = video.bit_rate || [];
+
+    if (Array.isArray(rawBitrates) && rawBitrates.length > 0) {
+      for (const br of rawBitrates) {
+        const urls = cleanUrls(br.play_addr?.url_list);
+        if (urls.length === 0) continue;
+        const width = Number(br.play_addr?.width || br.width || 0);
+        const height = Number(br.play_addr?.height || br.height || 0);
+        const minDim = (width > 0 && height > 0) ? Math.min(width, height) : Math.max(width, height);
+        const gear = (br.gear_name || '').toLowerCase();
+        const isH265 = Boolean(br.is_bytevc1 || br.is_h265);
+        const bitRate = Number(br.bit_rate) || 0;
+
+        let resP = minDim;
+        if (gear.includes('2160') || gear.includes('4k') || minDim >= 2000) {
+          resP = 2160;
+        } else if (gear.includes('1440') || gear.includes('2k') || minDim >= 1400) {
+          resP = 1440;
+        } else if (gear.includes('1080') || minDim >= 1000) {
+          resP = 1080;
+        } else if (gear.includes('720') || minDim >= 700) {
+          resP = 720;
+        } else if (gear.includes('576') || minDim >= 570) {
+          resP = 576;
+        } else if (gear.includes('540') || minDim >= 500) {
+          resP = 540;
+        } else {
+          resP = minDim || 720;
+        }
+
+        const label = `${resP ? resP + 'P' : '自适应'}${isH265 ? ' (H265)' : ''}${bitRate ? ' · ' + Math.round(bitRate / 1000) + 'kbps' : ''}`;
+
+        qualities.push({
+          name: br.gear_name || `gear_${resP}`,
+          label,
+          width,
+          height,
+          resolution: resP,
+          bit_rate: bitRate,
+          fps: br.FPS || 30,
+          size: br.play_addr?.data_size || 0,
+          url: urls[0],
+          urls,
+          codec: isH265 ? 'h265' : 'h264',
+          is_h265: isH265
+        });
+      }
+    }
+
+    // Fallback if no qualities extracted
+    if (qualities.length === 0 && videoUrls.length > 0) {
+      qualities.push({
+        name: 'default',
+        label: '默认画质',
+        bit_rate: 0,
+        resolution: 720,
+        fps: 30,
+        size: 0,
+        width: 0,
+        height: 0,
+        url: videoUrls[0],
+        urls: videoUrls,
+        codec: 'h264',
+        is_h265: false
+      });
+    }
+
+    // Sort qualities descending by resolution then bitrate
+    qualities.sort((a, b) => {
+      const aRes = a.resolution || 720;
+      const bRes = b.resolution || 720;
+      if (bRes !== aRes) return bRes - aRes;
+      return (b.bit_rate || 0) - (a.bit_rate || 0);
+    });
+
+    // Deduplicate by (resolution, codec) keeping highest bitrate
+    const seen = new Set<string>();
+    const deduped: any[] = [];
+    for (const q of qualities) {
+      const key = `${q.resolution}_${q.codec}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(q);
+    }
+    qualities = deduped;
+  }
+
+  // Ensure default video URL is top quality
+  if (qualities.length > 0) {
+    videoUrls = qualities[0].urls || [qualities[0].url];
+  }
+
+  return {
+    aweme_id: item.aweme_id || awemeId,
+    type: images.length > 0 ? 'images' : 'video',
+    title,
+    filename: cleanFilename(desc, `抖音作品_${awemeId}`),
+    desc,
+    cover: coverUrls[0] || '',
+    duration: Math.round(((video.duration || item.duration || 0) / 1000) * 10) / 10,
+    create_time: item.create_time || 0,
+    author: {
+      nickname: author.nickname || '',
+      uid: author.uid || '',
+      sec_uid: author.sec_uid || '',
+      avatar: cleanUrls(author.avatar_larger?.url_list || author.avatar_thumb?.url_list)
+    },
+    author_avatar: (cleanUrls(author.avatar_larger?.url_list || author.avatar_thumb?.url_list))[0] || '',
+    music: {
+      title: music.title || '',
+      author: music.author || '',
+      url: musicUrls[0] || ''
+    },
+    stats: {
+      digg: stats.digg_count || 0,
+      comment: stats.comment_count || 0,
+      share: stats.share_count || 0,
+      collect: stats.collect_count || 0,
+      play: stats.play_count || 0
+    },
+    video_urls: videoUrls,
+    images,
+    image_items: imageItems,
+    live_photo: liveVideos.length > 0,
+    live_videos: liveVideos,
+    qualities,
+    hd: true,
+    source_url: url
+  };
+}
+
+// ---------------- TikTok Parser ----------------
+async function parseTikTok(text: string) {
+  const url = extractFirstUrl(text);
+  if (!url) throw new Error('未在内容中识别到有效链接');
+
+  let targetUrl = url;
+  if (url.includes('tiktok.com/t/') || url.includes('vm.tiktok.com/') || url.includes('vt.tiktok.com/')) {
+    targetUrl = await followRedirects(url, { 'User-Agent': UA_CHROME_DESKTOP });
+  }
+
+  let videoId = '';
+  const idMatch = targetUrl.match(/video\/(\d{15,25})/) || targetUrl.match(/(\d{15,25})/);
+  if (idMatch) videoId = idMatch[1];
+
+  if (!videoId) throw new Error('无法从 TikTok 链接中识别作品 ID');
+
+  let itemInfo: any = null;
+  // Try items API first
+  try {
+    const apiUrl = `https://www.tiktok.com/player/api/v1/items?item_ids=${videoId}&aid=1988`;
+    const resp = await fetchWithTimeout(apiUrl, {
+      headers: {
+        'User-Agent': UA_CHROME_DESKTOP,
+        'Referer': 'https://www.tiktok.com/'
+      }
+    }, 7000);
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.items && json.items.length > 0) {
+        itemInfo = json.items[0];
+      }
+    }
+  } catch {}
+
+  // Fallback to fetch HTML page
+  let webStruct: any = null;
+  try {
+    const pageResp = await fetchWithTimeout(targetUrl, {
+      headers: {
+        'User-Agent': UA_CHROME_DESKTOP,
+        'Referer': 'https://www.tiktok.com/',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    }, 7000);
+    if (pageResp.ok) {
+      const pageText = await pageResp.text();
+      const rehydrationMatch = pageText.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/s);
+      if (rehydrationMatch) {
+        const rehData = JSON.parse(rehydrationMatch[1]);
+        webStruct = rehData?.__DEFAULT_SCOPE__?.['webapp.video-detail']?.itemInfo?.itemStruct;
+      }
+    }
+  } catch {}
+
+  if (!itemInfo && !webStruct) {
+    throw new Error('未能获取 TikTok 视频数据，可能已被删除或受地区网络限制');
+  }
+
+  const vInfo = itemInfo?.video_info || {};
+  const profiles = vInfo.profiles || [];
+  const qualities: any[] = [];
+
+  for (const prof of profiles) {
+    const rawList = prof.play_addr?.url_list || [];
+    // Filter out akamai webapp-prime 403 host
+    const usableList = rawList.sort((a: string, b: string) => {
+      const aBad = a.includes('webapp-prime') ? 1 : 0;
+      const bBad = b.includes('webapp-prime') ? 1 : 0;
+      return aBad - bBad;
+    });
+    if (usableList.length > 0) {
+      const gear = (prof.gear_name || '').toLowerCase();
+      const w = prof.play_addr?.width || 0;
+      const h = prof.play_addr?.height || 0;
+      const maxD = Math.max(w, h);
+      const isOriginal = maxD >= 1080 || gear.includes('1080') || gear.includes('origin') || gear.includes('2160');
+
+      qualities.push({
+        name: prof.gear_name || `gear_${maxD}`,
+        label: isOriginal ? `1080P 原画 (Original 1080P · ${prof.fps || 30}fps)` : maxD >= 720 ? `720P 高清 (HD 720P · ${prof.fps || 30}fps)` : `540P 标清 (SD · ${prof.fps || 30}fps)`,
+        shortLabel: isOriginal ? '1080P Original' : maxD >= 720 ? '720P HD' : '540P SD',
+        tag: isOriginal ? 'Original' : maxD >= 720 ? '720P' : '540P',
+        icon: isOriginal ? '🌟' : '🎬',
+        bit_rate: prof.bitrate || 0,
+        resolution: maxD || (isOriginal ? 1080 : 720),
+        fps: prof.fps || 30,
+        size: prof.play_addr?.data_size || 0,
+        url: usableList[0],
+        urls: usableList,
+        codec: prof.codec_type || 'h264',
+        is_h265: (prof.codec_type || '').includes('265') || (prof.codec_type || '').includes('hevc')
+      });
+    }
+  }
+
+  // Also check bitrateInfo in webStruct if profiles were limited
+  const bitrateInfo = webStruct?.video?.bitrateInfo || [];
+  if (Array.isArray(bitrateInfo) && bitrateInfo.length > 0) {
+    for (const br of bitrateInfo) {
+      const rawUrls = br.PlayAddr?.UrlList || [];
+      const usable = rawUrls.filter((u: string) => !u.includes('webapp-prime'));
+      if (usable.length === 0) continue;
+      const gear = (br.GearName || '').toLowerCase();
+      const w = br.PlayAddr?.Width || 0;
+      const h = br.PlayAddr?.Height || 0;
+      const maxD = Math.max(w, h);
+      const isOriginal = maxD >= 1080 || gear.includes('1080') || gear.includes('origin') || gear.includes('2160');
+
+      if (!qualities.some(q => q.url === usable[0])) {
+        qualities.push({
+          name: br.GearName || `gear_${maxD}`,
+          label: isOriginal ? `1080P 原画 (Original 1080P · ${br.BitrateFPS || 30}fps)` : maxD >= 720 ? `720P 高清 (HD 720P · ${br.BitrateFPS || 30}fps)` : `540P 标清 (SD · ${br.BitrateFPS || 30}fps)`,
+          shortLabel: isOriginal ? '1080P Original' : maxD >= 720 ? '720P HD' : '540P SD',
+          tag: isOriginal ? 'Original' : maxD >= 720 ? '720P' : '540P',
+          icon: isOriginal ? '🌟' : '🎬',
+          bit_rate: br.Bitrate || 0,
+          resolution: maxD || (isOriginal ? 1080 : 720),
+          fps: br.BitrateFPS || 30,
+          size: br.PlayAddr?.DataSize || 0,
+          url: usable[0],
+          urls: usable,
+          codec: br.CodecType || 'h264',
+          is_h265: (br.CodecType || '').includes('265') || (br.CodecType || '').includes('bytevc1')
+        });
+      }
+    }
+  }
+
+  const desc = webStruct?.desc || itemInfo?.title || `TikTok_${videoId}`;
+  const author = webStruct?.author || { nickname: itemInfo?.author || '' };
+  const cover = webStruct?.video?.cover || itemInfo?.cover_url || '';
+  const fallbackUrls = webStruct?.video?.playAddr ? [webStruct.video.playAddr] : [];
+  const videoUrls = qualities.length > 0 ? qualities[0].urls : fallbackUrls;
+
+  // If qualities is still single/empty, add multiple resolution choices
+  if (videoUrls.length > 0 && qualities.length <= 1) {
+    const mainUrl = videoUrls[0];
+    qualities.length = 0;
+    qualities.push({
+      name: '1080p',
+      label: '1080P 原画超清 (Original 1080P)',
+      shortLabel: '1080P Original',
+      tag: 'Original',
+      icon: '🌟',
+      resolution: 1080,
+      url: mainUrl,
+      urls: videoUrls,
+      codec: 'h264',
+      is_h265: false
+    });
+    qualities.push({
+      name: '720p',
+      label: '720P 高清 (HD 720P)',
+      shortLabel: '720P HD',
+      tag: '720P',
+      icon: '🎬',
+      resolution: 720,
+      url: videoUrls[1] || mainUrl,
+      urls: [videoUrls[1] || mainUrl],
+      codec: 'h264',
+      is_h265: false
+    });
+    qualities.push({
+      name: '480p',
+      label: '480P 流畅 (Standard 480P)',
+      shortLabel: '480P SD',
+      tag: '480P',
+      icon: '⚡',
+      resolution: 480,
+      url: mainUrl,
+      urls: [mainUrl],
+      codec: 'h264',
+      is_h265: false
+    });
+  }
+
+  // Sort descending
+  qualities.sort((a, b) => (b.resolution || 720) - (a.resolution || 720));
+
+  return {
+    id: videoId,
+    type: 'video',
+    title: desc,
+    filename: cleanFilename(desc, `TikTok_${videoId}`),
+    desc,
+    cover,
+    cover_proxy: '/api/proxy?url=' + encodeURIComponent(cover) + '&platform=tiktok',
+    duration: webStruct?.video?.duration || Math.round((vInfo.duration || 0) / 1000),
+    author: {
+      nickname: author.nickname || author.uniqueId || '',
+      uid: author.id || '',
+      avatar: [author.avatarLarger || author.avatarMedium || author.avatarThumb || '']
+    },
+    author_avatar: author.avatarLarger || author.avatarMedium || author.avatarThumb || '',
+    music: {
+      title: webStruct?.music?.title || '',
+      author: webStruct?.music?.authorName || '',
+      url: webStruct?.music?.playUrl || ''
+    },
+    stats: {
+      digg: webStruct?.stats?.diggCount || 0,
+      comment: webStruct?.stats?.commentCount || 0,
+      share: webStruct?.stats?.shareCount || 0,
+      play: webStruct?.stats?.playCount || 0
+    },
+    video_urls: videoUrls,
+    qualities: qualities.length > 0 ? qualities : [{
+      name: 'default',
+      label: '高清无水印',
+      url: videoUrls[0],
+      urls: videoUrls,
+      codec: 'h264',
+      is_h265: false
+    }],
+    images: []
+  };
+}
+
+// ---------------- Bilibili Parser ----------------
+async function parseBilibili(text: string, page = 0) {
+  const bvMatch = text.match(/BV[0-9A-Za-z]{10}/i) || text.match(/av(\d+)/i);
+  let bvid = bvMatch ? bvMatch[0] : '';
+
+  if (!bvid) {
+    const url = extractFirstUrl(text);
+    if (url && (url.includes('b23.tv') || url.includes('bilibili.com'))) {
+      const finalUrl = await followRedirects(url, { 'User-Agent': UA_CHROME_DESKTOP });
+      const m = finalUrl.match(/BV[0-9A-Za-z]{10}/i);
+      if (m) bvid = m[0];
+    }
+  }
+
+  if (!bvid) throw new Error('未识别到 B站 视频 BV 号或有效链接');
+
+  const viewResp = await fetchWithTimeout(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`, {
+    headers: { 'User-Agent': UA_CHROME_DESKTOP, 'Referer': 'https://www.bilibili.com/' }
+  }, 7000);
+  const viewJson = await viewResp.json();
+  if (viewJson.code !== 0 || !viewJson.data) {
+    throw new Error(viewJson.message || '获取 B站 视频信息失败');
+  }
+
+  const vData = viewJson.data;
+  const cid = vData.cid || (vData.pages && vData.pages[page]?.cid) || 0;
+
+  // Fetch playurl
+  const playResp = await fetchWithTimeout(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=16`, {
+    headers: { 'User-Agent': UA_CHROME_DESKTOP, 'Referer': 'https://www.bilibili.com/' }
+  }, 7000);
+  const playJson = await playResp.json();
+  const playData = playJson.data || {};
+
+  const qualities: any[] = [];
+  if (playData.durl) {
+    for (const d of playData.durl) {
+      qualities.push({
+        name: 'default',
+        label: '标准高清 (MP4)',
+        url: d.url,
+        urls: [d.url, ...(d.backup_url || [])],
+        size: d.size,
+        codec: 'h264'
+      });
+    }
+  } else if (playData.dash?.video) {
+    for (const v of playData.dash.video) {
+      qualities.push({
+        name: `qn_${v.id}`,
+        label: `${v.id >= 80 ? '1080P' : v.id >= 64 ? '720P' : '480P'} (DASH)`,
+        url: v.baseUrl || v.base_url,
+        urls: [v.baseUrl || v.base_url, ...(v.backupUrl || v.backup_url || [])],
+        bandwidth: v.bandwidth,
+        codec: v.codecs || 'h264',
+        muxable: false
+      });
+    }
+  }
+
+  return {
+    bvid,
+    cid,
+    title: vData.title,
+    filename: cleanFilename(vData.title, `bilibili_${bvid}`),
+    desc: vData.desc,
+    cover: vData.pic,
+    cover_proxy: '/api/proxy?url=' + encodeURIComponent(vData.pic) + '&platform=bilibili',
+    duration: vData.duration,
+    author: {
+      nickname: vData.owner?.name || '',
+      uid: vData.owner?.mid || '',
+      avatar: [vData.owner?.face || '']
+    },
+    author_avatar: vData.owner?.face || '',
+    stats: {
+      play: vData.stat?.view || 0,
+      danmaku: vData.stat?.danmaku || 0,
+      comment: vData.stat?.reply || 0,
+      collect: vData.stat?.favorite || 0,
+      digg: vData.stat?.like || 0
+    },
+    qualities,
+    muxer: { available: false, backend: 'none', reason: 'Web runtime' },
+    ffmpeg: { available: false, path: null }
+  };
+}
+
+// ---------------- Xiaohongshu Parser ----------------
+async function parseXiaohongshu(text: string) {
+  const url = extractFirstUrl(text);
+  if (!url) throw new Error('未在内容中识别到小红书链接');
+
+  let targetUrl = url;
+  if (url.includes('xhslink.com')) {
+    targetUrl = await followRedirects(url, { 'User-Agent': UA_MOBILE_ANDROID });
+  }
+
+  const resp = await fetchWithTimeout(targetUrl, {
+    headers: {
+      'User-Agent': UA_MOBILE_ANDROID,
+      'Referer': 'https://www.xiaohongshu.com/',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    }
+  }, 7000);
+
+  const html = await resp.text();
+  const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*(.*?);?<\/script>/s);
+  if (!stateMatch) {
+    throw new Error('未获取到小红书笔记数据，请确认链接完整且带有 xsec_token');
+  }
+
+  const cleanJson = stateMatch[1].replace(/:\s*undefined/g, ': null');
+  const state = JSON.parse(cleanJson);
+  const noteMap = state?.note?.noteDetailMap || state?.noteData?.noteDetailMap || {};
+  const noteId = Object.keys(noteMap)[0];
+  const note = noteMap[noteId]?.note;
+
+  if (!note) {
+    throw new Error('小红书笔记已被删除或需要登录');
+  }
+
+  const title = note.title || note.desc || '小红书笔记';
+  const desc = note.desc || '';
+  const images: string[] = [];
+  const imageItems: any[] = [];
+
+  const rawImageList = note.imageList || [];
+  for (let i = 0; i < rawImageList.length; i++) {
+    const img = rawImageList[i];
+    let u = img.urlDefault || img.url || '';
+    if (u) {
+      // remove compression params
+      u = u.replace(/!nd_dft_wlteh_webp_\d+/g, '').split('?')[0];
+      images.push(u);
+      imageItems.push({
+        index: i + 1,
+        url: u,
+        width: img.width || 0,
+        height: img.height || 0
+      });
+    }
+  }
+
+  const qualities: any[] = [];
+  const videoUrls: string[] = [];
+  if (note.video) {
+    const rawKey = note.video.consumer?.originVideoKey;
+    if (rawKey) {
+      const origUrl = `https://sns-video-bd.xhscdn.com/${rawKey}`;
+      videoUrls.push(origUrl);
+      qualities.push({
+        name: 'original',
+        label: '原画无水印 (Original Master)',
+        shortLabel: 'Original 原画',
+        tag: 'Original',
+        icon: '🌟',
+        resolution: 1080,
+        url: origUrl,
+        urls: [origUrl, `https://sns-video-qc.xhscdn.com/${rawKey}`],
+        codec: 'h264'
+      });
+    }
+
+    const streamsH264 = note.video.media?.stream?.h264 || [];
+    for (const st of streamsH264) {
+      if (st.masterUrl && !videoUrls.includes(st.masterUrl)) {
+        videoUrls.push(st.masterUrl);
+        const w = st.width || 0;
+        const h = st.height || 0;
+        const maxD = Math.max(w, h);
+        const isOrig = maxD >= 1080;
+        qualities.push({
+          name: st.qualityType || `stream_${maxD}`,
+          label: isOrig ? '1080P 超清 (Full HD)' : maxD >= 720 ? '720P 高清 (HD 720P)' : '540P 标清 (SD 540P)',
+          shortLabel: isOrig ? '1080P HD' : maxD >= 720 ? '720P HD' : '540P SD',
+          tag: isOrig ? '1080P' : maxD >= 720 ? '720P' : '540P',
+          icon: isOrig ? '🌟' : '🎬',
+          width: w,
+          height: h,
+          resolution: maxD || 720,
+          url: st.masterUrl,
+          urls: [st.masterUrl, ...(st.backupUrls || [])],
+          codec: 'h264'
+        });
+      }
+    }
+
+    if (qualities.length === 0 && videoUrls.length > 0) {
+      qualities.push({
+        name: '1080p',
+        label: '1080P 原画无水印 (Original)',
+        shortLabel: '1080P Original',
+        tag: 'Original',
+        icon: '🌟',
+        resolution: 1080,
+        url: videoUrls[0],
+        urls: videoUrls,
+        codec: 'h264'
+      });
+    }
+  }
+
+  // Sort descending
+  qualities.sort((a, b) => (b.resolution || 720) - (a.resolution || 720));
+
+  const cover = (images[0] || note.cover?.url || '');
+
+  return {
+    id: noteId,
+    type: images.length > 0 ? 'images' : 'video',
+    title,
+    filename: cleanFilename(title, `xhs_${noteId}`),
+    desc,
+    cover,
+    cover_proxy: cover ? '/api/proxy?url=' + encodeURIComponent(cover) + '&platform=xiaohongshu' : '',
+    author: {
+      nickname: note.user?.nickname || '',
+      uid: note.user?.userId || '',
+      avatar: [note.user?.avatar || '']
+    },
+    author_avatar: note.user?.avatar || '',
+    stats: {
+      digg: note.interactInfo?.likedCount || 0,
+      collect: note.interactInfo?.collectedCount || 0,
+      comment: note.interactInfo?.commentCount || 0,
+      share: note.interactInfo?.shareCount || 0
+    },
+    images,
+    image_items: imageItems,
+    video_urls: videoUrls,
+    qualities
+  };
+}
+
+// ---------------- Route Handlers ----------------
+
+// Serve index.html with injected port
+app.get(['/', '/index.html'], (req: Request, res: Response) => {
+  const indexPath = path.join(STATIC_DIR, 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    return res.status(404).send('index.html not found');
+  }
+  let html = fs.readFileSync(indexPath, 'utf-8');
+  html = html.replace(/__SERVICE_PORT__/g, String(PORT));
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
+// Serve other static files
+app.use('/static', express.static(STATIC_DIR));
+
+// 1. /api/parse
+app.post('/api/parse', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const requestId = generateRequestId();
+  res.setHeader('X-Request-Id', requestId);
+
+  const text = (req.body?.text || '').trim();
+  let platform = (req.body?.platform || '').trim().toLowerCase();
+
+  if (!platform || platform === 'auto' || platform === 'all') {
+    platform = detectPlatform(text);
+  }
+  const normalizedPlat = normalizePlatformName(platform, text);
+
+  if (!text) {
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'parse_request',
+      platform: normalizedPlat,
+      download_method: 'metadata_parse',
+      status: 'failed',
+      http_status: 200,
+      error_category: 'empty_input',
+      duration_ms: Date.now() - startTime
+    });
+    return res.json({
+      success: false,
+      platform: '',
+      error: '请粘贴有效的视频或图文分享链接'
+    });
+  }
+
+  try {
+    let resultData: any;
+    if (platform === 'douyin') {
+      resultData = await parseDouyin(text);
+    } else if (platform === 'tiktok') {
+      resultData = await parseTikTok(text);
+    } else if (platform === 'bilibili') {
+      resultData = await parseBilibili(text, req.body?.page || 0);
+    } else if (platform === 'xiaohongshu') {
+      resultData = await parseXiaohongshu(text);
+    } else if (/^\d{15,25}$/.test(text)) {
+      recordDownloadStat({
+        timestamp: new Date().toISOString(),
+        request_id: requestId,
+        operation: 'parse_request',
+        platform: normalizedPlat,
+        download_method: 'metadata_parse',
+        status: 'failed',
+        http_status: 200,
+        error_category: 'ambiguous_numeric_id',
+        duration_ms: Date.now() - startTime
+      });
+      return res.json({
+        success: false,
+        platform,
+        error: '这看起来是一个纯数字作品 id，但光凭 id 分不清是哪个平台。请先把上方横条切到对应平台（TikTok 或 抖音），再粘贴 id。'
+      });
+    } else {
+      recordDownloadStat({
+        timestamp: new Date().toISOString(),
+        request_id: requestId,
+        operation: 'parse_request',
+        platform: 'unknown',
+        download_method: 'metadata_parse',
+        status: 'failed',
+        http_status: 200,
+        error_category: 'unsupported_platform',
+        duration_ms: Date.now() - startTime
+      });
+      return res.json({
+        success: false,
+        platform: '',
+        error: '没识别出链接所属平台，目前支持抖音、B站、TikTok 与 小红书 链接'
+      });
+    }
+
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'parse_request',
+      platform: normalizePlatformName(platform, text),
+      download_method: 'metadata_parse',
+      status: 'success',
+      http_status: 200,
+      error_category: null,
+      duration_ms: Date.now() - startTime
+    });
+
+    return res.json({
+      success: true,
+      platform,
+      data: resultData
+    });
+  } catch (err: any) {
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'parse_request',
+      platform: normalizedPlat,
+      download_method: 'metadata_parse',
+      status: 'failed',
+      http_status: 200,
+      error_category: categorizeError(err, 200),
+      duration_ms: Date.now() - startTime
+    });
+    return res.json({
+      success: false,
+      platform,
+      error: err.message || '解析失败，请检查链接或稍后重试'
+    });
+  }
+});
+
+// Runtime CDN mirror health and latency tracker (dynamically demotes slow or failing CDN hosts)
+interface CdnHostHealth {
+  ewmaTtfbMs: number;
+  consecutiveFailures: number;
+  updatedAt: number;
+}
+const cdnHostHealth = new Map<string, CdnHostHealth>();
+const CDN_HEALTH_TTL_MS = 10 * 60 * 1000;
+
+function extractHostnameSafe(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function recordCdnHostSuccess(rawUrl: string, ttfbMs: number): void {
+  const host = extractHostnameSafe(rawUrl);
+  if (!host) return;
+  const prev = cdnHostHealth.get(host);
+  const clamped = Math.max(10, Math.min(15000, ttfbMs));
+  const ewma = prev ? Math.round(prev.ewmaTtfbMs * 0.6 + clamped * 0.4) : clamped;
+  cdnHostHealth.set(host, {
+    ewmaTtfbMs: ewma,
+    consecutiveFailures: 0,
+    updatedAt: Date.now()
+  });
+}
+
+function recordCdnHostFailure(rawUrl: string): void {
+  const host = extractHostnameSafe(rawUrl);
+  if (!host) return;
+  const prev = cdnHostHealth.get(host);
+  cdnHostHealth.set(host, {
+    ewmaTtfbMs: prev ? prev.ewmaTtfbMs : 3000,
+    consecutiveFailures: Math.min(10, (prev ? prev.consecutiveFailures : 0) + 1),
+    updatedAt: Date.now()
+  });
+}
+
+function getDynamicHostScore(rawUrl: string): number {
+  const base = scoreDouyinCdnUrl(rawUrl);
+  const host = extractHostnameSafe(rawUrl);
+  if (!host) return base;
+  const health = cdnHostHealth.get(host);
+  if (!health || Date.now() - health.updatedAt > CDN_HEALTH_TTL_MS) {
+    return base;
+  }
+  const failurePenalty = health.consecutiveFailures * 45;
+  const latencyPenalty = Math.min(40, Math.round(health.ewmaTtfbMs / 80));
+  return base + failurePenalty + latencyPenalty;
+}
+
+// Helper: build prioritized list of candidate media URLs from primary `url` and optional `alt` backup URLs
+function buildCandidateMediaUrls(primaryUrl: string, rawAlt: unknown, platform?: string): string[] {
+  const candidates: string[] = [];
+  const addUrl = (u: unknown) => {
+    if (typeof u !== 'string') return;
+    let trimmed = u.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return;
+    if (trimmed.startsWith('http://') && (trimmed.includes('douyinvod.com') || trimmed.includes('iesdouyin.com') || trimmed.includes('douyin.com'))) {
+      trimmed = 'https://' + trimmed.slice(7);
+    }
+    if (!candidates.includes(trimmed)) {
+      candidates.push(trimmed);
+    }
+  };
+  addUrl(primaryUrl);
+  if (Array.isArray(rawAlt)) {
+    rawAlt.forEach(addUrl);
+  } else if (typeof rawAlt === 'string' && rawAlt.trim()) {
+    const s = rawAlt.trim();
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) parsed.forEach(addUrl);
+      } catch {}
+    } else {
+      addUrl(s);
+    }
+  }
+  if (candidates.length > 1) {
+    candidates.sort((a, b) => getDynamicHostScore(a) - getDynamicHostScore(b));
+  }
+  return candidates.slice(0, 6);
+}
+
+interface ParsedRangeSpec {
+  start: number;
+  end: number | null;
+}
+
+function parseRangeHeaderSpec(rangeHeader?: string): ParsedRangeSpec | null {
+  if (!rangeHeader) return null;
+  const m = rangeHeader.match(/bytes=(\d+)-(\d*)/i);
+  if (!m) return null;
+  const start = parseInt(m[1], 10);
+  const end = m[2] ? parseInt(m[2], 10) : null;
+  if (!Number.isFinite(start) || start < 0) return null;
+  return { start, end: end !== null && Number.isFinite(end) ? end : null };
+}
+
+interface MediaRepresentationMeta {
+  totalBytes: number;
+  startByte: number;
+  endByte: number;
+  etag: string;
+}
+
+function inspectMediaResponse(
+  resp: globalThis.Response,
+  rangeHeader?: string,
+  expectedTotalBytes = 0
+): { valid: boolean; meta: MediaRepresentationMeta; reason?: string } {
+  const emptyMeta: MediaRepresentationMeta = { totalBytes: 0, startByte: 0, endByte: -1, etag: '' };
+  if (!resp.ok && resp.status !== 206) {
+    return { valid: false, meta: emptyMeta, reason: `http_${resp.status}` };
+  }
+  if (!resp.body) {
+    return { valid: false, meta: emptyMeta, reason: 'empty_body' };
+  }
+  const ctype = (resp.headers.get('content-type') || '').toLowerCase();
+  if (ctype.includes('text/html') || ctype.includes('application/json')) {
+    return { valid: false, meta: emptyMeta, reason: 'invalid_content_type' };
+  }
+
+  const reqRange = parseRangeHeaderSpec(rangeHeader);
+  const cr = resp.headers.get('content-range') || '';
+  const cl = parseInt(resp.headers.get('content-length') || '0', 10);
+  const etag = (resp.headers.get('etag') || '').trim();
+
+  let totalBytes = 0;
+  let startByte = 0;
+  let endByte = -1;
+
+  if (resp.status === 206 && cr) {
+    const m = cr.match(/bytes\s+(\d+)-(\d+)\/(\d+|\*)/i);
+    if (m) {
+      startByte = parseInt(m[1], 10);
+      endByte = parseInt(m[2], 10);
+      if (m[3] !== '*') {
+        totalBytes = parseInt(m[3], 10);
+      }
+    }
+  } else if (cl > 0) {
+    totalBytes = cl;
+    startByte = 0;
+    endByte = cl - 1;
+  }
+
+  // If a non-zero offset Range was requested, upstream MUST return 206 starting at the exact requested offset
+  if (reqRange && reqRange.start > 0) {
+    if (resp.status !== 206 || startByte !== reqRange.start) {
+      return { valid: false, meta: emptyMeta, reason: 'range_offset_mismatch' };
+    }
+  }
+
+  // Verify representation consistency when resuming against an alternate mirror
+  if (expectedTotalBytes > 0) {
+    if (totalBytes <= 0 || totalBytes !== expectedTotalBytes) {
+      return { valid: false, meta: emptyMeta, reason: 'representation_size_mismatch' };
+    }
+  }
+
+  return {
+    valid: true,
+    meta: {
+      totalBytes,
+      startByte,
+      endByte,
+      etag
+    }
+  };
+}
+
+// Helper: handle lightweight HEAD size/header probes without downloading full media bodies
+async function handleMediaHeadProbe(candidates: string[], platform: string, res: Response, clientSignal: AbortSignal): Promise<void> {
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Cache-Control', 'no-store, no-transform');
+
+  for (const candidateUrl of candidates) {
+    if (clientSignal.aborted) break;
+    const headers = getPlatformHeaders(candidateUrl, platform);
+    const t0 = Date.now();
+
+    // 1. Try fast upstream HEAD first
+    try {
+      const headResp = await fetchWithTimeout(candidateUrl, { method: 'HEAD', headers }, 4500, clientSignal);
+      try { await headResp.body?.cancel(); } catch {}
+      const clen = parseInt(headResp.headers.get('content-length') || '0', 10);
+      const ctype = (headResp.headers.get('content-type') || '').toLowerCase();
+      if (headResp.ok && clen > 0 && !ctype.includes('text/html')) {
+        recordCdnHostSuccess(candidateUrl, Date.now() - t0);
+        res.status(200);
+        if (ctype) res.setHeader('Content-Type', headResp.headers.get('content-type')!);
+        res.setHeader('Content-Length', String(clen));
+        res.setHeader('Accept-Ranges', headResp.headers.get('accept-ranges') || 'bytes');
+        res.end();
+        return;
+      }
+    } catch {}
+
+    // 2. Fallback: 1-byte Range GET (bytes=0-0) to extract total size from Content-Range without downloading the file
+    if (clientSignal.aborted) break;
+    try {
+      const rangeHeaders = { ...headers, Range: 'bytes=0-0' };
+      const rangeResp = await fetchWithTimeout(candidateUrl, { method: 'GET', headers: rangeHeaders }, 5500, clientSignal);
+      try { await rangeResp.body?.cancel(); } catch {}
+      const ctype = (rangeResp.headers.get('content-type') || '').toLowerCase();
+      if ((rangeResp.ok || rangeResp.status === 206) && !ctype.includes('text/html')) {
+        const cr = rangeResp.headers.get('content-range') || '';
+        const m = cr.match(/\/(\d+)$/);
+        const totalBytes = m ? parseInt(m[1], 10) : parseInt(rangeResp.headers.get('content-length') || '0', 10);
+        if (totalBytes > 0) {
+          recordCdnHostSuccess(candidateUrl, Date.now() - t0);
+          res.status(200);
+          if (ctype) res.setHeader('Content-Type', rangeResp.headers.get('content-type')!);
+          res.setHeader('Content-Length', String(totalBytes));
+          res.setHeader('Accept-Ranges', 'bytes');
+          res.end();
+          return;
+        }
+      }
+    } catch {
+      recordCdnHostFailure(candidateUrl);
+    }
+  }
+
+  if (!res.headersSent) {
+    res.status(200).end();
+  } else if (!res.writableEnded) {
+    res.end();
+  }
+}
+
+// Helper: connect to upstream media URL with staggered/hedged probing, automatic failover, and strict representation verification
+async function fetchUpstreamMediaWithFailover(
+  candidates: string[],
+  platform: string,
+  rangeHeader: string | undefined,
+  clientSignal: AbortSignal,
+  expectedTotalBytes = 0
+): Promise<{ upstream: globalThis.Response; usedUrl: string; meta: MediaRepresentationMeta }> {
+  let lastError: any = null;
+  let lastRejectedUpstream: globalThis.Response | null = null;
+  let lastUsedUrl = candidates[0] || '';
+
+  const attemptSingleCandidate = async (
+    candidateUrl: string,
+    timeoutMs: number,
+    abortSignal: AbortSignal
+  ): Promise<{ upstream: globalThis.Response; usedUrl: string; meta: MediaRepresentationMeta }> => {
+    const t0 = Date.now();
+    const headers = getPlatformHeaders(candidateUrl, platform);
+    if (rangeHeader) headers['Range'] = rangeHeader;
+    const upstream = await fetchWithTimeout(candidateUrl, { headers }, timeoutMs, abortSignal);
+    const check = inspectMediaResponse(upstream, rangeHeader, expectedTotalBytes);
+    if (check.valid) {
+      recordCdnHostSuccess(candidateUrl, Date.now() - t0);
+      return { upstream, usedUrl: candidateUrl, meta: check.meta };
+    }
+    recordCdnHostFailure(candidateUrl);
+    if (check.reason === 'representation_size_mismatch' || check.reason === 'range_offset_mismatch') {
+      try { await upstream.body?.cancel(); } catch {}
+      const mismatchErr: any = new Error(`Mirror representation mismatch (${check.reason})`);
+      mismatchErr.code = check.reason;
+      throw mismatchErr;
+    }
+    if (!lastRejectedUpstream) {
+      lastRejectedUpstream = upstream;
+      lastUsedUrl = candidateUrl;
+    } else {
+      try { await upstream.body?.cancel(); } catch {}
+    }
+    throw new Error(`Mirror returned invalid response (${check.reason || upstream.status})`);
+  };
+
+  // If at least 2 mirrors exist, use staggered hedging on the top 2 mirrors (starts #1 if #0 hasn't responded within 1200ms)
+  let startIndex = 0;
+  if (candidates.length >= 2 && !clientSignal.aborted) {
+    startIndex = 2;
+    const ctrl0 = new AbortController();
+    const ctrl1 = new AbortController();
+    const onClientAbort = () => {
+      ctrl0.abort();
+      ctrl1.abort();
+    };
+    clientSignal.addEventListener('abort', onClientAbort, { once: true });
+
+    let hedgeTimer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      const winner = await new Promise<{ upstream: globalThis.Response; usedUrl: string; meta: MediaRepresentationMeta }>((resolve, reject) => {
+        let settled = false;
+        let pendingCount = 1;
+        let secondStarted = false;
+
+        const handleSuccess = (resObj: { upstream: globalThis.Response; usedUrl: string; meta: MediaRepresentationMeta }, winnerIdx: number) => {
+          if (settled) {
+            try { resObj.upstream.body?.cancel(); } catch {}
+            return;
+          }
+          settled = true;
+          if (hedgeTimer) clearTimeout(hedgeTimer);
+          if (winnerIdx === 0) ctrl1.abort();
+          else ctrl0.abort();
+          resolve(resObj);
+        };
+
+        const handleFailure = (err: any) => {
+          lastError = err;
+          pendingCount--;
+          if (!secondStarted && !settled && !clientSignal.aborted) {
+            if (hedgeTimer) clearTimeout(hedgeTimer);
+            startSecond();
+            return;
+          }
+          if (pendingCount <= 0 && !settled) {
+            settled = true;
+            reject(lastError || new Error('Top hedged mirrors failed'));
+          }
+        };
+
+        const startSecond = () => {
+          if (secondStarted || settled || clientSignal.aborted) return;
+          secondStarted = true;
+          pendingCount++;
+          attemptSingleCandidate(candidates[1], 6500, ctrl1.signal)
+            .then(r => handleSuccess(r, 1))
+            .catch(handleFailure);
+        };
+
+        hedgeTimer = setTimeout(startSecond, 1200);
+
+        attemptSingleCandidate(candidates[0], 6500, ctrl0.signal)
+          .then(r => handleSuccess(r, 0))
+          .catch(handleFailure);
+      });
+
+      return winner;
+    } catch (err) {
+      lastError = err;
+    } finally {
+      if (hedgeTimer) clearTimeout(hedgeTimer);
+      clientSignal.removeEventListener('abort', onClientAbort);
+    }
+  }
+
+  for (let i = startIndex; i < candidates.length; i++) {
+    if (clientSignal.aborted) throw new Error('Client aborted');
+    const candidateUrl = candidates[i];
+    const hasMoreMirrors = i < candidates.length - 1;
+    const connectTimeoutMs = hasMoreMirrors ? 6500 : 11000;
+    try {
+      return await attemptSingleCandidate(candidateUrl, connectTimeoutMs, clientSignal);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (lastRejectedUpstream && expectedTotalBytes === 0) {
+    return {
+      upstream: lastRejectedUpstream,
+      usedUrl: lastUsedUrl,
+      meta: { totalBytes: 0, startByte: 0, endByte: -1, etag: '' }
+    };
+  }
+  throw lastError || new Error('All upstream media mirrors failed');
+}
+
+// Helper: stream upstream body to Express response with backpressure and transparent server-side Range resume on mid-stream stall
+async function streamUpstreamWithMidStreamRecovery(
+  initialUpstream: globalThis.Response,
+  initialMeta: MediaRepresentationMeta,
+  candidates: string[],
+  platform: string,
+  res: Response,
+  clientSignal: AbortSignal,
+  isClientAborted: () => boolean
+): Promise<{ bytesWritten: number; completedFullOrRequestedRange: boolean }> {
+  let currentUpstream: globalThis.Response | null = initialUpstream;
+  let bytesWritten = 0;
+  const startOffset = initialMeta.startByte || 0;
+  const totalBytes = initialMeta.totalBytes || 0;
+  const targetEndByte = initialMeta.endByte >= startOffset
+    ? initialMeta.endByte
+    : (totalBytes > 0 ? totalBytes - 1 : -1);
+  const expectedTransferLength = targetEndByte >= startOffset ? (targetEndByte - startOffset + 1) : 0;
+
+  let serverResumeCount = 0;
+  const MAX_SERVER_RESUMES = 2;
+
+  while (currentUpstream && currentUpstream.body) {
+    const reader = currentUpstream.body.getReader();
+    let streamStalledOrErrored = false;
+
+    try {
+      while (true) {
+        const { done, value } = await readChunkWithTimeout(reader, 20000);
+        if (done) break;
+        if (isClientAborted() || res.destroyed) {
+          try { await reader.cancel(); } catch {}
+          break;
+        }
+        if (value && value.byteLength > 0) {
+          bytesWritten += value.byteLength;
+          if (!res.write(value)) {
+            await new Promise<void>(resolve => {
+              const onDrain = () => { cleanup(); resolve(); };
+              const onClose = () => { cleanup(); resolve(); };
+              const cleanup = () => {
+                res.removeListener('drain', onDrain);
+                res.removeListener('close', onClose);
+              };
+              res.once('drain', onDrain);
+              res.once('close', onClose);
+            });
+          }
+        }
+      }
+    } catch {
+      streamStalledOrErrored = true;
+      try { await reader.cancel(); } catch {}
+    } finally {
+      if (isClientAborted() || res.destroyed) {
+        try { await reader.cancel(); } catch {}
+      }
+    }
+
+    currentUpstream = null;
+
+    if (isClientAborted() || res.destroyed) {
+      break;
+    }
+
+    // Check if we already transferred all expected bytes
+    if (expectedTransferLength > 0 && bytesWritten >= expectedTransferLength) {
+      break;
+    }
+
+    // If the stream ended prematurely or stalled mid-transfer and we know exact totalBytes, try transparent Range resume on a healthy mirror
+    if ((streamStalledOrErrored || (expectedTransferLength > 0 && bytesWritten < expectedTransferLength)) &&
+        totalBytes > 0 &&
+        targetEndByte >= startOffset + bytesWritten &&
+        serverResumeCount < MAX_SERVER_RESUMES) {
+      serverResumeCount++;
+      const nextByte = startOffset + bytesWritten;
+      const resumeRange = `bytes=${nextByte}-${targetEndByte}`;
+      try {
+        const resumed = await fetchUpstreamMediaWithFailover(
+          candidates,
+          platform,
+          resumeRange,
+          clientSignal,
+          totalBytes
+        );
+        currentUpstream = resumed.upstream;
+        continue;
+      } catch {
+        break;
+      }
+    }
+
+    break;
+  }
+
+  const completedFullOrRequestedRange = expectedTransferLength > 0
+    ? bytesWritten >= expectedTransferLength
+    : bytesWritten > 0;
+
+  return { bytesWritten, completedFullOrRequestedRange };
+}
+
+// 2. /api/proxy (Range support for video preview + anti-hotlink bypass + 0-byte HEAD probe)
+async function handleProxyRequest(req: Request, res: Response) {
+  const targetUrl = req.query.url as string;
+  const platform = req.query.platform as string;
+  const isHeadRequest = req.method === 'HEAD';
+  const isDownloadTransfer = !isHeadRequest && req.query.dl === '1';
+  const dlMethod = String(req.query.method || 'range_chunk_stream').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'range_chunk_stream';
+  const requestId = String(req.query.req_id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || generateRequestId();
+  const expectedSizeParam = parseInt(String(req.query.expected_size || '0'), 10) || 0;
+  const normalizedPlat = normalizePlatformName(platform, targetUrl);
+
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Cache-Control', 'no-store, no-transform');
+
+  let transferStartTime = Date.now();
+  if (isDownloadTransfer) {
+    const existing = activeRangeTransfers.get(requestId);
+    if (existing) {
+      transferStartTime = existing.startTime;
+    } else {
+      activeRangeTransfers.set(requestId, { startTime: transferStartTime });
+      if (activeRangeTransfers.size > MAX_TRACKED_TRANSFERS) {
+        const oldestKey = activeRangeTransfers.keys().next().value;
+        if (oldestKey) activeRangeTransfers.delete(oldestKey);
+      }
+    }
+  }
+
+  const recordProxyStatOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
+    if (!isDownloadTransfer) return;
+    if (markTransferFinalized(requestId)) return;
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'file_download',
+      platform: normalizedPlat,
+      download_method: dlMethod,
+      status,
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: Math.max(0, Date.now() - transferStartTime)
+    });
+  };
+
+  if (!targetUrl) {
+    recordProxyStatOnce('failed', 400, 'missing_url_param');
+    return res.status(400).send('Missing url parameter');
+  }
+
+  const clientAbortController = new AbortController();
+  let clientAborted = false;
+  const markClientAborted = () => {
+    if (!res.writableEnded) {
+      clientAborted = true;
+      clientAbortController.abort();
+    }
+  };
+  req.on('aborted', markClientAborted);
+  res.on('close', markClientAborted);
+
+  const candidates = buildCandidateMediaUrls(targetUrl, req.query.alt, platform);
+
+  // Fast path for HEAD requests (e.g. probeQualitySize): never download the full video body!
+  if (isHeadRequest) {
+    await handleMediaHeadProbe(candidates, platform, res, clientAbortController.signal);
+    return;
+  }
+
+  const range = typeof req.headers.range === 'string' ? req.headers.range : undefined;
+
+  try {
+    const { upstream, meta } = await fetchUpstreamMediaWithFailover(
+      candidates,
+      platform,
+      range,
+      clientAbortController.signal,
+      expectedSizeParam
+    );
+
+    res.status(upstream.status);
+
+    const passHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag'];
+    passHeaders.forEach(h => {
+      const v = upstream.headers.get(h);
+      if (v) res.setHeader(h, v);
+    });
+    if (!res.getHeader('Accept-Ranges')) {
+      res.setHeader('Accept-Ranges', 'bytes');
+    }
+
+    if (!upstream.ok && upstream.status !== 206) {
+      recordProxyStatOnce('failed', upstream.status, upstream.status >= 500 ? 'upstream_http_5xx' : 'upstream_http_4xx');
+      if (!upstream.body) return res.end();
+      const errText = await upstream.text().catch(() => '');
+      return res.end(errText);
+    }
+
+    if (!upstream.body) {
+      recordProxyStatOnce('failed', upstream.status, 'empty_upstream_body');
+      return res.end();
+    }
+
+    res.flushHeaders();
+
+    let isFinalChunkOrFullFile = upstream.status === 200;
+    const contentRange = upstream.headers.get('content-range') || '';
+    if (upstream.status === 206 && contentRange) {
+      const m = contentRange.match(/bytes\s+\d+-(\d+)\/(\d+)/i);
+      if (m) {
+        const endByte = parseInt(m[1], 10);
+        const totalBytes = parseInt(m[2], 10);
+        if (totalBytes > 0 && endByte + 1 >= totalBytes) {
+          isFinalChunkOrFullFile = true;
+        }
+      }
+    }
+
+    const { bytesWritten, completedFullOrRequestedRange } = await streamUpstreamWithMidStreamRecovery(
+      upstream,
+      meta,
+      candidates,
+      platform,
+      res,
+      clientAbortController.signal,
+      () => clientAborted
+    );
+
+    if (!res.writableEnded) {
+      res.end();
+    }
+
+    if (clientAborted) {
+      recordProxyStatOnce('aborted', upstream.status, 'client_aborted');
+    } else if (bytesWritten === 0) {
+      recordProxyStatOnce('failed', upstream.status, 'empty_upstream_body');
+    } else if (!completedFullOrRequestedRange) {
+      recordProxyStatOnce('failed', upstream.status, 'incomplete_upstream_stream');
+    } else if (isFinalChunkOrFullFile) {
+      recordProxyStatOnce('success', upstream.status, null);
+    }
+  } catch (err: any) {
+    const statusCode = (err?.code === 'representation_size_mismatch' || err?.code === 'range_offset_mismatch') ? 409 : 502;
+    if (clientAborted) {
+      recordProxyStatOnce('aborted', 499, 'client_aborted');
+    } else {
+      recordProxyStatOnce('failed', statusCode, categorizeError(err, statusCode));
+    }
+    if (!res.headersSent) {
+      res.status(statusCode).send(`Proxy fetch failed: ${err.message}`);
+    } else if (!res.writableEnded) {
+      res.end();
+    }
+  }
+}
+app.head('/api/proxy', handleProxyRequest);
+app.get('/api/proxy', handleProxyRequest);
+
+// 3. /api/download (Attachment download streaming with Range support, CDN mirror failover, and Nginx unbuffered streaming)
+async function handleDownloadRequest(req: Request, res: Response) {
+  const targetUrl = req.query.url as string;
+  const filename = (req.query.name as string) || (req.query.prefix ? String(req.query.prefix) + String(req.query.ext || '.mp4') : 'download.mp4');
+  const platform = req.query.platform as string;
+  const mediaType = String(req.query.type || 'video').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'video';
+  const dlMethod = String(req.query.method || `attachment_${mediaType}`).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || `attachment_${mediaType}`;
+  const isHeadRequest = req.method === 'HEAD';
+  const requestId = String(req.query.req_id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || generateRequestId();
+  const expectedSizeParam = parseInt(String(req.query.expected_size || '0'), 10) || 0;
+  const normalizedPlat = normalizePlatformName(platform, targetUrl);
+
+  res.setHeader('X-Request-Id', requestId);
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Cache-Control', 'no-store, no-transform');
+
+  let transferStartTime = Date.now();
+  if (!isHeadRequest) {
+    const existing = activeRangeTransfers.get(requestId);
+    if (existing) {
+      transferStartTime = existing.startTime;
+    } else {
+      activeRangeTransfers.set(requestId, { startTime: transferStartTime });
+      if (activeRangeTransfers.size > MAX_TRACKED_TRANSFERS) {
+        const oldestKey = activeRangeTransfers.keys().next().value;
+        if (oldestKey) activeRangeTransfers.delete(oldestKey);
+      }
+    }
+  }
+
+  let statRecorded = false;
+  const recordDownloadOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
+    if (isHeadRequest || statRecorded) return;
+    if (markTransferFinalized(requestId)) return;
+    statRecorded = true;
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'file_download',
+      platform: normalizedPlat,
+      download_method: dlMethod,
+      status,
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: Math.max(0, Date.now() - transferStartTime)
+    });
+  };
+
+  if (!targetUrl) {
+    recordDownloadOnce('failed', 400, 'missing_url_param');
+    return res.status(400).send('Missing url parameter');
+  }
+
+  const clientAbortController = new AbortController();
+  let clientAborted = false;
+  const markClientAborted = () => {
+    if (!res.writableEnded) {
+      clientAborted = true;
+      clientAbortController.abort();
+    }
+  };
+  req.on('aborted', markClientAborted);
+  res.on('close', markClientAborted);
+
+  const candidates = buildCandidateMediaUrls(targetUrl, req.query.alt, platform);
+
+  if (isHeadRequest) {
+    await handleMediaHeadProbe(candidates, platform, res, clientAbortController.signal);
+    return;
+  }
+
+  const range = typeof req.headers.range === 'string' ? req.headers.range : undefined;
+
+  try {
+    const { upstream, meta } = await fetchUpstreamMediaWithFailover(
+      candidates,
+      platform,
+      range,
+      clientAbortController.signal,
+      expectedSizeParam
+    );
+
+    if (!upstream.ok && upstream.status !== 206) {
+      recordDownloadOnce('failed', upstream.status, upstream.status >= 500 ? 'upstream_http_5xx' : 'upstream_http_4xx');
+      try { await upstream.body?.cancel(); } catch {}
+      return res.status(upstream.status).send(`Upstream returned HTTP ${upstream.status}`);
+    }
+
+    if (!upstream.body) {
+      recordDownloadOnce('failed', 502, 'empty_upstream_body');
+      return res.status(502).send('Upstream returned empty body');
+    }
+
+    res.status(upstream.status);
+
+    const safeExt = filename.endsWith('.jpg') ? '.jpg' : filename.endsWith('.mp3') ? '.mp3' : filename.endsWith('.zip') ? '.zip' : '.mp4';
+    const baseAscii = filename.replace(/\.[^/.]+$/, '').replace(/[^\w-]/g, '_') || 'download';
+    const asciiFallback = baseAscii + safeExt;
+    const encodedName = encodeURIComponent(filename);
+    res.setHeader('Content-Disposition', `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedName}`);
+
+    const passHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag'];
+    passHeaders.forEach(h => {
+      const v = upstream.headers.get(h);
+      if (v) res.setHeader(h, v);
+    });
+    if (!res.getHeader('Accept-Ranges')) {
+      res.setHeader('Accept-Ranges', 'bytes');
+    }
+
+    res.flushHeaders();
+
+    let isFinalChunkOrFullFile = upstream.status === 200;
+    const contentRange = upstream.headers.get('content-range') || '';
+    if (upstream.status === 206 && contentRange) {
+      const m = contentRange.match(/bytes\s+\d+-(\d+)\/(\d+)/i);
+      if (m) {
+        const endByte = parseInt(m[1], 10);
+        const totalBytes = parseInt(m[2], 10);
+        if (totalBytes > 0 && endByte + 1 >= totalBytes) {
+          isFinalChunkOrFullFile = true;
+        }
+      }
+    }
+
+    const { bytesWritten, completedFullOrRequestedRange } = await streamUpstreamWithMidStreamRecovery(
+      upstream,
+      meta,
+      candidates,
+      platform,
+      res,
+      clientAbortController.signal,
+      () => clientAborted
+    );
+
+    if (!res.writableEnded) {
+      res.end();
+    }
+
+    if (clientAborted) {
+      recordDownloadOnce('aborted', upstream.status, 'client_aborted');
+    } else if (bytesWritten === 0) {
+      recordDownloadOnce('failed', upstream.status, 'empty_upstream_body');
+    } else if (!completedFullOrRequestedRange) {
+      recordDownloadOnce('failed', upstream.status, 'incomplete_upstream_stream');
+    } else if (isFinalChunkOrFullFile) {
+      recordDownloadOnce('success', upstream.status, null);
+    }
+  } catch (err: any) {
+    const statusCode = (err?.code === 'representation_size_mismatch' || err?.code === 'range_offset_mismatch') ? 409 : 502;
+    if (clientAborted) {
+      recordDownloadOnce('aborted', 499, 'client_aborted');
+    } else {
+      recordDownloadOnce('failed', statusCode, categorizeError(err, statusCode));
+    }
+    if (!res.headersSent) {
+      res.status(statusCode).send(`Download failed: ${err.message}`);
+    } else if (!res.writableEnded) {
+      res.end();
+    }
+  }
+}
+app.head('/api/download', handleDownloadRequest);
+app.get('/api/download', handleDownloadRequest);
+
+// 4. /api/zip (Streaming multi-item ZIP archive)
+app.post('/api/zip', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const requestId = generateRequestId();
+  res.setHeader('X-Request-Id', requestId);
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const items: Array<{ url: string; name: string }> = req.body?.items || [];
+  const zipName = cleanFilename(req.body?.zip_name || req.body?.prefix || 'photos', 'photos') + '.zip';
+  const normalizedPlat = normalizePlatformName(req.body?.platform, items[0]?.url);
+
+  let statRecorded = false;
+  const recordZipOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
+    if (statRecorded) return;
+    statRecorded = true;
+    recordDownloadStat({
+      timestamp: new Date().toISOString(),
+      request_id: requestId,
+      operation: 'zip_download',
+      platform: normalizedPlat,
+      download_method: 'album_zip',
+      status,
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: Math.max(0, Date.now() - startTime)
+    });
+  };
+
+  if (!items || items.length === 0) {
+    recordZipOnce('failed', 400, 'zip_empty_items');
+    return res.status(400).json({ error: 'No items provided for zip' });
+  }
+
+  let clientAborted = false;
+  req.on('aborted', () => {
+    clientAborted = true;
+  });
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      clientAborted = true;
+    }
+  });
+
+  try {
+    const fetchedEntries: Array<{ buffer: Buffer; name: string }> = [];
+    for (let i = 0; i < items.length; i++) {
+      if (clientAborted) break;
+      const item = items[i];
+      if (!item || !item.url) continue;
+      try {
+        const headers = getPlatformHeaders(item.url, normalizedPlat);
+        const upstream = await fetchWithTimeout(item.url, { headers }, 12000);
+        if (upstream.ok) {
+          const arrayBuf = await upstream.arrayBuffer();
+          if (arrayBuf.byteLength > 0) {
+            fetchedEntries.push({
+              buffer: Buffer.from(arrayBuf),
+              name: item.name || `photo_${i + 1}.jpg`
+            });
+          }
+        }
+      } catch {
+        // Continue trying remaining items
+      }
+    }
+
+    if (clientAborted) {
+      recordZipOnce('aborted', 499, 'client_aborted');
+      if (!res.writableEnded) res.end();
+      return;
+    }
+
+    if (fetchedEntries.length === 0) {
+      recordZipOnce('failed', 502, 'zip_upstream_fetch_failed');
+      return res.status(502).json({ error: 'Failed to fetch album media from upstream CDN' });
+    }
+
+    const encodedZipName = encodeURIComponent(zipName);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodedZipName}"; filename*=UTF-8''${encodedZipName}`);
+    res.setHeader('Content-Type', 'application/zip');
+
+    const archive = archiver('zip', { zlib: { level: 5 } });
+    archive.on('error', (err) => {
+      recordZipOnce('failed', 500, categorizeError(err, 500));
+    });
+    archive.pipe(res);
+
+    for (const entry of fetchedEntries) {
+      archive.append(entry.buffer, { name: entry.name });
+    }
+
+    await archive.finalize();
+
+    if (clientAborted) {
+      recordZipOnce('aborted', 499, 'client_aborted');
+    } else {
+      recordZipOnce('success', 200, null);
+    }
+  } catch (err: any) {
+    if (clientAborted) {
+      recordZipOnce('aborted', 499, 'client_aborted');
+    } else {
+      recordZipOnce('failed', 500, categorizeError(err, 500));
+    }
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'ZIP creation failed' });
+    } else if (!res.writableEnded) {
+      res.end();
+    }
+  }
+});
+
+// 4b. /api/stats/downloads (Protected read-only anonymized backend download statistics summary)
+app.get('/api/stats/downloads', (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  if (!verifyAdminStatsRequest(req, res)) {
+    return;
+  }
+
+  res.json({
+    success: true,
+    note: 'Backend operational download statistics (separate from GA4 visitor analytics). No raw URLs or sensitive query parameters are stored.',
+    log_file: 'logs/download-stats.jsonl',
+    summary: {
+      total_records_loaded: cumulativeSummary.total_records_loaded,
+      recent_buffer_size: recentDownloadStats.length,
+      parse_requests: { ...cumulativeSummary.parse_requests },
+      file_downloads: { ...cumulativeSummary.file_downloads },
+      zip_downloads: { ...cumulativeSummary.zip_downloads },
+      by_platform: {
+        douyin: { ...cumulativeSummary.by_platform.douyin },
+        tiktok: { ...cumulativeSummary.by_platform.tiktok },
+        bilibili: { ...cumulativeSummary.by_platform.bilibili },
+        xiaohongshu: { ...cumulativeSummary.by_platform.xiaohongshu },
+        unknown: { ...cumulativeSummary.by_platform.unknown }
+      }
+    },
+    recent_events: recentDownloadStats.slice(-50).reverse()
+  });
+});
+
+// 5. /api/zip/prepare & /api/zip/get
+app.post('/api/zip/prepare', async (req: Request, res: Response) => {
+  const token = 'zip_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+  const items: Array<{ url: string; name: string }> = req.body?.items || [];
+  const zipName = cleanFilename(req.body?.zip_name || 'archive', 'archive') + '.zip';
+
+  zipArchives.set(token, { buffer: Buffer.alloc(0), filename: zipName, ready: false });
+
+  // Async create zip
+  (async () => {
+    try {
+      const bufs: Buffer[] = [];
+      const archive = archiver('zip', { zlib: { level: 5 } });
+      archive.on('data', chunk => bufs.push(chunk));
+      archive.on('end', () => {
+        const fullBuf = Buffer.concat(bufs);
+        zipArchives.set(token, { buffer: fullBuf, filename: zipName, ready: true });
+      });
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        try {
+          const upstream = await fetchWithTimeout(item.url, { headers: getPlatformHeaders(item.url) }, 12000);
+          if (upstream.ok) {
+            const arrayBuf = await upstream.arrayBuffer();
+            archive.append(Buffer.from(arrayBuf), { name: item.name || `item_${i + 1}.jpg` });
+          }
+        } catch {}
+      }
+      await archive.finalize();
+    } catch (e: any) {
+      zipArchives.set(token, { buffer: Buffer.alloc(0), filename: zipName, ready: true, error: e.message });
+    }
+  })();
+
+  res.json({ success: true, token });
+});
+
+app.get('/api/zip/get', (req: Request, res: Response) => {
+  const token = req.query.token as string;
+  const record = zipArchives.get(token);
+  if (!record || !record.ready) {
+    return res.status(404).send('Zip archive not ready or expired');
+  }
+  if (record.error) {
+    return res.status(500).send(record.error);
+  }
+  const encoded = encodeURIComponent(record.filename);
+  res.setHeader('Content-Disposition', `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+  res.setHeader('Content-Type', 'application/zip');
+  res.send(record.buffer);
+});
+
+// 6. /api/save endpoints (for Android and in-memory download list)
+app.post('/api/save', (req: Request, res: Response) => {
+  const id = 'task_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+  const task: SaveTask = {
+    id,
+    url: req.body?.url || '',
+    name: req.body?.name || 'file',
+    platform: req.body?.platform || '',
+    status: 'completed',
+    progress: 100,
+    totalSize: 0,
+    downloadedSize: 0,
+    createdAt: Date.now()
+  };
+  saveTasks.set(id, task);
+  res.json({ success: true, task_id: id });
+});
+
+app.get('/api/save/list', (req: Request, res: Response) => {
+  const list = Array.from(saveTasks.values()).sort((a, b) => b.createdAt - a.createdAt);
+  res.json({ success: true, tasks: list.slice(0, 50) });
+});
+
+app.get('/api/save/status', (req: Request, res: Response) => {
+  const id = req.query.id as string;
+  const task = saveTasks.get(id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  res.json({ success: true, task });
+});
+
+app.post('/api/save/cancel', (req: Request, res: Response) => {
+  const id = req.body?.id as string;
+  const task = saveTasks.get(id);
+  if (task) task.status = 'cancelled';
+  res.json({ success: true });
+});
+
+// 7. Config endpoints
+app.get('/api/bili/config', (req: Request, res: Response) => {
+  res.json({ cookie: bilibiliCookie ? 'configured' : '' });
+});
+app.post('/api/bili/config', (req: Request, res: Response) => {
+  bilibiliCookie = req.body?.cookie || '';
+  res.json({ success: true });
+});
+app.delete('/api/bili/config', (req: Request, res: Response) => {
+  bilibiliCookie = '';
+  res.json({ success: true });
+});
+
+app.get('/api/tiktok/config', (req: Request, res: Response) => {
+  res.json({ cookie: tiktokCookie ? 'configured' : '' });
+});
+app.post('/api/tiktok/config', (req: Request, res: Response) => {
+  tiktokCookie = req.body?.cookie || '';
+  res.json({ success: true });
+});
+app.delete('/api/tiktok/config', (req: Request, res: Response) => {
+  tiktokCookie = '';
+  res.json({ success: true });
+});
+
+// 8. Bilibili tracks & audio stubs
+app.get('/api/bili/tracks', (req: Request, res: Response) => {
+  res.json({ success: true, tracks: [] });
+});
+
+app.get('/api/bili/audio', (req: Request, res: Response) => {
+  res.status(501).json({ error: 'Bilibili audio separation requires ffmpeg' });
+});
+
+app.get('/api/bili/danmaku', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.send('<?xml version="1.0" encoding="UTF-8"?><i><chatserver>chat.bilibili.com</chatserver><chatid>0</chatid></i>');
+});
+
+app.get('/api/bili/mux/capability', (req: Request, res: Response) => {
+  res.json({ available: false, backend: 'none', reason: 'Web runtime' });
+});
+
+// Start server
+app.listen(PORT, HOST, () => {
+  console.log(`[Douyin Downloader] Server listening on http://${HOST}:${PORT}`);
+});
