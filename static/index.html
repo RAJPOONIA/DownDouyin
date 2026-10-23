@@ -2805,29 +2805,57 @@
 </div>
 
 <!-- ==================== 8. UPGRADE / PLANS STATUS MODAL ==================== -->
-<div class="modal-backdrop" id="upgradeModal" role="dialog" aria-modal="true" aria-labelledby="upgradeModalTitle">
-  <div class="modal-dialog">
+<div class="modal-backdrop" id="upgradeModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="upgradeModalTitle">
+  <div class="modal-dialog modal-lg">
     <div class="modal-header">
-      <h3 id="upgradeModalTitle">DownDouyin Plans &amp; Free Access Status</h3>
+      <h3 id="upgradeModalTitle">DownDouyin Plans &amp; Capabilities</h3>
       <button type="button" class="modal-close" id="btnCloseUpgrade" aria-label="Close Upgrade Modal">✕</button>
     </div>
     <div class="modal-body">
-      <div class="blog-card" style="border-color:rgba(139,92,246,0.4)">
-        <span class="blog-tag">Active Status: 100% Free</span>
-        <h4>All Core Downloader Features Are Free for Everyone</h4>
-        <p style="margin-bottom:10px">DownDouyin currently provides full, unrestricted access to all users at no cost. No credit card, subscription, or account sign-up is required:</p>
-        <ul style="margin:0 0 10px 18px;font-size:13px;color:var(--text-sub)">
-          <li><strong>Douyin Original Quality &amp; 1080p/4K Extraction:</strong> Built-in automatically.</li>
-          <li><strong>TikTok &amp; Xiaohongshu Watermark-Free Downloads:</strong> Built-in automatically.</li>
-          <li><strong>Audio (MP3), HD Cover Thumbnails &amp; Batch Album ZIP:</strong> Included free.</li>
-        </ul>
+      <div class="doc-meta-banner" id="upgradeSubheadlineBanner">
+        <strong>All core watermark-free parsing and downloads are 100% free.</strong> Optional high-volume batch &amp; developer API tiers are coming soon.
       </div>
 
-      <div class="blog-card">
-        <span class="blog-tag">Advanced Configuration</span>
-        <h4>Looking for Bilibili 4K SESSDATA or TikTok Proxy Settings?</h4>
-        <p style="margin-bottom:12px">If you want to configure your own Bilibili <code>SESSDATA</code> cookie (to unlock member-only 1080p60/4K streams on Bilibili) or set a custom TikTok HTTP proxy, open the dedicated <strong>HD Settings</strong> panel below.</p>
-        <button type="button" class="btn-row-dl" style="width:auto;padding:0 16px" id="btnUpgradeToSettings">⚙️ Open HD Settings &amp; Configuration</button>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px">
+        <!-- Free Plan Card -->
+        <div class="blog-card" style="border:2px solid rgba(16,185,129,0.45);margin-bottom:0;display:flex;flex-direction:column;justify-content:space-between">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
+              <span class="blog-tag" id="upgradeFreeBadge" style="background:rgba(16,185,129,0.14);color:#10B981;margin-bottom:0">Active Now</span>
+              <span id="upgradeFreePrice" style="font-size:15px;font-weight:800;color:var(--text-main)">$0 / Free Forever</span>
+            </div>
+            <h4 id="upgradeFreeTitle" style="font-size:16px;margin-bottom:8px">Standard Web Downloader</h4>
+            <ul id="upgradeFreeFeatures" style="margin:0 0 14px 18px;font-size:13px;color:var(--text-sub);line-height:1.6">
+              <li>Watermark-free Douyin, TikTok, Bilibili &amp; Xiaohongshu parsing</li>
+              <li>Up to 1080P / 4K Bilibili DASH &amp; Douyin multi-CDN failover</li>
+              <li>Live Photo &amp; Multi-Photo Album ZIP batch packaging</li>
+              <li>Custom SESSDATA &amp; Proxy configuration in HD Settings</li>
+            </ul>
+          </div>
+          <button type="button" class="btn-row-dl" style="width:100%;height:38px" id="btnUpgradeToSettings">⚙️ Configure Free 1080P/4K Cookie</button>
+        </div>
+
+        <!-- Pro / API Plan Card -->
+        <div class="blog-card" style="border:2px solid rgba(139,92,246,0.38);margin-bottom:0;display:flex;flex-direction:column;justify-content:space-between">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
+              <span class="blog-tag" id="upgradeProBadge" style="margin-bottom:0">Paid Plans Not Yet Available</span>
+              <span id="upgradeProPrice" style="font-size:15px;font-weight:800;color:var(--purple-600)">Coming Soon</span>
+            </div>
+            <h4 id="upgradeProTitle" style="font-size:16px;margin-bottom:8px">Pro Batch &amp; Developer API</h4>
+            <ul id="upgradeProFeatures" style="margin:0 0 14px 18px;font-size:13px;color:var(--text-sub);line-height:1.6">
+              <li>Automated creator profile &amp; playlist bulk archiving</li>
+              <li>Dedicated high-concurrency REST API keys &amp; webhooks</li>
+              <li>Server-side cloud muxing for 4K/8K Bilibili streams</li>
+              <li>Priority enterprise support &amp; SLA guarantees</li>
+            </ul>
+          </div>
+          <button type="button" class="btn-ghost" style="width:100%;height:38px;justify-content:center;border:1px solid var(--border-color)" id="btnUpgradeToContact">💬 Contact Support for API / Custom Plans</button>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text-muted);text-align:center">
+        No credit card or account sign-up is required to use DownDouyin. Paid checkout is currently disabled while Pro API infrastructure is in preview.
       </div>
     </div>
   </div>
@@ -3057,7 +3085,74 @@
     return 'request_error';
   }
 
+  /* ==================== FIRST-PARTY VISITOR / SESSION & TELEMETRY HELPERS ==================== */
+  function getOrCreateVisitorId() {
+    try {
+      let vid = localStorage.getItem('dd_vid');
+      if (!vid || !vid.startsWith('vid_')) {
+        const rand = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        vid = 'vid_' + rand;
+        localStorage.setItem('dd_vid', vid);
+      }
+      return vid;
+    } catch {
+      return 'vid_guest';
+    }
+  }
+
+  function getOrCreateSessionId() {
+    try {
+      let sid = sessionStorage.getItem('dd_sid');
+      if (!sid || !sid.startsWith('sid_')) {
+        const rand = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        sid = 'sid_' + rand;
+        sessionStorage.setItem('dd_sid', sid);
+      }
+      return sid;
+    } catch {
+      return 'sid_guest';
+    }
+  }
+
+  const CLIENT_VISITOR_ID = getOrCreateVisitorId();
+  const CLIENT_SESSION_ID = getOrCreateSessionId();
+  let lastParseRequestId = '';
+
+  function sendServerTelemetry(eventType, extra) {
+    try {
+      const payload = Object.assign(
+        {
+          event_type: eventType,
+          visitor_id: CLIENT_VISITOR_ID,
+          session_id: CLIENT_SESSION_ID,
+          platform: sanitizeAnalyticsPlatform((extra && extra.platform) || currentPlatform)
+        },
+        extra || {}
+      );
+      fetch(API_BASE + '/api/public/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(() => {});
+    } catch {}
+  }
+
   function trackAnalyticsEvent(eventName, rawParams) {
+    try {
+      if (eventName === 'download_button_click') {
+        sendServerTelemetry('download_click', {
+          platform: rawParams && rawParams.platform,
+          request_id: (rawParams && rawParams.request_id) || lastParseRequestId || undefined,
+          quality: rawParams && rawParams.quality,
+          format: rawParams && rawParams.download_method
+        });
+      }
+    } catch {}
     if (typeof window.gtag !== 'function') return;
     try {
       const safeParams = {};
@@ -3123,11 +3218,13 @@
     const cleanPlat = sanitizeAnalyticsPlatform(platform || currentPlatform);
     const cleanMethod = String(downloadMethod || 'video_stream').replace(/[^a-z0-9_]/gi, '_');
     const dlReqId = 'dl_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+    const dlClickStartMs = Date.now();
 
     // 1. Track user click on download button (distinct from completed download)
     trackAnalyticsEvent('download_button_click', {
       platform: cleanPlat,
-      download_method: cleanMethod
+      download_method: cleanMethod,
+      request_id: dlReqId
     });
 
     const origHtml = btnEl ? btnEl.innerHTML : '';
@@ -3364,11 +3461,19 @@
         a.remove();
       }, 6000);
 
-      // 3. Track completed file transfer ONLY after full verified payload is assembled and saved
+      // 3. Track completed file transfer ONLY after full verified payload is assembled and saved (Stage 4: client_completed)
       trackAnalyticsEvent('download_request_success', {
         platform: cleanPlat,
         download_method: cleanMethod,
         status: 'success'
+      });
+      sendServerTelemetry('download_client_completed', {
+        platform: cleanPlat,
+        request_id: dlReqId,
+        format: cleanMethod,
+        bytes_transferred: received,
+        duration_ms: Math.max(0, Date.now() - dlClickStartMs),
+        detail: `Client completed download (${filename || 'video.mp4'})`
       });
 
       if (btnEl) {
@@ -4183,11 +4288,16 @@
         body: JSON.stringify({
           text: rawText,
           platform: currentPlatform,
+          visitor_id: CLIENT_VISITOR_ID,
+          session_id: CLIENT_SESSION_ID,
           ...(localBiliCookie ? { bili_cookie: localBiliCookie } : {})
         })
       });
 
       const rawJson = await resp.json();
+      if (rawJson && rawJson.request_id) {
+        lastParseRequestId = String(rawJson.request_id);
+      }
       const isOk = resp.ok && !rawJson.error && (rawJson.success === true || rawJson.status === 'success' || Boolean(rawJson.data));
       if (!isOk) {
         throw new Error(rawJson.error || ('Failed to parse video (HTTP ' + resp.status + ')'));
@@ -4331,35 +4441,100 @@
     'upgradeModal'
   ];
 
+  let lastModalTriggerEl = null;
+
+  async function refreshUpgradePricingModal() {
+    try {
+      const resp = await fetch(API_BASE + '/api/public/pricing');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const p = data && data.pricing;
+      if (!p) return;
+      const isZh = currentLang === 'zh';
+      if ($('upgradeModalTitle')) {
+        $('upgradeModalTitle').textContent = (isZh ? p.headline_zh : p.headline_en) || 'DownDouyin Plans & Capabilities';
+      }
+      if ($('upgradeSubheadlineBanner')) {
+        $('upgradeSubheadlineBanner').textContent = (isZh ? p.subheadline_zh : p.subheadline_en) || '';
+      }
+      if (p.free_plan) {
+        if ($('upgradeFreeTitle')) $('upgradeFreeTitle').textContent = (isZh ? p.free_plan.name_zh : p.free_plan.name_en) || 'Standard Web Downloader';
+        if ($('upgradeFreePrice')) $('upgradeFreePrice').textContent = p.free_plan.price_label || '$0 / Free Forever';
+        if ($('upgradeFreeBadge')) $('upgradeFreeBadge').textContent = (isZh ? p.free_plan.status_badge_zh : p.free_plan.status_badge_en) || 'Active Now';
+        const feats = isZh ? p.free_plan.features_zh : p.free_plan.features_en;
+        if (Array.isArray(feats) && feats.length && $('upgradeFreeFeatures')) {
+          $('upgradeFreeFeatures').innerHTML = feats.map(f => `<li>${String(f).replace(/</g, '&lt;')}</li>`).join('');
+        }
+      }
+      if (p.pro_plan) {
+        if ($('upgradeProTitle')) $('upgradeProTitle').textContent = (isZh ? p.pro_plan.name_zh : p.pro_plan.name_en) || 'Pro Batch & Developer API';
+        if ($('upgradeProPrice')) $('upgradeProPrice').textContent = p.pro_plan.price_label || 'Coming Soon';
+        if ($('upgradeProBadge')) $('upgradeProBadge').textContent = (isZh ? p.pro_plan.status_badge_zh : p.pro_plan.status_badge_en) || 'Paid Plans Not Yet Available';
+        const proFeats = isZh ? p.pro_plan.features_zh : p.pro_plan.features_en;
+        if (Array.isArray(proFeats) && proFeats.length && $('upgradeProFeatures')) {
+          $('upgradeProFeatures').innerHTML = proFeats.map(f => `<li>${String(f).replace(/</g, '&lt;')}</li>`).join('');
+        }
+        if ($('btnUpgradeToSettings') && (p.pro_plan.cta_label_en || p.pro_plan.cta_label_zh)) {
+          $('btnUpgradeToSettings').textContent = '⚙️ ' + ((isZh ? p.pro_plan.cta_label_zh : p.pro_plan.cta_label_en) || 'Configure Free 1080P/4K Cookie');
+        }
+      }
+      if ($('btnUpgradeToContact')) {
+        $('btnUpgradeToContact').style.display = p.contact_cta_enabled === false ? 'none' : 'inline-flex';
+      }
+    } catch {}
+  }
+
   function closeAllModals(clearHash) {
+    let anyClosed = false;
     MODAL_IDS.forEach(id => {
       const el = $(id);
-      if (el) el.classList.remove('show');
+      if (el) {
+        if (el.classList.contains('show')) anyClosed = true;
+        el.classList.remove('show');
+        el.setAttribute('aria-hidden', 'true');
+      }
     });
-    if (clearHash && window.location.hash && /^#(settings|faq|guide|blog|privacy|terms|contact|upgrade)$/i.test(window.location.hash)) {
+    if (clearHash && window.location.hash && /^#(settings|faq|guide|blog|privacy|terms|contact|upgrade|plans)$/i.test(window.location.hash)) {
       try {
         history.replaceState(null, '', window.location.pathname + window.location.search);
       } catch {}
     }
+    if (anyClosed && lastModalTriggerEl && typeof lastModalTriggerEl.focus === 'function') {
+      try {
+        lastModalTriggerEl.focus();
+      } catch {}
+      lastModalTriggerEl = null;
+    }
   }
 
-  function openModalById(modalId, hashSlug) {
+  function openModalById(modalId, hashSlug, triggerEl) {
+    if (triggerEl && triggerEl instanceof HTMLElement) {
+      lastModalTriggerEl = triggerEl;
+    } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
+      lastModalTriggerEl = document.activeElement;
+    }
     closeAllModals(false);
     const target = $(modalId);
     if (!target) return;
     target.classList.add('show');
+    target.setAttribute('aria-hidden', 'false');
+
     if (modalId === 'settingsModal') {
       refreshConfigStatus();
+      sendServerTelemetry('settings_modal_open');
+    } else if (modalId === 'contactModal') {
+      sendServerTelemetry('contact_form_opened');
+    } else if (modalId === 'upgradeModal') {
+      refreshUpgradePricingModal();
+      sendServerTelemetry('upgrade_modal_open');
+    } else if (modalId === 'faqModal') {
+      sendServerTelemetry('faq_modal_open');
+    } else if (modalId === 'guideModal') {
+      sendServerTelemetry('help_guide_open');
+    } else if (modalId === 'blogModal') {
+      sendServerTelemetry('blog_modal_open');
     }
-    if (modalId === 'contactModal') {
-      try {
-        fetch(API_BASE + '/api/public/telemetry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event_type: 'contact_form_opened' })
-        }).catch(() => {});
-      } catch {}
-    }
+
     if (hashSlug && window.location.hash !== '#' + hashSlug) {
       try {
         history.replaceState(null, '', '#' + hashSlug);
@@ -4515,6 +4690,7 @@
     document.querySelectorAll('.plat-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         setActivePlatform(btn.dataset.platform);
+        sendServerTelemetry('platform_select', { platform: btn.dataset.platform });
         $('urlInput').focus();
       });
     });
@@ -4522,6 +4698,12 @@
     // Search Input & Fetch Button
     const urlInput = $('urlInput');
     const clearBtn = $('btnClearInput');
+    urlInput.addEventListener('focus', () => {
+      sendServerTelemetry('url_focus', { platform: currentPlatform });
+    });
+    urlInput.addEventListener('paste', () => {
+      sendServerTelemetry('url_paste', { platform: currentPlatform });
+    });
     urlInput.addEventListener('input', () => {
       const val = urlInput.value.trim();
       clearBtn.classList.toggle('visible', val.length > 0);
@@ -4549,6 +4731,7 @@
     document.querySelectorAll('.media-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         currentMediaTab = btn.dataset.tab;
+        sendServerTelemetry('format_select', { format: currentMediaTab, platform: currentPlatform });
         document.querySelectorAll('.media-tab').forEach(b => {
           b.classList.toggle('active', b === btn);
         });
@@ -4633,7 +4816,7 @@
 
     const triggerSettings = (e) => {
       if (e) e.preventDefault();
-      openModalById('settingsModal', 'settings');
+      openModalById('settingsModal', 'settings', e && e.currentTarget);
     };
     $('btnOpenSettings').addEventListener('click', triggerSettings);
     $('footerSettingsLink').addEventListener('click', triggerSettings);
@@ -4641,9 +4824,17 @@
 
     const triggerUpgrade = (e) => {
       if (e) e.preventDefault();
-      openModalById('upgradeModal', 'upgrade');
+      openModalById('upgradeModal', 'upgrade', e && e.currentTarget);
     };
     $('btnHeaderUpgrade').addEventListener('click', triggerUpgrade);
+
+    if ($('btnUpgradeToContact')) {
+      $('btnUpgradeToContact').addEventListener('click', (e) => {
+        e.preventDefault();
+        if ($('contactCategory')) $('contactCategory').value = 'general_feedback';
+        openModalById('contactModal', 'contact', $('btnHeaderUpgrade'));
+      });
+    }
 
     $('footerToolsLink').addEventListener('click', (e) => {
       e.preventDefault();
@@ -4706,9 +4897,11 @@
         });
         const d = await r.json();
         if (d.error) throw new Error(d.error);
+        sendServerTelemetry('cookie_saved', { platform: 'bilibili' });
         showToast('Bilibili SESSDATA saved!');
         refreshConfigStatus();
       } catch (e) {
+        sendServerTelemetry('cookie_saved', { platform: 'bilibili' });
         showToast('Bilibili SESSDATA saved in browser!');
         refreshConfigStatus();
       }
@@ -4724,6 +4917,7 @@
           body: JSON.stringify({ clear: true })
         });
       } catch {}
+      sendServerTelemetry('cookie_cleared', { platform: 'bilibili' });
       showToast('Bilibili cookie cleared.');
       refreshConfigStatus();
     });

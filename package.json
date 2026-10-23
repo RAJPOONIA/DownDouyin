@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs=require('fs');fs.cpSync('static','dist/static',{recursive:true});\"",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit"
   },

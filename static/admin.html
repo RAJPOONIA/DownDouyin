@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <title>DownDouyin — Admin Control Center</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%235630FF'/%3E%3Cstop offset='100%25' stop-color='%2300D2FF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M32 14v22m0 0l-9-9m9 9l9-9M18 46h28' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -131,26 +131,26 @@
   }
 
   .form-group {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   .form-label {
     display: block;
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
-    margin-bottom: 6px;
+    margin-bottom: 5px;
   }
 
   .form-input, .form-select, .form-textarea {
     width: 100%;
-    padding: 10px 12px;
+    padding: 9px 12px;
     background: var(--bg-canvas);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
     color: var(--text-primary);
     font-family: inherit;
-    font-size: 13.5px;
+    font-size: 13px;
     transition: border-color 0.15s ease;
   }
 
@@ -163,11 +163,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 9px 14px;
+    gap: 7px;
+    padding: 8px 14px;
     border-radius: 8px;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
     cursor: pointer;
     border: 1px solid transparent;
@@ -212,7 +212,7 @@
   }
 
   .btn-sm {
-    padding: 6px 10px;
+    padding: 5px 10px;
     font-size: 12px;
     border-radius: 6px;
   }
@@ -262,9 +262,8 @@
     display: flex;
   }
 
-  /* Sidebar */
   .sidebar {
-    width: 248px;
+    width: 252px;
     flex-shrink: 0;
     background: var(--bg-surface);
     border-right: 1px solid var(--border-subtle);
@@ -329,7 +328,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 8px 10px;
+    padding: 8.5px 10px;
     border-radius: 7px;
     border: none;
     background: transparent;
@@ -378,10 +377,6 @@
     gap: 8px;
   }
 
-  .user-meta {
-    overflow: hidden;
-  }
-
   .user-meta strong {
     display: block;
     font-size: 12.5px;
@@ -396,10 +391,9 @@
     text-transform: uppercase;
   }
 
-  /* Main Workspace */
   .main-area {
     flex: 1;
-    margin-left: 248px;
+    margin-left: 252px;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -497,7 +491,7 @@
 
   .workspace-content {
     padding: 24px;
-    max-width: 1440px;
+    max-width: 1480px;
     width: 100%;
     margin: 0 auto;
   }
@@ -513,9 +507,9 @@
   /* Grid & Cards */
   .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
   }
 
   .card {
@@ -531,6 +525,7 @@
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 14px;
+    flex-wrap: wrap;
   }
 
   .card-title {
@@ -551,15 +546,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .kpi-value {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
   }
 
   .kpi-foot {
@@ -581,21 +576,36 @@
     border: 1px solid var(--border-subtle);
   }
 
+  .badge-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .badge-ipv4 { background: var(--info-soft); color: var(--info); }
+  .badge-ipv6 { background: var(--accent-soft); color: var(--accent-hover); }
+  .badge-ok { background: var(--success-soft); color: var(--success); }
+  .badge-warn { background: var(--warning-soft); color: var(--warning); }
+  .badge-err { background: var(--danger-soft); color: var(--danger); }
+
   .delta-pos { color: var(--success); font-weight: 600; }
   .delta-neg { color: var(--danger); font-weight: 600; }
 
   .two-col {
     display: grid;
-    grid-template-columns: 1.6fr 1fr;
+    grid-template-columns: 1.55fr 1fr;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
   }
 
   .equal-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
   }
 
   /* Tables */
@@ -609,23 +619,23 @@
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    font-size: 13px;
+    font-size: 12.5px;
   }
 
   th {
     background: var(--bg-elevated);
     color: var(--text-secondary);
     font-weight: 600;
-    font-size: 11.5px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    padding: 10px 14px;
+    padding: 10px 12px;
     border-bottom: 1px solid var(--border-subtle);
     white-space: nowrap;
   }
 
   td {
-    padding: 11px 14px;
+    padding: 10px 12px;
     border-bottom: 1px solid var(--border-subtle);
     color: var(--text-primary);
     vertical-align: middle;
@@ -664,7 +674,6 @@
   .status-neutral { color: var(--text-secondary); }
   .status-neutral::before { background: var(--text-muted); }
 
-  /* Filter Toolbar */
   .filter-bar {
     display: flex;
     align-items: center;
@@ -681,13 +690,22 @@
     flex-wrap: wrap;
   }
 
+  .pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
   /* Bar Chart */
   .chart-bars {
     display: flex;
     align-items: flex-end;
     gap: 6px;
-    height: 170px;
-    padding-top: 16px;
+    height: 165px;
+    padding-top: 14px;
     border-bottom: 1px solid var(--border-subtle);
   }
 
@@ -699,7 +717,6 @@
     align-items: center;
     height: 100%;
     justify-content: flex-end;
-    position: relative;
   }
 
   .chart-bar-stack {
@@ -709,7 +726,7 @@
     flex-direction: column;
     justify-content: flex-end;
     gap: 1px;
-    height: 140px;
+    height: 135px;
   }
 
   .bar-seg-dl {
@@ -735,7 +752,7 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.68);
     display: none;
     align-items: center;
     justify-content: center;
@@ -752,7 +769,7 @@
     border: 1px solid var(--border-strong);
     border-radius: 12px;
     width: 100%;
-    max-width: 680px;
+    max-width: 740px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
@@ -783,7 +800,7 @@
 
   .funnel-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
     gap: 10px;
     margin-bottom: 18px;
   }
@@ -841,21 +858,11 @@
   }
 
   @media (max-width: 960px) {
-    .sidebar {
-      transform: translateX(-100%);
-    }
-    .sidebar.open {
-      transform: translateX(0);
-    }
-    .main-area {
-      margin-left: 0;
-    }
-    .mobile-menu-btn {
-      display: inline-flex;
-    }
-    .two-col, .equal-col {
-      grid-template-columns: 1fr;
-    }
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main-area { margin-left: 0; }
+    .mobile-menu-btn { display: inline-flex; }
+    .two-col, .equal-col { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -886,7 +893,7 @@
       </div>
       <button type="submit" class="btn btn-primary btn-block" id="btnLoginSubmit">Sign In to Control Center</button>
       <p style="font-size:11.5px;color:var(--text-muted);margin-top:14px;line-height:1.45;">
-        Protected by server-side session verification, scrypt password hashing, and rate limiting. Locked out? Set <code class="mono">ADMIN_RESET_PASSWORD</code> in <code class="mono">.env</code> on the server and restart.
+        Protected by server-side session verification, scrypt password hashing, CSRF validation, and brute-force rate limiting.
       </p>
     </form>
 
@@ -936,51 +943,43 @@
     </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-group-label">Operations &amp; Traffic</div>
+      <div class="nav-group-label">Traffic &amp; Activity</div>
       <button type="button" class="nav-btn active" data-tab="overview">
         <span>1. Overview</span>
       </button>
-      <button type="button" class="nav-btn" data-tab="analytics">
-        <span>2. Website Analytics</span>
+      <button type="button" class="nav-btn" data-tab="visitors">
+        <span>2. Visitors &amp; Users</span>
+        <span class="nav-badge" id="navVisitorsBadge" style="display:none;">0</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="activity">
+        <span>3. Activity Logs</span>
       </button>
       <button type="button" class="nav-btn" data-tab="downloads">
-        <span>3. Downloads</span>
+        <span>4. Downloads</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="analytics">
+        <span>5. Platform Analytics</span>
       </button>
 
-      <div class="nav-group-label">Support &amp; Users</div>
+      <div class="nav-group-label">Support &amp; Product</div>
       <button type="button" class="nav-btn" data-tab="contacts">
-        <span>4. Contact Inbox</span>
+        <span>6. Contact Messages</span>
         <span class="nav-badge unread" id="navUnreadBadge" style="display:none;">0</span>
       </button>
-      <button type="button" class="nav-btn" data-tab="feedback">
-        <span>5. Feedback</span>
-        <span class="nav-badge" id="navFeedbackBadge" style="display:none;">0</span>
+      <button type="button" class="nav-btn" data-tab="pricing">
+        <span>7. Upgrade &amp; Pricing</span>
       </button>
 
-      <div class="nav-group-label">Reliability &amp; SEO</div>
-      <button type="button" class="nav-btn" data-tab="errors">
-        <span>6. Errors &amp; Logs</span>
-        <span class="nav-badge" id="navErrorsBadge" style="display:none;">0</span>
+      <div class="nav-group-label">Security &amp; Infrastructure</div>
+      <button type="button" class="nav-btn" data-tab="security">
+        <span>8. Security &amp; Audit Logs</span>
       </button>
       <button type="button" class="nav-btn" data-tab="health">
-        <span>7. System Health</span>
-      </button>
-      <button type="button" class="nav-btn" data-tab="seo">
-        <span>8. SEO Overview</span>
-      </button>
-
-      <div class="nav-group-label">Administration</div>
-      <button type="button" class="nav-btn" data-tab="notifications">
-        <span>9. Notifications</span>
-      </button>
-      <button type="button" class="nav-btn" data-tab="integrations">
-        <span>10. Integrations</span>
-      </button>
-      <button type="button" class="nav-btn" data-tab="security">
-        <span>11. Security &amp; Audit</span>
+        <span>9. Application Health</span>
+        <span class="nav-badge" id="navErrorsBadge" style="display:none;">0</span>
       </button>
       <button type="button" class="nav-btn" data-tab="settings">
-        <span>12. Settings</span>
+        <span>10. Settings</span>
       </button>
     </nav>
 
@@ -997,15 +996,14 @@
     <header class="topbar">
       <div class="topbar-left">
         <button type="button" class="mobile-menu-btn" id="btnMobileMenu">☰</button>
-        <h1 class="page-heading" id="topbarTitle">Overview</h1>
+        <h1 class="page-heading" id="topbarTitle">1. Operational Overview</h1>
       </div>
 
       <div class="topbar-right">
         <div class="range-bar" id="dateRangeBar">
-          <button type="button" class="range-btn" data-range="today">Today</button>
-          <button type="button" class="range-btn" data-range="yesterday">Yesterday</button>
+          <button type="button" class="range-btn" data-range="24h">24H</button>
           <button type="button" class="range-btn active" data-range="7d">7D</button>
-          <button type="button" class="range-btn" data-range="28d">28D</button>
+          <button type="button" class="range-btn" data-range="30d">30D</button>
           <button type="button" class="range-btn" data-range="90d">90D</button>
           <button type="button" class="range-btn" data-range="custom">Custom</button>
         </div>
@@ -1022,7 +1020,7 @@
     </header>
 
     <main class="workspace-content">
-      <!-- ==================== TAB 1: OVERVIEW ==================== -->
+      <!-- ==================== SECTION 1: OVERVIEW ==================== -->
       <section class="tab-pane active" id="pane-overview">
         <div class="kpi-grid" id="overviewKpiGrid"></div>
 
@@ -1030,8 +1028,8 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Daily Operational &amp; Page View Trend</div>
-                <div class="card-subtitle" id="overviewChartSubtitle">First-party page views vs completed downloads in selected window</div>
+                <div class="card-title">Daily Traffic, Link Submissions &amp; Completed Downloads</div>
+                <div class="card-subtitle">First-party page views vs completed media downloads in selected time window</div>
               </div>
               <span class="source-tag">First-Party Server Logs</span>
             </div>
@@ -1045,8 +1043,8 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Supported Platform Distribution</div>
-                <div class="card-subtitle">Activity across Douyin, Bilibili, TikTok &amp; Xiaohongshu</div>
+                <div class="card-title">Most Popular Platforms</div>
+                <div class="card-subtitle">Usage share across Douyin, Bilibili, TikTok &amp; Xiaohongshu</div>
               </div>
               <span class="source-tag">download-stats.jsonl</span>
             </div>
@@ -1055,9 +1053,10 @@
                 <thead>
                   <tr>
                     <th>Platform</th>
-                    <th>Total</th>
+                    <th>Attempts</th>
                     <th>Success</th>
                     <th>Failed</th>
+                    <th>Share</th>
                   </tr>
                 </thead>
                 <tbody id="overviewPlatformTbody"></tbody>
@@ -1066,90 +1065,213 @@
           </div>
         </div>
 
-        <div class="equal-col">
+        <div class="two-col">
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Contact Support &amp; Feedback Funnel</div>
-                <div class="card-subtitle">Tracks visitors opening the support modal through stored inquiries</div>
+                <div class="card-title">Live User &amp; Link Activity Feed</div>
+                <div class="card-subtitle">Most recent visitor actions, link submissions, and download lifecycle events</div>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" data-goto="contacts">Open Inbox →</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-goto="activity">Full Activity Log →</button>
             </div>
-            <div class="funnel-row" id="overviewFunnelRow"></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time (UTC)</th>
+                    <th>Visitor ID</th>
+                    <th>IP / Ver</th>
+                    <th>Event</th>
+                    <th>Platform</th>
+                    <th>Host / Path</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="overviewRecentActivityTbody"></tbody>
+              </table>
+            </div>
           </div>
 
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Runtime &amp; Backup Status</div>
-                <div class="card-subtitle">Server uptime, error count, and latest snapshot backup</div>
+                <div class="card-title">Top Error Types &amp; System Readiness</div>
+                <div class="card-subtitle">Most frequent error categories &amp; operational health</div>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" data-goto="health">System Health →</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-goto="health">Application Health →</button>
+            </div>
+            <div class="table-wrap" style="margin-bottom:14px;">
+              <table>
+                <thead><tr><th>Error Category</th><th>Count</th></tr></thead>
+                <tbody id="overviewTopErrorsTbody"></tbody>
+              </table>
             </div>
             <div id="overviewHealthSummary"></div>
           </div>
         </div>
       </section>
 
-      <!-- ==================== TAB 2: WEBSITE ANALYTICS ==================== -->
-      <section class="tab-pane" id="pane-analytics">
-        <div class="card" style="margin-bottom:20px;">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Google Analytics 4 Integration Status</div>
-              <div class="card-subtitle">Client-side GA4 tag (<code class="mono" id="ga4MeasurementLabel">G-S9BHCYX6EN</code>) &amp; optional GA4 Data API reporting</div>
-            </div>
-            <span id="ga4ApiBadge" class="status-dot status-neutral">Checking...</span>
+      <!-- ==================== SECTION 2: VISITORS & USERS ==================== -->
+      <section class="tab-pane" id="pane-visitors">
+        <div class="kpi-grid" id="visitorsSummaryKpis"></div>
+
+        <div class="filter-bar">
+          <div class="filter-group">
+            <input type="search" class="form-input" id="visitorSearchInput" placeholder="Search Visitor ID, IPv4/IPv6, UA, notes..." style="width:260px;">
+            <select class="form-select" id="visitorStatusFilter" style="width:145px;">
+              <option value="all">All Visitors</option>
+              <option value="active_24h">Active (Last 24h)</option>
+              <option value="active_7d">Active (Last 7d)</option>
+              <option value="blocked">Blocked Only</option>
+            </select>
+            <select class="form-select" id="visitorPlatformFilter" style="width:145px;">
+              <option value="all">All Platforms</option>
+              <option value="douyin">Douyin</option>
+              <option value="bilibili">Bilibili</option>
+              <option value="tiktok">TikTok</option>
+              <option value="xiaohongshu">Xiaohongshu</option>
+            </select>
+            <select class="form-select" id="visitorIpVerFilter" style="width:125px;">
+              <option value="all">IPv4 &amp; IPv6</option>
+              <option value="IPv4">IPv4 Only</option>
+              <option value="IPv6">IPv6 Only</option>
+            </select>
+            <select class="form-select" id="visitorSortBy" style="width:165px;">
+              <option value="last_active_at">Sort: Last Active</option>
+              <option value="first_seen_at">Sort: First Seen</option>
+              <option value="links_submitted">Sort: Links Submitted</option>
+              <option value="successful_downloads">Sort: Downloads</option>
+              <option value="session_count">Sort: Sessions</option>
+            </select>
+            <button type="button" class="btn btn-primary btn-sm" id="btnFilterVisitors">Apply</button>
           </div>
-          <div id="ga4StatusBody"></div>
+          <div class="filter-group">
+            <a href="/api/admin/export/visitors.csv" class="btn btn-secondary btn-sm">⬇ Export Visitors CSV</a>
+          </div>
         </div>
 
-        <div class="kpi-grid" id="analyticsFirstPartyKpis"></div>
-
-        <div class="equal-col">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Top Referrer Hosts (First-Party Page Views)</div>
-              <span class="source-tag">visitor-events.jsonl</span>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Referrer Source</th><th>Page Views</th></tr></thead>
-                <tbody id="analyticsReferrersTbody"></tbody>
-              </table>
-            </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Visitor ID</th>
+                  <th>Last IP &amp; Version</th>
+                  <th>First Seen (UTC)</th>
+                  <th>Last Active (UTC)</th>
+                  <th>Sessions</th>
+                  <th>Links</th>
+                  <th>DL Attempts</th>
+                  <th>Succeeded / Client</th>
+                  <th>Failed</th>
+                  <th>Top Platform</th>
+                  <th>Last Action</th>
+                  <th>Status</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody id="visitorsTableBody"></tbody>
+            </table>
           </div>
-
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Device &amp; Language Breakdown</div>
-              <span class="source-tag">User-Agent / Accept-Language</span>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Segment</th><th>Category</th><th>Page Views</th></tr></thead>
-                <tbody id="analyticsDeviceLangTbody"></tbody>
-              </table>
+          <div class="pagination-bar">
+            <span id="visitorsPaginationInfo">Showing 0 visitors</span>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnVisitorsPrev">← Prev</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnVisitorsNext">Next →</button>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ==================== TAB 3: DOWNLOADS ==================== -->
-      <section class="tab-pane" id="pane-downloads">
+      <!-- ==================== SECTION 3: ACTIVITY LOGS ==================== -->
+      <section class="tab-pane" id="pane-activity">
         <div class="filter-bar">
-          <div>
-            <h2 style="font-size:15px;font-weight:700;">Platform Parse &amp; Download Telemetry</h2>
-            <p style="font-size:12px;color:var(--text-secondary);">Anonymized operational events from <code class="mono">/api/parse</code>, <code class="mono">/api/proxy</code>, <code class="mono">/api/download</code>, and <code class="mono">/api/zip</code>.</p>
+          <div class="filter-group">
+            <input type="search" class="form-input" id="activitySearchInput" placeholder="Search Visitor ID, IP, Req ID, Hostname..." style="width:250px;">
+            <select class="form-select" id="activityCategoryFilter" style="width:155px;">
+              <option value="all">All Categories</option>
+              <option value="link_submission">Link Submissions</option>
+              <option value="download_lifecycle">Download Lifecycle</option>
+              <option value="ui_interaction">UI Clicks &amp; Selects</option>
+              <option value="modal_interaction">Modal Opens</option>
+              <option value="settings">Cookie &amp; Settings</option>
+              <option value="navigation">Page Views</option>
+            </select>
+            <select class="form-select" id="activityPlatformFilter" style="width:135px;">
+              <option value="all">All Platforms</option>
+              <option value="douyin">Douyin</option>
+              <option value="bilibili">Bilibili</option>
+              <option value="tiktok">TikTok</option>
+              <option value="xiaohongshu">Xiaohongshu</option>
+            </select>
+            <select class="form-select" id="activityStatusFilter" style="width:135px;">
+              <option value="all">All Statuses</option>
+              <option value="valid">Valid Link</option>
+              <option value="success">Success</option>
+              <option value="failed">Failed</option>
+              <option value="invalid">Invalid Link</option>
+              <option value="unsupported">Unsupported</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="info">Info / Click</option>
+            </select>
+            <select class="form-select" id="activityIpVerFilter" style="width:115px;">
+              <option value="all">All IPs</option>
+              <option value="IPv4">IPv4</option>
+              <option value="IPv6">IPv6</option>
+            </select>
+            <button type="button" class="btn btn-primary btn-sm" id="btnFilterActivity">Filter</button>
           </div>
           <div class="filter-group">
+            <a href="/api/admin/export/activity.csv" class="btn btn-secondary btn-sm">⬇ Export Activity CSV</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time (UTC)</th>
+                  <th>Visitor ID</th>
+                  <th>IP Address</th>
+                  <th>Event Type</th>
+                  <th>Platform</th>
+                  <th>Normalized Host / Path</th>
+                  <th>Stage / Method</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                  <th>Inspect</th>
+                </tr>
+              </thead>
+              <tbody id="activityTableBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination-bar">
+            <span id="activityPaginationInfo">Showing 0 events</span>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnActivityPrev">← Prev</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnActivityNext">Next →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SECTION 4: DOWNLOADS ==================== -->
+      <section class="tab-pane" id="pane-downloads">
+        <div class="card" style="margin-bottom:18px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">4-Stage Download Verification Lifecycle</div>
+              <div class="card-subtitle">Distinguishes server parse processing, upstream media retrieval, server stream completion, and browser-confirmed file save</div>
+            </div>
             <a href="/api/admin/export/downloads.csv" class="btn btn-secondary btn-sm">⬇ Export Downloads CSV</a>
           </div>
+          <div class="funnel-row" id="downloadsLifecycleRow" style="margin-bottom:0;"></div>
         </div>
 
         <div class="card" style="margin-bottom:20px;">
           <div class="card-header">
-            <div class="card-title">Per-Platform Performance Breakdown</div>
+            <div class="card-title">Per-Platform Parse &amp; Download Performance</div>
             <span class="source-tag" id="downloadsWindowLabel">Selected Window</span>
           </div>
           <div class="table-wrap">
@@ -1161,7 +1283,8 @@
                   <th>Parse Success</th>
                   <th>Parse Failed</th>
                   <th>Media Downloads</th>
-                  <th>Download Success</th>
+                  <th>Stream Succeeded</th>
+                  <th>Client Confirmed</th>
                   <th>Download Failed</th>
                   <th>Client Aborted</th>
                   <th>Avg Latency</th>
@@ -1197,8 +1320,8 @@
 
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Failure Categories</div>
-              <span class="source-tag">Error Distribution</span>
+              <div class="card-title">Failure Categories Distribution</div>
+              <span class="source-tag">Error Breakdown</span>
             </div>
             <div class="table-wrap">
               <table>
@@ -1210,13 +1333,57 @@
         </div>
       </section>
 
-      <!-- ==================== TAB 4: CONTACT INBOX ==================== -->
+      <!-- ==================== SECTION 5: PLATFORM ANALYTICS ==================== -->
+      <section class="tab-pane" id="pane-analytics">
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Google Analytics 4 &amp; First-Party Telemetry Status</div>
+              <div class="card-subtitle">Client-side GA4 tag (<code class="mono" id="ga4MeasurementLabel">G-S9BHCYX6EN</code>) &amp; server-side first-party visitor tracking</div>
+            </div>
+            <span id="ga4ApiBadge" class="status-dot status-neutral">Checking...</span>
+          </div>
+          <div id="ga4StatusBody"></div>
+        </div>
+
+        <div class="kpi-grid" id="analyticsFirstPartyKpis"></div>
+
+        <div class="equal-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Top Referrer Sources (First-Party Page Views)</div>
+              <span class="source-tag">visitor-events.jsonl</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Referrer Source</th><th>Page Views</th></tr></thead>
+                <tbody id="analyticsReferrersTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Device &amp; Browser Language Breakdown</div>
+              <span class="source-tag">User-Agent / Accept-Language</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Segment</th><th>Category</th><th>Page Views</th></tr></thead>
+                <tbody id="analyticsDeviceLangTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SECTION 6: CONTACT MESSAGES ==================== -->
       <section class="tab-pane" id="pane-contacts">
         <div class="card" style="margin-bottom:18px;">
           <div class="card-header">
             <div>
               <div class="card-title">Contact Support Attempt Funnel</div>
-              <div class="card-subtitle">Visibility into visitors who opened the contact form, encountered validation errors, or submitted inquiries</div>
+              <div class="card-subtitle">Visibility into visitors who opened the contact form, encountered validation errors, or stored inquiries</div>
             </div>
             <span class="source-tag">contact-events.jsonl</span>
           </div>
@@ -1225,8 +1392,8 @@
 
         <div class="filter-bar">
           <div class="filter-group">
-            <input type="search" class="form-input" id="contactSearchInput" placeholder="Search Ref ID, name, email, message..." style="width:260px;">
-            <select class="form-select" id="contactStatusFilter" style="width:140px;">
+            <input type="search" class="form-input" id="contactSearchInput" placeholder="Search Ref ID, name, email, message..." style="width:250px;">
+            <select class="form-select" id="contactStatusFilter" style="width:135px;">
               <option value="all">All Statuses</option>
               <option value="unread">Unread Only</option>
               <option value="open">Open</option>
@@ -1234,13 +1401,19 @@
               <option value="resolved">Resolved</option>
               <option value="spam">Spam</option>
             </select>
-            <select class="form-select" id="contactPlatformFilter" style="width:145px;">
+            <select class="form-select" id="contactTypeFilter" style="width:145px;">
+              <option value="all">All Types</option>
+              <option value="inquiry">Support Inquiry</option>
+              <option value="feedback">Product Feedback</option>
+              <option value="bug_report">Bug Report</option>
+            </select>
+            <select class="form-select" id="contactPlatformFilter" style="width:140px;">
               <option value="all">All Platforms</option>
               <option value="douyin">Douyin</option>
               <option value="bilibili">Bilibili</option>
               <option value="tiktok">TikTok</option>
               <option value="xiaohongshu">Xiaohongshu</option>
-              <option value="unknown">General / Other</option>
+              <option value="unknown">General</option>
             </select>
             <button type="button" class="btn btn-primary btn-sm" id="btnFilterContacts">Filter</button>
           </div>
@@ -1257,8 +1430,9 @@
                   <th>Ref ID</th>
                   <th>Submitted (UTC)</th>
                   <th>Status</th>
+                  <th>Type</th>
                   <th>Sender</th>
-                  <th>Category / Platform</th>
+                  <th>Platform</th>
                   <th>Message Preview</th>
                   <th>Email Alert</th>
                   <th>Actions</th>
@@ -1270,201 +1444,118 @@
         </div>
       </section>
 
-      <!-- ==================== TAB 5: FEEDBACK ==================== -->
-      <section class="tab-pane" id="pane-feedback">
-        <div class="filter-bar">
-          <div>
-            <h2 style="font-size:15px;font-weight:700;">User Feedback &amp; Bug Reports</h2>
-            <p style="font-size:12px;color:var(--text-secondary);">Filtered view of product feedback, feature suggestions, and bug reports submitted via the public form.</p>
-          </div>
-        </div>
-        <div class="card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Ref ID</th>
-                  <th>Submitted</th>
-                  <th>Type</th>
-                  <th>Platform</th>
-                  <th>Sender</th>
-                  <th>Feedback / Report</th>
-                  <th>Status</th>
-                  <th>Manage</th>
-                </tr>
-              </thead>
-              <tbody id="feedbackTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== TAB 6: ERRORS & LOGS ==================== -->
-      <section class="tab-pane" id="pane-errors">
-        <div class="filter-bar">
-          <div class="filter-group">
-            <select class="form-select" id="errorSeverityFilter" style="width:150px;">
-              <option value="all">All Severities</option>
-              <option value="warn">Warning</option>
-              <option value="error">Error</option>
-              <option value="critical">Critical</option>
-            </select>
-            <select class="form-select" id="errorRouteFilter" style="width:160px;">
-              <option value="all">All Route Categories</option>
-              <option value="parse">Parse (/api/parse)</option>
-              <option value="download">Download (/api/download)</option>
-              <option value="proxy">Proxy (/api/proxy)</option>
-              <option value="zip">ZIP (/api/zip)</option>
-              <option value="contact">Contact (/api/contact)</option>
-            </select>
-            <button type="button" class="btn btn-primary btn-sm" id="btnFilterErrors">Apply Filter</button>
-          </div>
-          <span class="source-tag">Redacted Structured Log (logs/app-errors.jsonl)</span>
-        </div>
-
-        <div class="card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Timestamp (UTC)</th>
-                  <th>Req ID</th>
-                  <th>Severity</th>
-                  <th>Route</th>
-                  <th>Platform</th>
-                  <th>HTTP</th>
-                  <th>Category</th>
-                  <th>Duration</th>
-                  <th>Sanitized Summary</th>
-                </tr>
-              </thead>
-              <tbody id="errorsTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== TAB 7: SYSTEM HEALTH ==================== -->
-      <section class="tab-pane" id="pane-health">
-        <div class="kpi-grid" id="healthKpiGrid"></div>
-        <div class="equal-col">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Persistent Storage &amp; Log Files</div>
-              <span class="source-tag" id="healthWritableBadge">Checking...</span>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Data Store File</th><th>Size</th></tr></thead>
-                <tbody id="healthFilesTbody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Runtime Subsystems Readiness</div>
-              <span class="source-tag">Live Probe</span>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Subsystem</th><th>Status</th></tr></thead>
-                <tbody id="healthIntegrationsTbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== TAB 8: SEO OVERVIEW ==================== -->
-      <section class="tab-pane" id="pane-seo">
-        <div class="equal-col">
-          <div class="card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">Technical SEO &amp; Indexing Verification</div>
-                <div class="card-subtitle">Live inspection of <code class="mono">static/index.html</code>, <code class="mono">/sitemap.xml</code>, and <code class="mono">/robots.txt</code></div>
-              </div>
-              <span class="source-tag">Live Inspection</span>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Check</th><th>Current Value / Status</th></tr></thead>
-                <tbody id="seoTechnicalTbody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">robots.txt &amp; Sitemap Configuration</div>
-                <div class="card-subtitle">Verifies <code class="mono">Disallow: /admin</code> and canonical sitemap directive</div>
-              </div>
-              <a href="/sitemap.xml" target="_blank" class="btn btn-secondary btn-sm">Open sitemap.xml ↗</a>
-            </div>
-            <pre class="mono" id="seoRobotsPre" style="background:var(--bg-canvas);padding:12px;border-radius:8px;border:1px solid var(--border-subtle);font-size:12px;overflow-x:auto;margin-bottom:16px;"></pre>
-
-            <div class="card-title" style="margin-bottom:8px;">Google Search Console API Status</div>
-            <div id="seoGscBox"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== TAB 9: NOTIFICATIONS ==================== -->
-      <section class="tab-pane" id="pane-notifications">
+      <!-- ==================== SECTION 7: UPGRADE & PRICING ==================== -->
+      <section class="tab-pane" id="pane-pricing">
         <div class="two-col">
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Email Delivery History</div>
-                <div class="card-subtitle">Transactional emails dispatched via Resend HTTPS API (<code class="mono">logs/email-deliveries.jsonl</code>)</div>
+                <div class="card-title">Public Upgrade &amp; Pricing Modal Configuration</div>
+                <div class="card-subtitle">Controls the independent <code class="mono">#upgradeModal</code> on the public homepage (<code class="mono">/api/public/pricing</code>)</div>
               </div>
-              <span id="notifProviderBadge" class="status-dot status-neutral">Checking...</span>
+              <span class="badge-pill badge-ok">Independent from Contact Modal</span>
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Timestamp</th>
-                    <th>Event</th>
-                    <th>Recipient</th>
-                    <th>Subject</th>
-                    <th>Status</th>
-                    <th>Details</th>
-                  </tr>
-                </thead>
-                <tbody id="notifDeliveriesTbody"></tbody>
-              </table>
-            </div>
+            <form id="pricingConfigForm">
+              <div class="equal-col" style="margin-bottom:12px;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Modal Headline (English)</label>
+                  <input type="text" class="form-input" id="prHeadlineEn" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Modal Headline (中文)</label>
+                  <input type="text" class="form-input" id="prHeadlineZh" required>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Subheadline Banner (English)</label>
+                <input type="text" class="form-input" id="prSubheadlineEn">
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;">
+                <div style="background:var(--bg-canvas);padding:14px;border-radius:8px;border:1px solid var(--border-subtle);">
+                  <div style="font-weight:700;margin-bottom:10px;color:var(--success);">Free Tier Card</div>
+                  <div class="form-group">
+                    <label class="form-label">Plan Name (EN)</label>
+                    <input type="text" class="form-input" id="prFreeNameEn">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Price Label</label>
+                    <input type="text" class="form-input" id="prFreePrice">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Status Badge (EN)</label>
+                    <input type="text" class="form-input" id="prFreeBadgeEn">
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Features (One per line, EN)</label>
+                    <textarea class="form-textarea" id="prFreeFeaturesEn" rows="4"></textarea>
+                  </div>
+                </div>
+
+                <div style="background:var(--bg-canvas);padding:14px;border-radius:8px;border:1px solid var(--border-subtle);">
+                  <div style="font-weight:700;margin-bottom:10px;color:var(--accent-hover);">Pro / API Tier Card</div>
+                  <div class="form-group">
+                    <label class="form-label">Plan Name (EN)</label>
+                    <input type="text" class="form-input" id="prProNameEn">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Price / Availability Label</label>
+                    <input type="text" class="form-input" id="prProPrice">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Status Badge (EN)</label>
+                    <input type="text" class="form-input" id="prProBadgeEn">
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Features (One per line, EN)</label>
+                    <textarea class="form-textarea" id="prProFeaturesEn" rows="4"></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div style="padding:12px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:8px;margin-bottom:14px;">
+                <div class="toggle-row">
+                  <span>Mark Pro / Paid Plans as "Coming Soon — Paid Plans Not Yet Available"</span>
+                  <input type="checkbox" id="prProComingSoon" checked>
+                </div>
+                <div class="toggle-row">
+                  <span>Show secondary "Contact Support for API / Custom Plans" button inside Upgrade modal</span>
+                  <input type="checkbox" id="prContactCtaEnabled" checked>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block">Save Upgrade &amp; Pricing Configuration</button>
+            </form>
           </div>
 
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Send Administrator Test Email</div>
-                <div class="card-subtitle">Verify Resend API key and sender domain configuration</div>
+                <div class="card-title">Modal Separation &amp; UX Verification</div>
+                <div class="card-subtitle">Guarantees Contact and Upgrade buttons never conflict</div>
               </div>
             </div>
-            <div class="alert-box" id="testEmailFeedback"></div>
-            <div class="form-group">
-              <label class="form-label" for="testEmailInput">Recipient Email Address</label>
-              <input type="email" class="form-input" id="testEmailInput" placeholder="admin@downdouyin.com">
+            <div style="font-size:13px;color:var(--text-secondary);line-height:1.65;">
+              <p style="margin-bottom:12px;">
+                <strong>Verified Button Wiring on Public Homepage:</strong>
+              </p>
+              <ul style="margin-left:18px;margin-bottom:16px;">
+                <li><strong>Header &amp; Footer Contact (<code class="mono">#navContactBtn</code>, <code class="mono">#footerContactLink</code>):</strong> Opens ONLY <code class="mono">#contactModal</code> (Support &amp; Feedback Form).</li>
+                <li><strong>Header Upgrade (<code class="mono">#btnHeaderUpgrade</code>):</strong> Opens ONLY <code class="mono">#upgradeModal</code> (Plans &amp; Free Capabilities).</li>
+                <li><strong>Primary CTA inside Upgrade Modal:</strong> Opens <code class="mono">#settingsModal</code> so users can configure free 1080P/4K Bilibili <code class="mono">SESSDATA</code> or TikTok proxy.</li>
+                <li><strong>Secondary CTA inside Upgrade Modal:</strong> Explicitly transitions to <code class="mono">#contactModal</code> only when the user clicks <em>"Contact Support for API / Custom Plans"</em>.</li>
+              </ul>
+              <div style="padding:12px;background:var(--bg-canvas);border-radius:8px;border:1px solid var(--border-subtle);">
+                <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Last Updated</div>
+                <div class="mono" id="prUpdatedAtLabel" style="font-size:12px;color:var(--text-muted);">—</div>
+              </div>
             </div>
-            <button type="button" class="btn btn-primary btn-block" id="btnSendTestEmail">Send Test Notification Email</button>
-            <p style="font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.45;">
-              Requires <code class="mono">RESEND_API_KEY</code> in your server <code class="mono">.env</code> file. Every delivery attempt (sent or failed) is recorded in the table on the left and in the Security Audit Log.
-            </p>
           </div>
         </div>
       </section>
 
-      <!-- ==================== TAB 10: INTEGRATIONS ==================== -->
-      <section class="tab-pane" id="pane-integrations">
-        <div class="equal-col" id="integrationsCardsGrid"></div>
-      </section>
-
-      <!-- ==================== TAB 11: SECURITY & AUDIT LOG ==================== -->
+      <!-- ==================== SECTION 8: SECURITY & AUDIT LOGS ==================== -->
       <section class="tab-pane" id="pane-security">
         <div class="equal-col">
           <div class="card">
@@ -1487,7 +1578,7 @@
                 <tbody id="securitySessionsTbody"></tbody>
               </table>
             </div>
-            <div style="border-top:1px solid var(--border-subtle);padding-top:12px;display:flex;gap:8px;align-items:center;">
+            <div style="border-top:1px solid var(--border-subtle);padding-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <input type="password" class="form-input" id="revokeAllPasswordInput" placeholder="Confirm current password to revoke all..." style="max-width:260px;">
               <button type="button" class="btn btn-danger btn-sm" id="btnRevokeAllSessions">Revoke All Sessions</button>
             </div>
@@ -1534,7 +1625,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">Immutable Security &amp; Administrative Audit Log</div>
-              <div class="card-subtitle">Tracks sign-ins, failed attempts, inbox mutations, CSV exports, backups, and settings changes (<code class="mono">logs/audit-log.jsonl</code>)</div>
+              <div class="card-subtitle">Tracks sign-ins, failed attempts, visitor blocks, inbox mutations, CSV exports, backups, and settings changes (<code class="mono">logs/audit-log.jsonl</code>)</div>
             </div>
             <span class="source-tag">Recent 250 Events</span>
           </div>
@@ -1557,18 +1648,104 @@
         </div>
       </section>
 
-      <!-- ==================== TAB 12: SETTINGS ==================== -->
+      <!-- ==================== SECTION 9: APPLICATION HEALTH (Runtime + SEO + Errors) ==================== -->
+      <section class="tab-pane" id="pane-health">
+        <div class="kpi-grid" id="healthKpiGrid"></div>
+
+        <div class="equal-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Persistent Storage &amp; Log Files</div>
+              <span class="source-tag" id="healthWritableBadge">Checking...</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Data Store File</th><th>Size</th></tr></thead>
+                <tbody id="healthFilesTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Runtime Subsystems &amp; Technical SEO Verification</div>
+              <a href="/sitemap.xml" target="_blank" class="btn btn-secondary btn-sm">Open sitemap.xml ↗</a>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Subsystem / SEO Check</th><th>Status</th></tr></thead>
+                <tbody id="healthIntegrationsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Application Error &amp; Warning Log (<code class="mono">logs/app-errors.jsonl</code>)</div>
+              <div class="card-subtitle">Sanitized backend errors across parse, download, proxy, ZIP, and contact routes</div>
+            </div>
+            <div class="filter-group">
+              <select class="form-select" id="errorSeverityFilter" style="width:140px;">
+                <option value="all">All Severities</option>
+                <option value="warn">Warning</option>
+                <option value="error">Error</option>
+                <option value="critical">Critical</option>
+              </select>
+              <select class="form-select" id="errorRouteFilter" style="width:155px;">
+                <option value="all">All Routes</option>
+                <option value="parse">Parse (/api/parse)</option>
+                <option value="download">Download (/api/download)</option>
+                <option value="proxy">Proxy (/api/proxy)</option>
+                <option value="zip">ZIP (/api/zip)</option>
+                <option value="contact">Contact (/api/contact)</option>
+              </select>
+              <button type="button" class="btn btn-primary btn-sm" id="btnFilterErrors">Filter Errors</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp (UTC)</th>
+                  <th>Req ID</th>
+                  <th>Severity</th>
+                  <th>Route</th>
+                  <th>Platform</th>
+                  <th>HTTP</th>
+                  <th>Category</th>
+                  <th>Duration</th>
+                  <th>Sanitized Summary</th>
+                </tr>
+              </thead>
+              <tbody id="errorsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SECTION 10: SETTINGS ==================== -->
       <section class="tab-pane" id="pane-settings">
         <div class="equal-col">
-          <!-- Left: Notification & Shortcut Settings -->
+          <!-- Left: IP Privacy, Notification & Shortcut Settings -->
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Notifications, Shortcut &amp; Retention Settings</div>
+                <div class="card-title">IP Tracking, Notifications, Shortcut &amp; Retention</div>
                 <div class="card-subtitle">Persisted atomically in <code class="mono">logs/admin-settings.json</code></div>
               </div>
             </div>
             <form id="settingsForm">
+              <div class="form-group">
+                <label class="form-label">Visitor IP Address Logging Mode</label>
+                <select class="form-select" id="setIpLoggingMode">
+                  <option value="full">Full IPv4 / IPv6 Address (Recommended for Abuse &amp; Security Diagnostics)</option>
+                  <option value="masked">Masked Octets / Hextets (e.g. 203.0.113.xxx / 2001:db8:85a3::xxxx)</option>
+                  <option value="hashed">Salted SHA-256 Hash Only (ip_xxxxxxxxxxxx)</option>
+                </select>
+              </div>
+
               <div class="form-group">
                 <label class="form-label">Contact &amp; Feedback Notification Recipient Email</label>
                 <input type="email" class="form-input" id="setNotifToEmail" placeholder="admin@downdouyin.com">
@@ -1604,7 +1781,7 @@
               <div style="margin:14px 0;padding:12px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:8px;">
                 <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Optional Public Search-Box Shortcut</div>
                 <p style="font-size:11.5px;color:var(--text-secondary);margin-bottom:10px;">
-                  Convenience navigation only: typing this phrase into the public homepage search box clears the input immediately, skips analytics/parsing, and opens the <code class="mono">/admin</code> login screen. It <strong>never</strong> authenticates automatically.
+                  Convenience navigation only: typing this phrase into the public homepage search box clears the input immediately and opens the <code class="mono">/admin</code> login screen. Never authenticates automatically.
                 </p>
                 <div class="toggle-row">
                   <span>Enable Search-Box Shortcut to <code class="mono">/admin</code></span>
@@ -1640,8 +1817,29 @@
             </form>
           </div>
 
-          <!-- Right: Password Change, Backups & Retention Cleanup -->
+          <!-- Right: Test Email, Password Change, Backups & Retention Cleanup -->
           <div>
+            <div class="card" style="margin-bottom:16px;">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Transactional Email Verification (Resend API)</div>
+                  <div class="card-subtitle">Send a test notification or inspect recent delivery attempts</div>
+                </div>
+                <span id="notifProviderBadge" class="status-dot status-neutral">Checking...</span>
+              </div>
+              <div class="alert-box" id="testEmailFeedback"></div>
+              <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <input type="email" class="form-input" id="testEmailInput" placeholder="admin@downdouyin.com">
+                <button type="button" class="btn btn-primary" id="btnSendTestEmail">Send Test Email</button>
+              </div>
+              <div class="table-wrap" style="max-height:170px;overflow-y:auto;">
+                <table>
+                  <thead><tr><th>Time</th><th>Event</th><th>Recipient</th><th>Status</th></tr></thead>
+                  <tbody id="notifDeliveriesTbody"></tbody>
+                </table>
+              </div>
+            </div>
+
             <div class="card" style="margin-bottom:16px;">
               <div class="card-header">
                 <div>
@@ -1688,6 +1886,97 @@
   </div>
 </div>
 
+<!-- ==================== VISITOR DETAIL MODAL ==================== -->
+<div class="modal-backdrop" id="visitorDetailModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <strong id="vdModalTitle" style="font-size:15px;">Visitor Profile</strong>
+        <div id="vdModalSubtitle" class="mono" style="font-size:12px;color:var(--text-secondary);"></div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnCloseVisitorDetail">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="kpi-grid" id="vdKpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(135px,1fr));margin-bottom:14px;"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div style="background:var(--bg-canvas);padding:12px;border-radius:8px;border:1px solid var(--border-subtle);">
+          <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Access &amp; Rate-Limit Control</div>
+          <div class="toggle-row">
+            <span>Block Visitor / IP from Parsing &amp; Downloads</span>
+            <input type="checkbox" id="vdBlockedToggle">
+          </div>
+          <div class="form-group" style="margin-top:8px;margin-bottom:8px;">
+            <label class="form-label">Admin Notes</label>
+            <input type="text" class="form-input" id="vdAdminNotes" placeholder="Optional note on this visitor/IP...">
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btnSaveVisitorControl">Save Visitor Policy</button>
+        </div>
+
+        <div style="background:var(--bg-canvas);padding:12px;border-radius:8px;border:1px solid var(--border-subtle);">
+          <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Observed IP Address History</div>
+          <div class="table-wrap" style="max-height:130px;overflow-y:auto;">
+            <table>
+              <thead><tr><th>IP Address</th><th>Ver</th><th>Hits</th><th>Last Seen</th></tr></thead>
+              <tbody id="vdIpHistoryTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Recent Activity Timeline (Last 50 Events)</div>
+      <div class="table-wrap" style="max-height:220px;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Time (UTC)</th>
+              <th>Event Type</th>
+              <th>Platform</th>
+              <th>Host / Path</th>
+              <th>Stage</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="vdTimelineTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ACTIVITY EVENT DETAIL MODAL ==================== -->
+<div class="modal-backdrop" id="activityDetailModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <strong id="adModalTitle" style="font-size:15px;">Activity Event Details</strong>
+        <div id="adModalSubtitle" class="mono" style="font-size:12px;color:var(--text-secondary);"></div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnCloseActivityDetail">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div id="adMetadataGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--bg-canvas);padding:14px;border-radius:8px;border:1px solid var(--border-subtle);margin-bottom:14px;font-size:12.5px;"></div>
+
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Correlated Lifecycle Events Sharing Request ID</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time (UTC)</th>
+              <th>Event Type</th>
+              <th>Download Stage</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Bytes</th>
+            </tr>
+          </thead>
+          <tbody id="adCorrelatedTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ==================== CONTACT INQUIRY DETAIL MODAL ==================== -->
 <div class="modal-backdrop" id="contactDetailModal">
   <div class="modal-box">
@@ -1706,7 +1995,7 @@
         </div>
         <div>
           <span class="form-label">Sender Email</span>
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span id="cdSenderEmail" class="mono" style="font-size:12.5px;"></span>
             <button type="button" class="btn btn-secondary btn-sm" id="btnCopySenderEmail">Copy</button>
             <a href="#" id="btnMailtoSender" class="btn btn-primary btn-sm">Reply via Email ↗</a>
@@ -1767,7 +2056,7 @@
   </div>
 </div>
 
-<!-- ==================== CONFIRMATION MODAL (No window.confirm) ==================== -->
+<!-- ==================== CONFIRMATION MODAL ==================== -->
 <div class="modal-backdrop" id="confirmModal">
   <div class="modal-box" style="max-width:420px;">
     <div class="modal-head">
@@ -1797,6 +2086,14 @@
   let currentRange = '7d';
   let customStart = '';
   let customEnd = '';
+
+  let visitorsPage = 1;
+  let visitorsTotalPages = 1;
+  let activeVisitorId = null;
+
+  let activityPage = 1;
+  let activityTotalPages = 1;
+
   let cachedContacts = [];
   let activeContactItem = null;
   let pendingConfirmCallback = null;
@@ -1822,6 +2119,20 @@
     if (d > 0) return `${d}d ${h}h ${m}m`;
     if (h > 0) return `${h}h ${m}m`;
     return `${m}m ${s % 60}s`;
+  }
+
+  function renderIpBadge(ip, ver) {
+    const v = ver === 'IPv6' ? 'IPv6' : ver === 'IPv4' ? 'IPv4' : 'IP';
+    const cls = ver === 'IPv6' ? 'badge-ipv6' : 'badge-ipv4';
+    return `<span class="badge-pill ${cls}" style="margin-right:5px;">${v}</span><span class="mono" style="font-size:11.5px;">${esc(ip || 'unknown')}</span>`;
+  }
+
+  function renderStatusBadge(st) {
+    const s = String(st || 'info').toLowerCase();
+    if (s === 'success' || s === 'valid') return `<span class="badge-pill badge-ok">${esc(s)}</span>`;
+    if (s === 'failed' || s === 'invalid' || s === 'timed_out') return `<span class="badge-pill badge-err">${esc(s)}</span>`;
+    if (s === 'unsupported' || s === 'cancelled' || s === 'processing') return `<span class="badge-pill badge-warn">${esc(s)}</span>`;
+    return `<span class="source-tag">${esc(s)}</span>`;
   }
 
   function showToast(msg) {
@@ -1871,7 +2182,6 @@
   $('btnThemeToggle').addEventListener('click', toggleTheme);
   $('btnAuthThemeToggle').addEventListener('click', toggleTheme);
 
-  // Authenticated API client with automatic CSRF header injection
   async function apiFetch(path, opts = {}) {
     const method = (opts.method || 'GET').toUpperCase();
     const headers = Object.assign({ 'Accept': 'application/json' }, opts.headers || {});
@@ -2011,17 +2321,15 @@
   // ==================== NAVIGATION & DATE RANGE ====================
   const TAB_TITLES = {
     overview: '1. Operational Overview',
-    analytics: '2. Website Analytics & Telemetry',
-    downloads: '3. Download & Parse Analytics',
-    contacts: '4. Contact Support Inbox',
-    feedback: '5. User Feedback & Bug Reports',
-    errors: '6. Application Errors & Logs',
-    health: '7. System Health & Resources',
-    seo: '8. Technical SEO & Search Console',
-    notifications: '9. Email Notifications (Resend)',
-    integrations: '10. External Integrations Status',
-    security: '11. Security, Sessions & Audit Log',
-    settings: '12. Control Center Settings'
+    visitors: '2. Visitors & User Management',
+    activity: '3. Live Activity & Link Submission Logs',
+    downloads: '4. Download & 4-Stage Verification Analytics',
+    analytics: '5. Platform Analytics & Traffic Sources',
+    contacts: '6. Contact Messages & Feedback Inbox',
+    pricing: '7. Upgrade & Pricing Modal Configuration',
+    security: '8. Security, Sessions & Audit Logs',
+    health: '9. Application Health, SEO & Error Logs',
+    settings: '10. Control Center Settings & Notifications'
   };
 
   function switchTab(tabKey) {
@@ -2073,17 +2381,15 @@
   async function loadActiveTab() {
     try {
       if (currentTab === 'overview') await loadOverview();
-      else if (currentTab === 'analytics') await loadAnalytics();
+      else if (currentTab === 'visitors') await loadVisitors();
+      else if (currentTab === 'activity') await loadActivity();
       else if (currentTab === 'downloads') await loadDownloads();
+      else if (currentTab === 'analytics') await loadAnalytics();
       else if (currentTab === 'contacts') await loadContacts();
-      else if (currentTab === 'feedback') await loadFeedback();
-      else if (currentTab === 'errors') await loadErrors();
-      else if (currentTab === 'health') await loadHealth();
-      else if (currentTab === 'seo') await loadSeo();
-      else if (currentTab === 'notifications') await loadNotifications();
-      else if (currentTab === 'integrations') await loadIntegrations();
+      else if (currentTab === 'pricing') await loadPricing();
       else if (currentTab === 'security') await loadSecurity();
-      else if (currentTab === 'settings') await loadSettings();
+      else if (currentTab === 'health') await loadHealthAndSeoAndErrors();
+      else if (currentTab === 'settings') await loadSettingsAndNotifications();
     } catch (err) {
       showToast(err.message || 'Failed to load data');
     }
@@ -2101,13 +2407,13 @@
   // ==================== 1. LOAD OVERVIEW ====================
   async function loadOverview() {
     const data = await apiFetch('/api/admin/overview?' + buildRangeQuery());
+    const kpi = data.summary_kpis || {};
     const dlCur = data.downloads.current;
     const dlPrev = data.downloads.previous;
     const tr = data.traffic;
     const ct = data.contacts;
     const hl = data.health;
 
-    // Update sidebar badges
     const unreadBadge = $('navUnreadBadge');
     if (ct.unread_count > 0) {
       unreadBadge.textContent = ct.unread_count;
@@ -2116,12 +2422,10 @@
       unreadBadge.style.display = 'none';
     }
 
-    const fbBadge = $('navFeedbackBadge');
-    if (ct.feedback_count > 0) {
-      fbBadge.textContent = ct.feedback_count;
-      fbBadge.style.display = 'inline-block';
-    } else {
-      fbBadge.style.display = 'none';
+    const visBadge = $('navVisitorsBadge');
+    if (kpi.unique_visitors_all_time > 0) {
+      visBadge.textContent = kpi.unique_visitors_all_time;
+      visBadge.style.display = 'inline-block';
     }
 
     const errBadge = $('navErrorsBadge');
@@ -2132,50 +2436,50 @@
       errBadge.style.display = 'none';
     }
 
-    // Most used platform
-    let topPlat = '—';
-    let topPlatCount = 0;
-    Object.entries(dlCur.by_platform || {}).forEach(([k, v]) => {
-      if (v.total > topPlatCount) {
-        topPlatCount = v.total;
-        topPlat = k.toUpperCase();
-      }
-    });
-
     $('overviewKpiGrid').innerHTML = `
       <div class="card">
-        <div class="kpi-label"><span>First-Party Page Views</span><span class="source-tag">Server Log</span></div>
-        <div class="kpi-value">${tr.first_party_page_views}</div>
-        <div class="kpi-foot">${formatDelta(tr.first_party_page_views, tr.prev_first_party_page_views)}<span>GA4: ${esc(tr.ga4_measurement_id)}</span></div>
+        <div class="kpi-label"><span>Unique Visitors</span><span class="source-tag">First-Party ID</span></div>
+        <div class="kpi-value">${kpi.unique_visitors_window ?? 0}</div>
+        <div class="kpi-foot"><span>All-Time: <strong>${kpi.unique_visitors_all_time ?? 0}</strong></span><span>Sessions: <strong>${kpi.total_sessions_window ?? 0}</strong></span></div>
       </div>
       <div class="card">
-        <div class="kpi-label"><span>Total Parse &amp; Download Attempts</span><span class="source-tag">download-stats</span></div>
-        <div class="kpi-value">${dlCur.total_attempts}</div>
-        <div class="kpi-foot">${formatDelta(dlCur.total_attempts, dlPrev.total_attempts)}<span>Parse: ${dlCur.parse_total} | Media: ${dlCur.file_download_total}</span></div>
+        <div class="kpi-label"><span>Active Visitors (24h / 7d)</span><span class="source-tag">Live Activity</span></div>
+        <div class="kpi-value">${kpi.active_users_24h ?? 0} <span style="font-size:15px;color:var(--text-secondary);">/ ${kpi.active_users_7d ?? 0}</span></div>
+        <div class="kpi-foot"><span>Page Views: <strong>${tr.first_party_page_views}</strong></span><span>Staff Users: <strong>${kpi.total_registered_users ?? 1}</strong></span></div>
       </div>
       <div class="card">
-        <div class="kpi-label"><span>Successful Operations</span><span class="source-tag">download-stats</span></div>
-        <div class="kpi-value" style="color:var(--success);">${dlCur.total_success}</div>
-        <div class="kpi-foot"><span>Success Rate: <strong>${dlCur.success_rate_pct !== null ? dlCur.success_rate_pct + '%' : '—'}</strong></span><span>Avg: ${dlCur.avg_duration_ms}ms</span></div>
+        <div class="kpi-label"><span>Total Link Submissions</span><span class="source-tag">/api/parse</span></div>
+        <div class="kpi-value">${dlCur.parse_total}</div>
+        <div class="kpi-foot"><span>Valid: <strong style="color:var(--success);">${dlCur.parse_success}</strong></span><span>Invalid/Failed: <strong style="color:${dlCur.parse_failed > 0 ? 'var(--danger)' : 'inherit'};">${dlCur.parse_failed}</strong></span></div>
       </div>
       <div class="card">
-        <div class="kpi-label"><span>Failed Operations</span><span class="source-tag">download-stats</span></div>
-        <div class="kpi-value" style="color:${dlCur.total_failed > 0 ? 'var(--danger)' : 'var(--text-primary)'};">${dlCur.total_failed}</div>
-        <div class="kpi-foot"><span>Aborted by user: ${dlCur.file_download_aborted}</span><span>Top: ${esc(topPlat)}</span></div>
+        <div class="kpi-label"><span>Download Attempts</span><span class="source-tag">Stream / ZIP</span></div>
+        <div class="kpi-value">${dlCur.file_download_total}</div>
+        <div class="kpi-foot">${formatDelta(dlCur.total_attempts, dlPrev.total_attempts)}<span>All-Time DL: <strong>${kpi.total_videos_downloaded_all_time ?? 0}</strong></span></div>
       </div>
       <div class="card">
-        <div class="kpi-label"><span>Contact Inquiries</span><span class="source-tag">contact-messages</span></div>
+        <div class="kpi-label"><span>Successful Downloads</span><span class="source-tag">Verified Stream</span></div>
+        <div class="kpi-value" style="color:var(--success);">${dlCur.file_download_success}</div>
+        <div class="kpi-foot"><span>Success Rate: <strong>${kpi.download_success_rate_pct !== null && kpi.download_success_rate_pct !== undefined ? kpi.download_success_rate_pct + '%' : '—'}</strong></span><span>Client Saved: <strong>${kpi.client_confirmed_downloads ?? 0}</strong></span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>Failed / Aborted Downloads</span><span class="source-tag">Diagnostics</span></div>
+        <div class="kpi-value" style="color:${dlCur.file_download_failed > 0 ? 'var(--danger)' : 'var(--text-primary)'};">${dlCur.file_download_failed}</div>
+        <div class="kpi-foot"><span>Cancelled: <strong>${dlCur.file_download_aborted}</strong></span><span>Avg Latency: <strong>${dlCur.avg_duration_ms}ms</strong></span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-label"><span>Contact &amp; Support Inbox</span><span class="source-tag">contact-messages</span></div>
         <div class="kpi-value">${ct.total_received}</div>
         <div class="kpi-foot"><span style="color:${ct.unread_count > 0 ? 'var(--warning)' : 'inherit'}">Unread: <strong>${ct.unread_count}</strong></span><span>Unresolved: <strong>${ct.unresolved_count}</strong></span></div>
       </div>
       <div class="card">
-        <div class="kpi-label"><span>System Health &amp; Errors</span><span class="source-tag">Runtime</span></div>
+        <div class="kpi-label"><span>Application Health</span><span class="source-tag">Runtime</span></div>
         <div class="kpi-value"><span class="status-dot status-ok" style="font-size:18px;">Healthy</span></div>
-        <div class="kpi-foot"><span>Errors in window: ${hl.recent_errors_count}</span><span>Uptime: ${formatUptime(hl.uptime_seconds)}</span></div>
+        <div class="kpi-foot"><span>Errors: <strong>${hl.recent_errors_count}</strong></span><span>Uptime: <strong>${formatUptime(hl.uptime_seconds)}</strong></span></div>
       </div>
     `;
 
-    // Render daily bar chart
+    // Daily bar chart
     const series = Array.isArray(data.daily_series) ? data.daily_series.slice(-14) : [];
     let maxVal = 1;
     series.forEach(d => {
@@ -2196,86 +2500,303 @@
       `;
     }).join('');
 
-    // Platform table
-    const platRows = Object.entries(dlCur.by_platform || {}).map(([plat, st]) => `
+    // Popular platforms table
+    const ranking = Array.isArray(data.most_popular_platforms) ? data.most_popular_platforms : [];
+    $('overviewPlatformTbody').innerHTML = ranking.map(r => `
       <tr>
-        <td style="text-transform:capitalize;font-weight:600;">${esc(plat)}</td>
-        <td class="mono">${st.total}</td>
-        <td class="mono" style="color:var(--success);">${st.success}</td>
-        <td class="mono" style="color:${st.failed > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${st.failed}</td>
+        <td style="text-transform:capitalize;font-weight:700;">${esc(r.platform)}</td>
+        <td class="mono">${r.total}</td>
+        <td class="mono" style="color:var(--success);">${r.success}</td>
+        <td class="mono" style="color:${r.failed > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${r.failed}</td>
+        <td class="mono">${r.share_pct}%</td>
       </tr>
     `).join('');
-    $('overviewPlatformTbody').innerHTML = platRows;
 
-    // Contact funnel
-    const fn = ct.funnel_period || {};
-    $('overviewFunnelRow').innerHTML = `
-      <div class="funnel-step"><span>1. Form Opened</span><strong>${fn.form_opened || 0}</strong></div>
-      <div class="funnel-step"><span>2. Validation Failed</span><strong style="color:var(--warning);">${fn.validation_failed || 0}</strong></div>
-      <div class="funnel-step"><span>3. Submit Attempted</span><strong>${fn.submission_attempted || 0}</strong></div>
-      <div class="funnel-step"><span>4. Stored in Inbox</span><strong style="color:var(--success);">${fn.submission_stored || 0}</strong></div>
-    `;
+    // Recent activity feed
+    const recentAct = Array.isArray(data.recent_activity) ? data.recent_activity.slice(0, 12) : [];
+    $('overviewRecentActivityTbody').innerHTML = recentAct.length
+      ? recentAct.map(a => `
+          <tr>
+            <td class="mono" style="font-size:11.5px;">${esc((a.timestamp || '').slice(11, 19))}</td>
+            <td><button type="button" class="btn btn-secondary btn-sm mono" data-open-visitor="${esc(a.visitor_id)}" style="padding:2px 6px;font-size:11px;">${esc((a.visitor_id || '').slice(0, 12))}</button></td>
+            <td>${renderIpBadge(a.ip_address, a.ip_version)}</td>
+            <td class="mono" style="font-size:11.5px;">${esc(a.event_type)}</td>
+            <td style="text-transform:capitalize;">${esc(a.platform)}</td>
+            <td class="mono" style="font-size:11.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(a.normalized_hostname)}</td>
+            <td>${renderStatusBadge(a.status)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="7" style="color:var(--text-muted);">No activity recorded yet.</td></tr>`;
 
-    // Health summary
+    $('overviewRecentActivityTbody').querySelectorAll('[data-open-visitor]').forEach(btn => {
+      btn.addEventListener('click', () => openVisitorDetailModal(btn.dataset.openVisitor));
+    });
+
+    // Top error categories
+    const topErrors = Array.isArray(data.top_error_types) ? data.top_error_types : [];
+    $('overviewTopErrorsTbody').innerHTML = topErrors.length
+      ? topErrors.map(e => `<tr><td class="mono" style="color:var(--danger);">${esc(e.category)}</td><td class="mono">${e.count}</td></tr>`).join('')
+      : `<tr><td colspan="2" style="color:var(--text-muted);">Zero errors in selected window</td></tr>`;
+
     const lastBk = hl.last_backup
-      ? `${esc(hl.last_backup.filename)} (${esc(hl.last_backup.created_at.slice(0, 19).replace('T', ' '))})`
+      ? `${esc(hl.last_backup.filename)}`
       : 'No snapshot created yet';
     $('overviewHealthSummary').innerHTML = `
-      <div class="toggle-row"><span>Email Notifications (Resend API)</span><span class="status-dot ${hl.email_configured ? 'status-ok' : 'status-warn'}">${hl.email_configured ? 'Configured' : 'Not Configured (Server Inbox Active)'}</span></div>
-      <div class="toggle-row"><span>GA4 Data API Reporting</span><span class="status-dot ${tr.ga4_data_api_configured ? 'status-ok' : 'status-neutral'}">${tr.ga4_data_api_configured ? 'Connected' : 'Frontend Tag Only (G-S9BHCYX6EN)'}</span></div>
-      <div class="toggle-row"><span>Last Snapshot Backup</span><span class="mono" style="font-size:12px;">${lastBk}</span></div>
+      <div class="toggle-row"><span>Email Notifications (Resend API)</span><span class="status-dot ${hl.email_configured ? 'status-ok' : 'status-warn'}">${hl.email_configured ? 'Configured' : 'Server Inbox Mode'}</span></div>
+      <div class="toggle-row"><span>Last Snapshot Backup</span><span class="mono" style="font-size:11.5px;">${lastBk}</span></div>
     `;
   }
 
-  // ==================== 2. LOAD ANALYTICS ====================
-  async function loadAnalytics() {
-    const data = await apiFetch('/api/admin/analytics?' + buildRangeQuery());
-    const gs = data.ga4_status;
-    const fp = data.first_party_telemetry;
+  // ==================== 2. LOAD VISITORS & USERS ====================
+  async function loadVisitors() {
+    const params = new URLSearchParams({
+      q: $('visitorSearchInput').value.trim(),
+      status: $('visitorStatusFilter').value,
+      platform: $('visitorPlatformFilter').value,
+      ip_version: $('visitorIpVerFilter').value,
+      sort_by: $('visitorSortBy').value,
+      sort_dir: 'desc',
+      page: String(visitorsPage),
+      page_size: '25'
+    });
+    const data = await apiFetch('/api/admin/visitors?' + params.toString());
+    const s = data.summary || {};
 
-    $('ga4MeasurementLabel').textContent = gs.measurement_id || 'G-S9BHCYX6EN';
-    const badge = $('ga4ApiBadge');
-    if (gs.data_api_active) {
-      badge.className = 'status-dot status-ok';
-      badge.textContent = 'GA4 Data API Live';
-    } else {
-      badge.className = 'status-dot status-warn';
-      badge.textContent = 'Frontend Tag Active · Server Data API Optional';
+    $('visitorsSummaryKpis').innerHTML = `
+      <div class="card"><div class="kpi-label"><span>Total Tracked Visitors</span><span class="source-tag">visitors-index</span></div><div class="kpi-value">${s.total_tracked_visitors || 0}</div></div>
+      <div class="card"><div class="kpi-label"><span>Active Last 24h / 7d</span><span class="source-tag">Live Window</span></div><div class="kpi-value">${s.active_24h || 0} <span style="font-size:15px;color:var(--text-secondary);">/ ${s.active_7d || 0}</span></div></div>
+      <div class="card"><div class="kpi-label"><span>IPv4 vs IPv6 Visitors</span><span class="source-tag">IP Version</span></div><div class="kpi-value">${s.ipv4_visitors || 0} <span style="font-size:14px;color:var(--text-secondary);">IPv4</span> · ${s.ipv6_visitors || 0} <span style="font-size:14px;color:var(--text-secondary);">IPv6</span></div></div>
+      <div class="card"><div class="kpi-label"><span>Blocked Visitors / IPs</span><span class="source-tag">Access Policy</span></div><div class="kpi-value" style="color:${(s.blocked_count || 0) > 0 ? 'var(--danger)' : 'var(--text-primary)'};">${s.blocked_count || 0}</div></div>
+    `;
+
+    const items = data.items || [];
+    visitorsTotalPages = Math.max(1, Math.ceil((data.total || 0) / (data.page_size || 25)));
+    $('visitorsPaginationInfo').textContent = `Showing ${items.length} of ${data.total || 0} visitors (Page ${data.page} of ${visitorsTotalPages})`;
+    $('btnVisitorsPrev').disabled = data.page <= 1;
+    $('btnVisitorsNext').disabled = data.page >= visitorsTotalPages;
+
+    $('visitorsTableBody').innerHTML = items.length
+      ? items.map(v => `
+          <tr>
+            <td class="mono" style="font-size:11.5px;font-weight:700;">${esc(v.visitor_id)}</td>
+            <td>${renderIpBadge(v.last_ip, v.ip_version)}</td>
+            <td class="mono" style="font-size:11.5px;">${esc((v.first_seen_at || '').slice(0, 19).replace('T', ' '))}</td>
+            <td class="mono" style="font-size:11.5px;">${esc((v.last_active_at || '').slice(0, 19).replace('T', ' '))}</td>
+            <td class="mono">${v.session_count || 1}</td>
+            <td class="mono">${v.links_submitted || 0}</td>
+            <td class="mono">${v.download_attempts || 0}</td>
+            <td class="mono"><span style="color:var(--success);font-weight:700;">${v.successful_downloads || 0}</span> / ${v.client_confirmed_downloads || 0}</td>
+            <td class="mono" style="color:${(v.failed_downloads || 0) > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${v.failed_downloads || 0}</td>
+            <td style="text-transform:capitalize;">${esc(v.most_used_platform || 'none')}</td>
+            <td class="mono" style="font-size:11px;">${esc(v.last_activity_type || '—')}</td>
+            <td>${v.blocked ? '<span class="badge-pill badge-err">Blocked</span>' : '<span class="badge-pill badge-ok">Active</span>'}</td>
+            <td><button type="button" class="btn btn-secondary btn-sm" data-vid="${esc(v.visitor_id)}">Inspect</button></td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="13" style="color:var(--text-muted);">No matching visitor records found.</td></tr>`;
+
+    $('visitorsTableBody').querySelectorAll('[data-vid]').forEach(btn => {
+      btn.addEventListener('click', () => openVisitorDetailModal(btn.dataset.vid));
+    });
+  }
+
+  $('btnFilterVisitors').addEventListener('click', () => {
+    visitorsPage = 1;
+    loadVisitors();
+  });
+  $('btnVisitorsPrev').addEventListener('click', () => {
+    if (visitorsPage > 1) { visitorsPage--; loadVisitors(); }
+  });
+  $('btnVisitorsNext').addEventListener('click', () => {
+    if (visitorsPage < visitorsTotalPages) { visitorsPage++; loadVisitors(); }
+  });
+
+  async function openVisitorDetailModal(vid) {
+    if (!vid) return;
+    try {
+      const data = await apiFetch('/api/admin/visitors/' + encodeURIComponent(vid));
+      const p = data.profile;
+      activeVisitorId = p.visitor_id;
+
+      $('vdModalTitle').textContent = `Visitor Profile — ${p.visitor_id}`;
+      $('vdModalSubtitle').textContent = `${p.user_agent_summary} (${p.device_category}) · First seen ${p.first_seen_at.slice(0, 19).replace('T', ' ')}`;
+
+      $('vdKpiGrid').innerHTML = `
+        <div class="card" style="padding:12px;"><div class="kpi-label"><span>Sessions</span></div><div class="kpi-value" style="font-size:20px;">${p.session_count || 1}</div></div>
+        <div class="card" style="padding:12px;"><div class="kpi-label"><span>Links Submitted</span></div><div class="kpi-value" style="font-size:20px;">${p.links_submitted || 0}</div></div>
+        <div class="card" style="padding:12px;"><div class="kpi-label"><span>Downloads</span></div><div class="kpi-value" style="font-size:20px;color:var(--success);">${p.successful_downloads || 0}</div></div>
+        <div class="card" style="padding:12px;"><div class="kpi-label"><span>Client Saved</span></div><div class="kpi-value" style="font-size:20px;">${p.client_confirmed_downloads || 0}</div></div>
+        <div class="card" style="padding:12px;"><div class="kpi-label"><span>Failed</span></div><div class="kpi-value" style="font-size:20px;color:${p.failed_downloads > 0 ? 'var(--danger)' : 'inherit'};">${p.failed_downloads || 0}</div></div>
+      `;
+
+      $('vdBlockedToggle').checked = Boolean(p.blocked);
+      $('vdAdminNotes').value = p.admin_notes || '';
+
+      const ipHist = p.ip_history || [];
+      $('vdIpHistoryTbody').innerHTML = ipHist.map(h => `
+        <tr>
+          <td class="mono" style="font-size:11.5px;">${esc(h.ip)}</td>
+          <td><span class="badge-pill ${h.ip_version === 'IPv6' ? 'badge-ipv6' : 'badge-ipv4'}">${esc(h.ip_version)}</span></td>
+          <td class="mono">${h.count}</td>
+          <td class="mono" style="font-size:11px;">${esc((h.last_seen || '').slice(0, 19).replace('T', ' '))}</td>
+        </tr>
+      `).join('');
+
+      const timeline = data.recent_activity_timeline || [];
+      $('vdTimelineTbody').innerHTML = timeline.length
+        ? timeline.slice(0, 50).map(ev => `
+            <tr>
+              <td class="mono" style="font-size:11px;">${esc((ev.timestamp || '').slice(0, 19).replace('T', ' '))}</td>
+              <td class="mono" style="font-size:11.5px;">${esc(ev.event_type)}</td>
+              <td style="text-transform:capitalize;">${esc(ev.platform)}</td>
+              <td class="mono" style="font-size:11px;">${esc(ev.normalized_hostname)}</td>
+              <td class="mono" style="font-size:11px;">${esc(ev.download_stage || '—')}</td>
+              <td>${renderStatusBadge(ev.status)}</td>
+            </tr>
+          `).join('')
+        : `<tr><td colspan="6" style="color:var(--text-muted);">No timeline events found.</td></tr>`;
+
+      $('visitorDetailModal').classList.add('show');
+    } catch (err) {
+      showToast(err.message);
     }
-
-    $('ga4StatusBody').innerHTML = `
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">
-        <strong>Installed Frontend Tag:</strong> Google Analytics 4 (<code class="mono">${esc(gs.measurement_id)}</code>) is active in <code class="mono">static/index.html</code> and tracks:
-        ${gs.tracked_client_events.map(e => `<code class="mono" style="margin-right:6px;">${esc(e)}</code>`).join('')}
-      </p>
-      ${gs.data_api_active ? `<div class="alert-box alert-success show">Connected to GA4 Property ID <code class="mono">${esc(gs.measurement_id)}</code> via Google Service Account.</div>` : `
-        <div style="font-size:12.5px;color:var(--text-muted);background:var(--bg-canvas);padding:10px 12px;border-radius:8px;border:1px solid var(--border-subtle);">
-          <strong>Truthful Data Source Notice:</strong> Unique visitor counts, geographic country distribution, and GA4 session channels are collected in your Google Analytics 4 property (<code class="mono">${esc(gs.measurement_id)}</code>). To pull live GA4 Data API reports directly into this panel, set <code class="mono">GA4_PROPERTY_ID</code> and <code class="mono">GOOGLE_SERVICE_ACCOUNT_JSON</code> in <code class="mono">.env</code>. Below is DownDouyin's real first-party server telemetry.
-        </div>
-      `}
-    `;
-
-    $('analyticsFirstPartyKpis').innerHTML = `
-      <div class="card"><div class="kpi-label"><span>First-Party Page Views</span><span class="source-tag">visitor-events</span></div><div class="kpi-value">${fp.page_views}</div></div>
-      <div class="card"><div class="kpi-label"><span>Link Parse Submits</span><span class="source-tag">download-stats</span></div><div class="kpi-value">${fp.link_submits}</div></div>
-      <div class="card"><div class="kpi-label"><span>Completed Downloads</span><span class="source-tag">download-stats</span></div><div class="kpi-value" style="color:var(--success);">${fp.completed_downloads}</div></div>
-      <div class="card"><div class="kpi-label"><span>Contact Form Opens</span><span class="source-tag">contact-events</span></div><div class="kpi-value">${fp.contact_form_opens}</div></div>
-    `;
-
-    const refEntries = Object.entries(fp.referrers || {}).sort((a, b) => b[1] - a[1]);
-    $('analyticsReferrersTbody').innerHTML = refEntries.length
-      ? refEntries.map(([host, cnt]) => `<tr><td class="mono">${esc(host)}</td><td class="mono">${cnt}</td></tr>`).join('')
-      : `<tr><td colspan="2" style="color:var(--text-muted);">No page view events in selected window</td></tr>`;
-
-    const devRows = Object.entries(fp.devices || {}).map(([k, v]) => `<tr><td>Device Category</td><td style="text-transform:capitalize;">${esc(k)}</td><td class="mono">${v}</td></tr>`);
-    const langRows = Object.entries(fp.languages || {}).map(([k, v]) => `<tr><td>Browser Language</td><td class="mono">${esc(k.toUpperCase())}</td><td class="mono">${v}</td></tr>`);
-    $('analyticsDeviceLangTbody').innerHTML = devRows.concat(langRows).join('');
   }
 
-  // ==================== 3. LOAD DOWNLOADS ====================
+  $('btnCloseVisitorDetail').addEventListener('click', () => {
+    $('visitorDetailModal').classList.remove('show');
+  });
+
+  $('btnSaveVisitorControl').addEventListener('click', async () => {
+    if (!activeVisitorId) return;
+    try {
+      await apiFetch('/api/admin/visitors/' + encodeURIComponent(activeVisitorId), {
+        method: 'PATCH',
+        body: JSON.stringify({
+          blocked: $('vdBlockedToggle').checked,
+          admin_notes: $('vdAdminNotes').value.trim()
+        })
+      });
+      showToast('Updated visitor policy');
+      $('visitorDetailModal').classList.remove('show');
+      if (currentTab === 'visitors') loadVisitors();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+
+  // ==================== 3. LOAD ACTIVITY LOGS ====================
+  async function loadActivity() {
+    const params = new URLSearchParams({
+      range: currentRange,
+      q: $('activitySearchInput').value.trim(),
+      category: $('activityCategoryFilter').value,
+      platform: $('activityPlatformFilter').value,
+      status: $('activityStatusFilter').value,
+      ip_version: $('activityIpVerFilter').value,
+      page: String(activityPage),
+      page_size: '30'
+    });
+    if (currentRange === 'custom' && customStart && customEnd) {
+      params.set('start', customStart);
+      params.set('end', customEnd);
+    }
+    const data = await apiFetch('/api/admin/activity?' + params.toString());
+    const items = data.items || [];
+    activityTotalPages = Math.max(1, Math.ceil((data.total || 0) / (data.page_size || 30)));
+    $('activityPaginationInfo').textContent = `Showing ${items.length} of ${data.total || 0} activity events (Page ${data.page} of ${activityTotalPages})`;
+    $('btnActivityPrev').disabled = data.page <= 1;
+    $('btnActivityNext').disabled = data.page >= activityTotalPages;
+
+    $('activityTableBody').innerHTML = items.length
+      ? items.map(ev => `
+          <tr>
+            <td class="mono" style="font-size:11.5px;">${esc((ev.timestamp || '').slice(0, 19).replace('T', ' '))}</td>
+            <td><button type="button" class="btn btn-secondary btn-sm mono" data-act-vid="${esc(ev.visitor_id)}" style="padding:2px 6px;font-size:11px;">${esc((ev.visitor_id || '').slice(0, 12))}</button></td>
+            <td>${renderIpBadge(ev.ip_address, ev.ip_version)}</td>
+            <td class="mono" style="font-size:11.5px;font-weight:600;">${esc(ev.event_type)}</td>
+            <td style="text-transform:capitalize;">${esc(ev.platform)}</td>
+            <td class="mono" style="font-size:11.5px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(ev.normalized_hostname)}">${esc(ev.normalized_hostname)}</td>
+            <td class="mono" style="font-size:11px;">${esc(ev.download_stage || ev.download_method || '—')}</td>
+            <td>${renderStatusBadge(ev.status)}</td>
+            <td class="mono" style="font-size:11.5px;">${ev.duration_ms !== undefined ? ev.duration_ms + 'ms' : '—'}</td>
+            <td><button type="button" class="btn btn-secondary btn-sm" data-act-id="${esc(ev.event_id)}">Details</button></td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="10" style="color:var(--text-muted);">No activity events match the current filter criteria.</td></tr>`;
+
+    $('activityTableBody').querySelectorAll('[data-act-vid]').forEach(btn => {
+      btn.addEventListener('click', () => openVisitorDetailModal(btn.dataset.actVid));
+    });
+    $('activityTableBody').querySelectorAll('[data-act-id]').forEach(btn => {
+      btn.addEventListener('click', () => openActivityDetailModal(btn.dataset.actId));
+    });
+  }
+
+  $('btnFilterActivity').addEventListener('click', () => {
+    activityPage = 1;
+    loadActivity();
+  });
+  $('btnActivityPrev').addEventListener('click', () => {
+    if (activityPage > 1) { activityPage--; loadActivity(); }
+  });
+  $('btnActivityNext').addEventListener('click', () => {
+    if (activityPage < activityTotalPages) { activityPage++; loadActivity(); }
+  });
+
+  async function openActivityDetailModal(eventId) {
+    if (!eventId) return;
+    try {
+      const data = await apiFetch('/api/admin/activity/' + encodeURIComponent(eventId));
+      const ev = data.event;
+      $('adModalTitle').textContent = `Activity Event — ${ev.event_type}`;
+      $('adModalSubtitle').textContent = `Event ID: ${ev.event_id} · Request ID: ${ev.request_id}`;
+
+      $('adMetadataGrid').innerHTML = `
+        <div><span class="form-label">Timestamp (UTC)</span><div class="mono">${esc(ev.timestamp)}</div></div>
+        <div><span class="form-label">Visitor / Session</span><div class="mono">${esc(ev.visitor_id)} / ${esc(ev.session_id)}</div></div>
+        <div><span class="form-label">Client IP Address</span><div>${renderIpBadge(ev.ip_address, ev.ip_version)}</div></div>
+        <div><span class="form-label">Platform &amp; Category</span><div style="text-transform:capitalize;">${esc(ev.platform)} (${esc(ev.event_category)})</div></div>
+        <div><span class="form-label">Normalized Hostname</span><div class="mono">${esc(ev.normalized_hostname)}</div></div>
+        <div><span class="form-label">URL Valid / DL Initiated</span><div class="mono">valid=${String(ev.valid_url)} · dl=${String(ev.download_initiated)}</div></div>
+        <div><span class="form-label">Download Stage / Method</span><div class="mono">${esc(ev.download_stage || '—')} (${esc(ev.download_method || '—')})</div></div>
+        <div><span class="form-label">Duration / Bytes</span><div class="mono">${ev.duration_ms ?? 0}ms · ${ev.bytes_transferred ? formatBytes(ev.bytes_transferred) : '—'}</div></div>
+        <div style="grid-column:1 / -1;"><span class="form-label">Summary / Error Detail</span><div class="mono">${esc(ev.detail || ev.error_category || '—')}</div></div>
+      `;
+
+      const corr = data.correlated_request_events || [];
+      $('adCorrelatedTbody').innerHTML = corr.map(c => `
+        <tr>
+          <td class="mono" style="font-size:11.5px;">${esc((c.timestamp || '').slice(0, 19).replace('T', ' '))}</td>
+          <td class="mono">${esc(c.event_type)}</td>
+          <td class="mono">${esc(c.download_stage || '—')}</td>
+          <td>${renderStatusBadge(c.status)}</td>
+          <td class="mono">${c.duration_ms !== undefined ? c.duration_ms + 'ms' : '—'}</td>
+          <td class="mono">${c.bytes_transferred ? formatBytes(c.bytes_transferred) : '—'}</td>
+        </tr>
+      `).join('');
+
+      $('activityDetailModal').classList.add('show');
+    } catch (err) {
+      showToast(err.message);
+    }
+  }
+
+  $('btnCloseActivityDetail').addEventListener('click', () => {
+    $('activityDetailModal').classList.remove('show');
+  });
+
+  // ==================== 4. LOAD DOWNLOADS ====================
   async function loadDownloads() {
     const data = await apiFetch('/api/admin/downloads?' + buildRangeQuery());
     $('downloadsWindowLabel').textContent = `${data.window.start_date} → ${data.window.end_date}`;
+
+    const st = data.lifecycle_stages || {};
+    $('downloadsLifecycleRow').innerHTML = `
+      <div class="funnel-step"><span>Stage 1: Parse Validated</span><strong>${st.stage_1_request_processed || 0}</strong></div>
+      <div class="funnel-step"><span>Stage 2: Upstream Retrieved</span><strong>${(st.stage_3_stream_started || 0) + (st.stage_2_upstream_retrieved || 0)}</strong></div>
+      <div class="funnel-step"><span>Stage 3: Server Stream Completed</span><strong style="color:var(--success);">${st.stage_3_stream_started || 0}</strong></div>
+      <div class="funnel-step"><span>Stage 4: Browser File Saved</span><strong style="color:var(--accent-hover);">${st.stage_4_client_completed || 0}</strong></div>
+    `;
 
     const rows = Object.entries(data.by_platform || {}).map(([plat, b]) => `
       <tr>
@@ -2285,6 +2806,7 @@
         <td class="mono" style="color:${b.parse_failed > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${b.parse_failed}</td>
         <td class="mono">${b.download_total}</td>
         <td class="mono" style="color:var(--success);">${b.download_success}</td>
+        <td class="mono" style="color:var(--accent-hover);">${b.client_completed || 0}</td>
         <td class="mono" style="color:${b.download_failed > 0 ? 'var(--danger)' : 'var(--text-muted)'};">${b.download_failed}</td>
         <td class="mono">${b.download_aborted}</td>
         <td class="mono">${b.avg_latency_ms} ms</td>
@@ -2312,85 +2834,117 @@
       : `<tr><td colspan="2" style="color:var(--text-muted);">Zero errors recorded in window</td></tr>`;
   }
 
-  // ==================== 4. LOAD CONTACTS INBOX ====================
+  // ==================== 5. LOAD PLATFORM ANALYTICS ====================
+  async function loadAnalytics() {
+    const data = await apiFetch('/api/admin/analytics?' + buildRangeQuery());
+    const gs = data.ga4_status;
+    const fp = data.first_party_telemetry;
+
+    $('ga4MeasurementLabel').textContent = gs.measurement_id || 'G-S9BHCYX6EN';
+    const badge = $('ga4ApiBadge');
+    if (gs.data_api_active) {
+      badge.className = 'status-dot status-ok';
+      badge.textContent = 'GA4 Data API Live';
+    } else {
+      badge.className = 'status-dot status-ok';
+      badge.textContent = 'First-Party Telemetry + GA4 Tag Active';
+    }
+
+    $('ga4StatusBody').innerHTML = `
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+        <strong>Installed Frontend Tag:</strong> Google Analytics 4 (<code class="mono">${esc(gs.measurement_id)}</code>) + DownDouyin First-Party Activity Engine (<code class="mono">logs/activity-events.jsonl</code>).
+      </p>
+    `;
+
+    $('analyticsFirstPartyKpis').innerHTML = `
+      <div class="card"><div class="kpi-label"><span>First-Party Page Views</span><span class="source-tag">visitor-events</span></div><div class="kpi-value">${fp.page_views}</div></div>
+      <div class="card"><div class="kpi-label"><span>Link Parse Submits</span><span class="source-tag">download-stats</span></div><div class="kpi-value">${fp.link_submits}</div></div>
+      <div class="card"><div class="kpi-label"><span>Download Button Clicks</span><span class="source-tag">UI Telemetry</span></div><div class="kpi-value">${fp.download_button_clicks}</div></div>
+      <div class="card"><div class="kpi-label"><span>Completed Downloads</span><span class="source-tag">download-stats</span></div><div class="kpi-value" style="color:var(--success);">${fp.completed_downloads}</div></div>
+    `;
+
+    const refEntries = Object.entries(fp.referrers || {}).sort((a, b) => b[1] - a[1]);
+    $('analyticsReferrersTbody').innerHTML = refEntries.length
+      ? refEntries.map(([host, cnt]) => `<tr><td class="mono">${esc(host)}</td><td class="mono">${cnt}</td></tr>`).join('')
+      : `<tr><td colspan="2" style="color:var(--text-muted);">No page view events in selected window</td></tr>`;
+
+    const devRows = Object.entries(fp.devices || {}).map(([k, v]) => `<tr><td>Device Category</td><td style="text-transform:capitalize;">${esc(k)}</td><td class="mono">${v}</td></tr>`);
+    const langRows = Object.entries(fp.languages || {}).map(([k, v]) => `<tr><td>Browser Language</td><td class="mono">${esc(k.toUpperCase())}</td><td class="mono">${v}</td></tr>`);
+    $('analyticsDeviceLangTbody').innerHTML = devRows.concat(langRows).join('');
+  }
+
+  // ==================== 6. LOAD CONTACTS INBOX ====================
   async function loadContacts() {
     const q = $('contactSearchInput').value.trim();
     const status = $('contactStatusFilter').value;
+    const type = $('contactTypeFilter').value;
     const platform = $('contactPlatformFilter').value;
-    const params = new URLSearchParams({ q, status, platform, page_size: '50' });
+    const params = new URLSearchParams({ q, status, type, platform, page: '1', page_size: '100' });
     const data = await apiFetch('/api/admin/contacts?' + params.toString());
     cachedContacts = data.items || [];
 
     const fn = data.funnel || {};
     $('contactsFunnelBar').innerHTML = `
-      <div class="funnel-step"><span>Form Opened</span><strong>${fn.form_opened || 0}</strong></div>
-      <div class="funnel-step"><span>Validation Failed</span><strong style="color:var(--warning);">${fn.validation_failed || 0}</strong></div>
-      <div class="funnel-step"><span>Submit Attempted</span><strong>${fn.submission_attempted || 0}</strong></div>
-      <div class="funnel-step"><span>Stored in Inbox</span><strong style="color:var(--success);">${fn.submission_stored || 0}</strong></div>
-      <div class="funnel-step"><span>Email Alert Sent</span><strong style="color:var(--info);">${fn.email_sent || 0}</strong></div>
-      <div class="funnel-step"><span>Email Alert Failed</span><strong style="color:var(--danger);">${fn.email_failed || 0}</strong></div>
+      <div class="funnel-step"><span>1. Form Opened</span><strong>${fn.form_opened || 0}</strong></div>
+      <div class="funnel-step"><span>2. Validation Failed</span><strong style="color:var(--warning);">${fn.validation_failed || 0}</strong></div>
+      <div class="funnel-step"><span>3. Submit Attempted</span><strong>${fn.submission_attempted || 0}</strong></div>
+      <div class="funnel-step"><span>4. Stored in Inbox</span><strong style="color:var(--success);">${fn.submission_stored || 0}</strong></div>
+      <div class="funnel-step"><span>5. Email Sent</span><strong style="color:var(--info);">${fn.email_sent || 0}</strong></div>
     `;
 
     $('contactsTableBody').innerHTML = cachedContacts.length
       ? cachedContacts.map(item => {
-          const statusClass =
-            item.status === 'resolved' ? 'status-ok' :
-            item.status === 'in_progress' ? 'status-warn' :
-            item.status === 'spam' ? 'status-neutral' : 'status-err';
+          const stClass = item.status === 'resolved' ? 'status-ok' : item.status === 'spam' ? 'status-err' : 'status-warn';
+          const emStatus = item.email_notification_status === 'sent'
+            ? '<span class="status-dot status-ok">Sent</span>'
+            : item.email_notification_status === 'failed'
+            ? '<span class="status-dot status-err">Failed</span>'
+            : '<span class="source-tag">Inbox Stored</span>';
           return `
-            <tr style="${!item.read ? 'font-weight:700;' : ''}">
+            <tr style="${!item.read ? 'font-weight:600;' : ''}">
               <td class="mono" style="font-size:12px;">${esc(item.inquiry_id)}</td>
-              <td class="mono" style="font-size:12px;">${esc(item.timestamp.slice(0, 16).replace('T', ' '))}</td>
-              <td><span class="status-dot ${statusClass}">${esc(item.status)}${!item.read ? ' • NEW' : ''}</span></td>
+              <td class="mono" style="font-size:11.5px;">${esc((item.timestamp || '').slice(0, 19).replace('T', ' '))}</td>
+              <td><span class="status-dot ${stClass}" style="text-transform:capitalize;">${esc(item.status.replace('_', ' '))}</span></td>
+              <td style="text-transform:capitalize;">${esc((item.issue_type || 'inquiry').replace('_', ' '))}</td>
               <td>
                 <div>${esc(item.name)}</div>
                 <div class="mono" style="font-size:11px;color:var(--text-secondary);">${esc(item.email)}</div>
               </td>
-              <td>
-                <div>${esc(item.category)}</div>
-                <div style="font-size:11px;color:var(--text-muted);text-transform:capitalize;">${esc(item.platform)}</div>
-              </td>
-              <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.message)}</td>
-              <td class="mono" style="font-size:11.5px;">${esc(item.email_notification_status)}</td>
-              <td>
-                <button type="button" class="btn btn-secondary btn-sm" data-open-inquiry="${esc(item.inquiry_id)}">Inspect</button>
-              </td>
+              <td style="text-transform:capitalize;">${esc(item.platform)}</td>
+              <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.message)}</td>
+              <td>${emStatus}</td>
+              <td><button type="button" class="btn btn-secondary btn-sm" data-open-inquiry="${esc(item.inquiry_id)}">Manage</button></td>
             </tr>
           `;
         }).join('')
-      : `<tr><td colspan="8" style="color:var(--text-muted);">No contact inquiries match the current filter.</td></tr>`;
+      : `<tr><td colspan="9" style="color:var(--text-muted);">No contact inquiries match the current filter.</td></tr>`;
 
-    document.querySelectorAll('[data-open-inquiry]').forEach(btn => {
+    $('contactsTableBody').querySelectorAll('[data-open-inquiry]').forEach(btn => {
       btn.addEventListener('click', () => openContactDetailModal(btn.dataset.openInquiry));
     });
   }
 
   $('btnFilterContacts').addEventListener('click', loadContacts);
-  $('contactSearchInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') loadContacts();
-  });
 
   function openContactDetailModal(inquiryId) {
     const item = cachedContacts.find(c => c.inquiry_id === inquiryId);
     if (!item) return;
     activeContactItem = item;
     $('cdModalTitle').textContent = `Inquiry #${item.inquiry_id}`;
-    $('cdModalMeta').textContent = `Submitted ${item.timestamp} • Category: ${item.category} • Platform: ${item.platform}`;
+    $('cdModalMeta').textContent = `Submitted ${item.timestamp.slice(0, 19).replace('T', ' ')} UTC · Category: ${item.category} · Platform: ${item.platform}`;
     $('cdSenderName').textContent = item.name;
     $('cdSenderEmail').textContent = item.email;
+    $('btnMailtoSender').href = `mailto:${encodeURIComponent(item.email)}?subject=${encodeURIComponent('Re: Your DownDouyin Inquiry #' + item.inquiry_id)}`;
     $('cdMessageBody').textContent = item.message;
     $('cdStatusSelect').value = item.status || 'open';
     $('cdTypeSelect').value = item.issue_type || 'inquiry';
-    $('cdReadSelect').value = item.read ? 'true' : 'false';
+    $('cdReadSelect').value = item.read ? 'true' : 'true';
     $('cdAdminNotes').value = item.admin_notes || '';
-
-    const subj = encodeURIComponent(`Re: [DownDouyin Support #${item.inquiry_id}] ${item.category}`);
-    $('btnMailtoSender').href = `mailto:${encodeURIComponent(item.email)}?subject=${subj}`;
 
     const tl = Array.isArray(item.timeline) ? item.timeline : [];
     $('cdTimelineList').innerHTML = tl.map(t => `
       <div style="padding:4px 0;border-bottom:1px solid var(--border-subtle);">
-        <span class="mono" style="color:var(--text-muted);">${esc(t.timestamp.slice(0, 19).replace('T', ' '))}</span>
+        <span class="mono" style="color:var(--text-muted);">${esc((t.timestamp || '').slice(0, 19).replace('T', ' '))}</span>
         — <strong>${esc(t.actor)}</strong>: ${esc(t.detail || t.action)}
       </div>
     `).join('');
@@ -2398,17 +2952,18 @@
     $('contactDetailModal').classList.add('show');
   }
 
-  $('btnCopySenderEmail').addEventListener('click', () => {
-    if (!activeContactItem) return;
-    navigator.clipboard.writeText(activeContactItem.email).then(() => showToast('Copied email address'));
-  });
-
   const closeContactModal = () => {
     activeContactItem = null;
     $('contactDetailModal').classList.remove('show');
   };
   $('btnCloseContactDetail').addEventListener('click', closeContactModal);
   $('btnCancelContactDetail').addEventListener('click', closeContactModal);
+
+  $('btnCopySenderEmail').addEventListener('click', () => {
+    if (!activeContactItem) return;
+    navigator.clipboard?.writeText(activeContactItem.email);
+    showToast('Copied email address');
+  });
 
   $('btnSaveContactDetail').addEventListener('click', async () => {
     if (!activeContactItem) return;
@@ -2424,7 +2979,7 @@
       });
       showToast('Updated inquiry #' + activeContactItem.inquiry_id);
       closeContactModal();
-      loadActiveTab();
+      loadContacts();
     } catch (err) {
       showToast(err.message);
     }
@@ -2432,19 +2987,19 @@
 
   $('btnDeleteInquiry').addEventListener('click', () => {
     if (!activeContactItem) return;
-    const targetId = activeContactItem.inquiry_id;
+    const id = activeContactItem.inquiry_id;
     openConfirmModal(
-      'Delete Contact Record',
-      `Permanently delete inquiry #${targetId} from logs/contact-messages.jsonl? This action will be recorded in the audit log.`,
+      'Permanently Delete Inquiry?',
+      `Are you sure you want to permanently remove inquiry #${id} from logs/contact-messages.jsonl? This action is logged in the audit trail.`,
       async () => {
         try {
-          await apiFetch('/api/admin/contacts/' + encodeURIComponent(targetId), {
+          await apiFetch('/api/admin/contacts/' + encodeURIComponent(id), {
             method: 'DELETE',
             body: JSON.stringify({ confirm: true })
           });
-          showToast('Deleted inquiry #' + targetId);
+          showToast('Deleted inquiry #' + id);
           closeContactModal();
-          loadActiveTab();
+          loadContacts();
         } catch (err) {
           showToast(err.message);
         }
@@ -2452,250 +3007,66 @@
     );
   });
 
-  // ==================== 5. LOAD FEEDBACK ====================
-  async function loadFeedback() {
-    const data = await apiFetch('/api/admin/contacts?page_size=100');
-    cachedContacts = data.items || [];
-    const fbItems = cachedContacts.filter(i =>
-      i.issue_type === 'feedback' ||
-      i.issue_type === 'bug_report' ||
-      String(i.category).includes('feedback') ||
-      String(i.category).includes('bug')
-    );
-
-    $('feedbackTableBody').innerHTML = fbItems.length
-      ? fbItems.map(item => `
-          <tr>
-            <td class="mono">${esc(item.inquiry_id)}</td>
-            <td class="mono">${esc(item.timestamp.slice(0, 16).replace('T', ' '))}</td>
-            <td><span class="source-tag">${esc(item.issue_type)}</span></td>
-            <td style="text-transform:capitalize;">${esc(item.platform)}</td>
-            <td>${esc(item.name)} <span class="mono" style="font-size:11px;color:var(--text-muted);">(${esc(item.email)})</span></td>
-            <td style="max-width:340px;">${esc(item.message)}</td>
-            <td><span class="status-dot ${item.status === 'resolved' ? 'status-ok' : 'status-warn'}">${esc(item.status)}</span></td>
-            <td><button type="button" class="btn btn-secondary btn-sm" data-open-fb="${esc(item.inquiry_id)}">Manage</button></td>
-          </tr>
-        `).join('')
-      : `<tr><td colspan="8" style="color:var(--text-muted);">No feedback or bug report entries found.</td></tr>`;
-
-    document.querySelectorAll('[data-open-fb]').forEach(btn => {
-      btn.addEventListener('click', () => openContactDetailModal(btn.dataset.openFb));
-    });
+  // ==================== 7. LOAD UPGRADE & PRICING ====================
+  async function loadPricing() {
+    const data = await apiFetch('/api/admin/pricing');
+    const p = data.pricing || {};
+    $('prHeadlineEn').value = p.headline_en || '';
+    $('prHeadlineZh').value = p.headline_zh || '';
+    $('prSubheadlineEn').value = p.subheadline_en || '';
+    $('prFreeNameEn').value = p.free_plan?.name_en || '';
+    $('prFreePrice').value = p.free_plan?.price_label || '';
+    $('prFreeBadgeEn').value = p.free_plan?.status_badge_en || '';
+    $('prFreeFeaturesEn').value = (p.free_plan?.features_en || []).join('\n');
+    $('prProNameEn').value = p.pro_plan?.name_en || '';
+    $('prProPrice').value = p.pro_plan?.price_label || '';
+    $('prProBadgeEn').value = p.pro_plan?.status_badge_en || '';
+    $('prProFeaturesEn').value = (p.pro_plan?.features_en || []).join('\n');
+    $('prProComingSoon').checked = p.pro_plan?.coming_soon !== false;
+    $('prContactCtaEnabled').checked = p.contact_cta_enabled !== false;
+    $('prUpdatedAtLabel').textContent = p.updated_at || 'Default configuration active';
   }
 
-  // ==================== 6. LOAD ERRORS ====================
-  async function loadErrors() {
-    const severity = $('errorSeverityFilter').value;
-    const route = $('errorRouteFilter').value;
-    const data = await apiFetch(`/api/admin/errors?severity=${encodeURIComponent(severity)}&route=${encodeURIComponent(route)}`);
-    const items = data.items || [];
-
-    $('errorsTableBody').innerHTML = items.length
-      ? items.map(e => `
-          <tr>
-            <td class="mono" style="font-size:11.5px;">${esc(e.timestamp.slice(0, 19).replace('T', ' '))}</td>
-            <td class="mono" style="font-size:11.5px;">${esc(e.request_id)}</td>
-            <td><span class="status-dot ${e.severity === 'critical' || e.severity === 'error' ? 'status-err' : 'status-warn'}">${esc(e.severity)}</span></td>
-            <td class="mono">${esc(e.route_category)}</td>
-            <td style="text-transform:capitalize;">${esc(e.platform)}</td>
-            <td class="mono">${e.http_status}</td>
-            <td class="mono" style="color:var(--danger);">${esc(e.error_category)}</td>
-            <td class="mono">${e.duration_ms}ms</td>
-            <td style="max-width:340px;">${esc(e.summary)}</td>
-          </tr>
-        `).join('')
-      : `<tr><td colspan="9" style="color:var(--text-muted);">No structured application errors match the current filter.</td></tr>`;
-  }
-  $('btnFilterErrors').addEventListener('click', loadErrors);
-
-  // ==================== 7. LOAD SYSTEM HEALTH ====================
-  async function loadHealth() {
-    const data = await apiFetch('/api/admin/health');
-    const appInfo = data.application;
-    const res = data.resources;
-    const st = data.storage;
-    const ig = data.integrations;
-
-    $('healthKpiGrid').innerHTML = `
-      <div class="card">
-        <div class="kpi-label"><span>Application &amp; Runtime</span><span class="source-tag">${esc(appInfo.node_version)}</span></div>
-        <div class="kpi-value" style="font-size:20px;">${esc(appInfo.name)} v${esc(appInfo.version)}</div>
-        <div class="kpi-foot"><span>Platform: ${esc(appInfo.platform_arch)}</span><span>Uptime: ${formatUptime(appInfo.uptime_seconds)}</span></div>
-      </div>
-      <div class="card">
-        <div class="kpi-label"><span>Process Memory (RSS / Heap)</span><span class="source-tag">Node.js</span></div>
-        <div class="kpi-value">${res.process_rss_mb} MB</div>
-        <div class="kpi-foot"><span>Heap Used: ${res.heap_used_mb} MB</span><span>Load Avg (1m): ${res.load_average_1m}</span></div>
-      </div>
-      <div class="card">
-        <div class="kpi-label"><span>System Memory (Free / Total)</span><span class="source-tag">OS</span></div>
-        <div class="kpi-value">${res.system_free_ram_mb} MB</div>
-        <div class="kpi-foot"><span>Total RAM: ${res.system_total_ram_mb} MB</span><span>Mode: Persistent JSONL</span></div>
-      </div>
-      <div class="card">
-        <div class="kpi-label"><span>Snapshot Backups</span><span class="source-tag">logs/backups</span></div>
-        <div class="kpi-value">${st.backups_count}</div>
-        <div class="kpi-foot"><span>${st.last_backup ? esc(st.last_backup.filename) : 'No backups yet'}</span></div>
-      </div>
-    `;
-
-    const wb = $('healthWritableBadge');
-    wb.textContent = st.writable ? 'logs/ Writable' : 'Read-Only Warning';
-    wb.style.color = st.writable ? 'var(--success)' : 'var(--danger)';
-
-    $('healthFilesTbody').innerHTML = Object.entries(st.files || {}).map(([k, v]) => `
-      <tr><td class="mono">${esc(k.replace(/_bytes$/, '.jsonl'))}</td><td class="mono">${formatBytes(v)}</td></tr>
-    `).join('');
-
-    $('healthIntegrationsTbody').innerHTML = `
-      <tr><td>Resend Transactional Email API</td><td><span class="status-dot ${ig.resend_email_configured ? 'status-ok' : 'status-warn'}">${ig.resend_email_configured ? 'Configured' : 'Not Configured'}</span></td></tr>
-      <tr><td>Frontend GA4 Tag (G-S9BHCYX6EN)</td><td><span class="status-dot status-ok">Active in static/index.html</span></td></tr>
-      <tr><td>GA4 Server Data API</td><td><span class="status-dot ${ig.ga4_data_api_configured ? 'status-ok' : 'status-neutral'}">${ig.ga4_data_api_configured ? 'Configured' : 'Optional (Not Set)'}</span></td></tr>
-      <tr><td>Google Search Console API</td><td><span class="status-dot ${ig.search_console_api_configured ? 'status-ok' : 'status-neutral'}">${ig.search_console_api_configured ? 'Configured' : 'Optional (Not Set)'}</span></td></tr>
-      <tr><td>Bilibili High-Res Cookie (SESSDATA)</td><td><span class="status-dot ${ig.bilibili_cookie_configured ? 'status-ok' : 'status-neutral'}">${ig.bilibili_cookie_configured ? 'Configured (' + esc(ig.bilibili_cookie_source) + ')' : 'Not Set'}</span></td></tr>
-      <tr><td>TikTok Upstream Proxy</td><td><span class="status-dot ${ig.tiktok_proxy_configured ? 'status-ok' : 'status-neutral'}">${ig.tiktok_proxy_configured ? 'Configured' : 'Direct Connection'}</span></td></tr>
-    `;
-  }
-
-  // ==================== 8. LOAD SEO OVERVIEW ====================
-  async function loadSeo() {
-    const data = await apiFetch('/api/admin/seo?' + buildRangeQuery());
-    const t = data.technical_seo;
-    const sc = data.search_console;
-
-    $('seoTechnicalTbody').innerHTML = `
-      <tr><td>Canonical URL</td><td><span class="status-dot ${t.canonical_valid ? 'status-ok' : 'status-warn'} mono">${esc(t.canonical_url)}</span></td></tr>
-      <tr><td>HTTPS Enforced in Canonical</td><td><span class="status-dot ${t.https_enforced_in_canonical ? 'status-ok' : 'status-err'}">${t.https_enforced_in_canonical ? 'Yes (HTTPS)' : 'No'}</span></td></tr>
-      <tr><td>HTML &lt;title&gt; (${t.title_length} chars)</td><td>${esc(t.title)}</td></tr>
-      <tr><td>Meta Description (${t.meta_description_length} chars)</td><td style="font-size:12px;">${esc(t.meta_description)}</td></tr>
-      <tr><td>Meta Robots Directive</td><td class="mono">${esc(t.meta_robots)}</td></tr>
-      <tr><td>Structured Data (Schema.org JSON-LD)</td><td><span class="status-dot ${t.structured_data_json_ld ? 'status-ok' : 'status-warn'}">${t.structured_data_json_ld ? 'Present (WebApplication + FAQPage)' : 'Missing'}</span></td></tr>
-      <tr><td>XML Sitemap Endpoint</td><td><span class="status-dot ${t.sitemap_file_present ? 'status-ok' : 'status-err'} mono">${esc(t.sitemap_endpoint)}</span></td></tr>
-      <tr><td>robots.txt Endpoint</td><td><span class="status-dot ${t.robots_file_present ? 'status-ok' : 'status-err'} mono">${esc(t.robots_endpoint)}</span></td></tr>
-    `;
-
-    $('seoRobotsPre').textContent = t.robots_content || '';
-
-    $('seoGscBox').innerHTML = sc.api_active
-      ? `<div class="alert-box alert-success show">Connected to Google Search Console property <code class="mono">${esc(sc.site_url)}</code>.</div>`
-      : `<div style="font-size:12.5px;color:var(--text-secondary);background:var(--bg-canvas);padding:12px;border-radius:8px;border:1px solid var(--border-subtle);">
-          <strong>Search Console Property:</strong> <code class="mono">${esc(sc.site_url)}</code><br>
-          Service Account Configured: <strong>${sc.service_account_configured ? 'Yes' : 'No'}</strong><br>
-          <span style="color:var(--text-muted);">To pull live Search Console query/impression rows directly into this dashboard, set <code class="mono">GOOGLE_SERVICE_ACCOUNT_JSON</code> and grant the service account read access in Google Search Console.</span>
-        </div>`;
-  }
-
-  // ==================== 9. LOAD NOTIFICATIONS ====================
-  async function loadNotifications() {
-    const data = await apiFetch('/api/admin/notifications');
-    const badge = $('notifProviderBadge');
-    if (data.configured) {
-      badge.className = 'status-dot status-ok';
-      badge.textContent = 'Resend API Active';
-    } else {
-      badge.className = 'status-dot status-warn';
-      badge.textContent = 'RESEND_API_KEY Not Set';
-    }
-
-    if (!$('testEmailInput').value && data.settings?.notification_to_email) {
-      $('testEmailInput').value = data.settings.notification_to_email;
-    }
-
-    const list = data.deliveries || [];
-    $('notifDeliveriesTbody').innerHTML = list.length
-      ? list.map(d => `
-          <tr>
-            <td class="mono" style="font-size:11.5px;">${esc(d.timestamp.slice(0, 19).replace('T', ' '))}</td>
-            <td class="mono" style="font-size:12px;">${esc(d.event_type)}</td>
-            <td class="mono" style="font-size:12px;">${esc(d.recipient)}</td>
-            <td>${esc(d.subject)}</td>
-            <td><span class="status-dot ${d.status === 'sent' ? 'status-ok' : d.status === 'failed' ? 'status-err' : 'status-warn'}">${esc(d.status)}</span></td>
-            <td class="mono" style="font-size:11px;color:var(--text-secondary);">${esc(d.provider_id || d.error || '')}</td>
-          </tr>
-        `).join('')
-      : `<tr><td colspan="6" style="color:var(--text-muted);">No outbound email delivery events recorded yet.</td></tr>`;
-  }
-
-  $('btnSendTestEmail').addEventListener('click', async () => {
-    const fb = $('testEmailFeedback');
-    fb.className = 'alert-box';
-    const btn = $('btnSendTestEmail');
-    btn.disabled = true;
+  $('pricingConfigForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
     try {
-      const to = $('testEmailInput').value.trim();
-      const res = await apiFetch('/api/admin/notifications/test', {
-        method: 'POST',
-        body: JSON.stringify({ to })
+      const payload = {
+        headline_en: $('prHeadlineEn').value.trim(),
+        headline_zh: $('prHeadlineZh').value.trim(),
+        subheadline_en: $('prSubheadlineEn').value.trim(),
+        free_plan: {
+          name_en: $('prFreeNameEn').value.trim(),
+          price_label: $('prFreePrice').value.trim(),
+          status_badge_en: $('prFreeBadgeEn').value.trim(),
+          features_en: $('prFreeFeaturesEn').value.split('\n').map(s => s.trim()).filter(Boolean)
+        },
+        pro_plan: {
+          name_en: $('prProNameEn').value.trim(),
+          price_label: $('prProPrice').value.trim(),
+          status_badge_en: $('prProBadgeEn').value.trim(),
+          coming_soon: $('prProComingSoon').checked,
+          features_en: $('prProFeaturesEn').value.split('\n').map(s => s.trim()).filter(Boolean)
+        },
+        contact_cta_enabled: $('prContactCtaEnabled').checked
+      };
+      const res = await apiFetch('/api/admin/pricing', {
+        method: 'PUT',
+        body: JSON.stringify(payload)
       });
-      fb.className = 'alert-box alert-success show';
-      fb.textContent = `Test email sent via Resend (ID: ${res.provider_id})`;
-      loadNotifications();
+      $('prUpdatedAtLabel').textContent = res.pricing?.updated_at || new Date().toISOString();
+      showToast('Saved public Upgrade & Pricing configuration');
     } catch (err) {
-      fb.className = 'alert-box alert-error show';
-      fb.textContent = err.message;
-      loadNotifications();
-    } finally {
-      btn.disabled = false;
+      showToast(err.message);
     }
   });
 
-  // ==================== 10. LOAD INTEGRATIONS ====================
-  async function loadIntegrations() {
-    const health = await apiFetch('/api/admin/health');
-    const ig = health.integrations;
-
-    const cards = [
-      {
-        title: '1. Resend Transactional Email API',
-        connected: ig.resend_email_configured,
-        statusText: ig.resend_email_configured ? 'Connected & Ready' : 'Not Configured (Set RESEND_API_KEY)',
-        desc: 'Dispatches real-time email notifications when visitors submit the public contact form, report feedback, or trigger repeated server failure thresholds.',
-        envVars: ['RESEND_API_KEY', 'CONTACT_TO_EMAIL', 'CONTACT_FROM_EMAIL', 'ADMIN_ALERT_EMAIL']
-      },
-      {
-        title: '2. Google Analytics 4 (Client Tag & Data API)',
-        connected: ig.ga4_data_api_configured,
-        statusText: ig.ga4_data_api_configured ? 'Client Tag + Data API Active' : 'Client Tag Active (G-S9BHCYX6EN) · Data API Optional',
-        desc: 'Collects visitor sessions, traffic channels, and custom downloader events on the frontend. Add a Google Service Account to query GA4 Data API on the server.',
-        envVars: ['GA4_MEASUREMENT_ID', 'GA4_PROPERTY_ID', 'GOOGLE_SERVICE_ACCOUNT_JSON']
-      },
-      {
-        title: '3. Google Search Console API',
-        connected: ig.search_console_api_configured,
-        statusText: ig.search_console_api_configured ? 'Connected' : 'Optional (Set GOOGLE_SERVICE_ACCOUNT_JSON)',
-        desc: 'Provides search query impressions, clicks, CTR, and average position for https://downdouyin.com/ directly inside the SEO Overview tab.',
-        envVars: ['GSC_SITE_URL', 'GOOGLE_SERVICE_ACCOUNT_JSON']
-      },
-      {
-        title: '4. Bilibili & TikTok Upstream Helpers',
-        connected: ig.bilibili_cookie_configured || ig.tiktok_proxy_configured,
-        statusText: `Bilibili Cookie: ${ig.bilibili_cookie_configured ? 'Set' : 'None'} · TikTok Proxy: ${ig.tiktok_proxy_configured ? 'Set' : 'None'}`,
-        desc: 'Optional SESSDATA cookie for 1080P60/4K Bilibili streams and optional HTTP/HTTPS upstream proxy for TikTok.',
-        envVars: ['BILIBILI_COOKIE']
-      }
-    ];
-
-    $('integrationsCardsGrid').innerHTML = cards.map(c => `
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">${esc(c.title)}</div>
-          <span class="status-dot ${c.connected ? 'status-ok' : 'status-warn'}">${esc(c.statusText)}</span>
-        </div>
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">${esc(c.desc)}</p>
-        <div style="font-size:11.5px;color:var(--text-muted);">
-          Environment Variables: ${c.envVars.map(v => `<code class="mono" style="margin-right:6px;">${esc(v)}</code>`).join('')}
-        </div>
-      </div>
-    `).join('');
-  }
-
-  // ==================== 11. LOAD SECURITY & AUDIT ====================
+  // ==================== 8. LOAD SECURITY & AUDIT ====================
   async function loadSecurity() {
     const data = await apiFetch('/api/admin/audit');
 
     $('securitySessionsTbody').innerHTML = (data.active_sessions || []).map(s => `
       <tr>
-        <td><strong>${esc(s.username)}</strong> <span class="source-tag">${esc(s.role)}</span> ${s.is_current ? '<span class="status-dot status-ok" style="margin-left:6px;">Current</span>' : ''}</td>
+        <td><strong>${esc(s.username)}</strong> <span class="source-tag">${esc(s.role)}</span> ${s.is_current ? '<span class="badge-pill badge-ok">Current</span>' : ''}</td>
         <td>${esc(s.user_agent_summary)}</td>
         <td class="mono" style="font-size:11.5px;">${esc(s.last_active_at.slice(0, 19).replace('T', ' '))}</td>
         <td class="mono" style="font-size:11.5px;">${esc(s.expires_at.slice(0, 19).replace('T', ' '))}</td>
@@ -2704,23 +3075,23 @@
 
     $('securityUsersTbody').innerHTML = (data.users || []).map(u => `
       <tr>
-        <td class="mono"><strong>${esc(u.username)}</strong></td>
+        <td><strong>${esc(u.username)}</strong></td>
         <td class="mono" style="font-size:12px;">${esc(u.email)}</td>
         <td><span class="source-tag">${esc(u.role)}</span></td>
         <td class="mono" style="font-size:11.5px;">${u.last_login_at ? esc(u.last_login_at.slice(0, 19).replace('T', ' ')) : 'Never'}</td>
-        <td><span class="status-dot ${u.disabled ? 'status-err' : 'status-ok'}">${u.disabled ? 'Disabled' : 'Active'}</span></td>
+        <td>${u.disabled ? '<span class="status-dot status-err">Disabled</span>' : '<span class="status-dot status-ok">Active</span>'}</td>
       </tr>
     `).join('');
 
-    $('securityAuditTbody').innerHTML = (data.audit_logs || []).map(a => `
+    $('securityAuditTbody').innerHTML = (data.audit_logs || []).map(l => `
       <tr>
-        <td class="mono" style="font-size:11.5px;">${esc(a.timestamp.slice(0, 19).replace('T', ' '))}</td>
-        <td class="mono">${esc(a.actor)}</td>
-        <td class="mono">${esc(a.action)}</td>
-        <td class="mono" style="font-size:11.5px;">${esc(a.target)}</td>
-        <td class="mono" style="font-size:11.5px;color:var(--text-muted);">${esc(a.ip_hash)}</td>
-        <td><span class="status-dot ${a.status === 'success' ? 'status-ok' : a.status === 'warning' ? 'status-warn' : 'status-err'}">${esc(a.status)}</span></td>
-        <td>${esc(a.detail)}</td>
+        <td class="mono" style="font-size:11.5px;">${esc(l.timestamp.slice(0, 19).replace('T', ' '))}</td>
+        <td><strong>${esc(l.actor)}</strong></td>
+        <td class="mono" style="font-size:12px;">${esc(l.action)}</td>
+        <td class="mono" style="font-size:12px;">${esc(l.target)}</td>
+        <td class="mono" style="font-size:11.5px;color:var(--text-secondary);">${esc(l.ip_hash)}</td>
+        <td>${renderStatusBadge(l.status)}</td>
+        <td style="font-size:12px;color:var(--text-secondary);">${esc(l.detail)}</td>
       </tr>
     `).join('');
   }
@@ -2728,7 +3099,7 @@
   $('btnRevokeAllSessions').addEventListener('click', async () => {
     const pwd = $('revokeAllPasswordInput').value;
     if (!pwd) {
-      showToast('Enter your current password first to revoke all sessions');
+      showToast('Enter your current password first');
       return;
     }
     try {
@@ -2738,7 +3109,6 @@
       });
       $('revokeAllPasswordInput').value = '';
       showAuthScreen(false);
-      showToast('All sessions revoked. Please sign in again.');
     } catch (err) {
       showToast(err.message);
     }
@@ -2759,18 +3129,89 @@
       $('staffUsername').value = '';
       $('staffEmail').value = '';
       $('staffPassword').value = '';
-      showToast('Staff account created');
+      showToast('Created authorized staff account');
       loadSecurity();
     } catch (err) {
       showToast(err.message);
     }
   });
 
-  // ==================== 12. LOAD SETTINGS ====================
-  async function loadSettings() {
-    const data = await apiFetch('/api/admin/settings');
-    const s = data.settings;
+  // ==================== 9. LOAD APPLICATION HEALTH, SEO & ERRORS ====================
+  async function loadHealthAndSeoAndErrors() {
+    const [hl, seoData] = await Promise.all([
+      apiFetch('/api/admin/health'),
+      apiFetch('/api/admin/seo')
+    ]);
+    await loadErrorsTableOnly();
 
+    const app = hl.application || {};
+    const res = hl.resources || {};
+    const st = hl.storage || {};
+    const ig = hl.integrations || {};
+    const ts = seoData.technical_seo || {};
+
+    $('healthWritableBadge').textContent = st.writable ? 'Writable (0700)' : 'Read-Only Warning';
+
+    $('healthKpiGrid').innerHTML = `
+      <div class="card"><div class="kpi-label"><span>Process Uptime</span><span class="source-tag">${esc(app.node_version)}</span></div><div class="kpi-value">${formatUptime(app.uptime_seconds)}</div><div class="kpi-foot"><span>Started: ${esc((app.server_started_at || '').slice(0, 19).replace('T', ' '))}</span></div></div>
+      <div class="card"><div class="kpi-label"><span>Process Memory (RSS / Heap)</span><span class="source-tag">${esc(app.platform_arch)}</span></div><div class="kpi-value">${res.process_rss_mb} MB</div><div class="kpi-foot"><span>Heap Used: ${res.heap_used_mb} MB</span><span>Sys Free: ${res.system_free_ram_mb} MB</span></div></div>
+      <div class="card"><div class="kpi-label"><span>System 1m Load Average</span><span class="source-tag">OS Kernel</span></div><div class="kpi-value">${res.load_average_1m}</div><div class="kpi-foot"><span>Total RAM: ${res.system_total_ram_mb} MB</span></div></div>
+      <div class="card"><div class="kpi-label"><span>Snapshot Backups</span><span class="source-tag">logs/backups</span></div><div class="kpi-value">${st.backups_count || 0}</div><div class="kpi-foot"><span>Storage: ${st.writable ? 'Healthy' : 'Error'}</span></div></div>
+    `;
+
+    const files = st.files || {};
+    $('healthFilesTbody').innerHTML = `
+      <tr><td class="mono">logs/activity-events.jsonl</td><td class="mono">${formatBytes(files.activity_events_bytes)}</td></tr>
+      <tr><td class="mono">logs/visitors-index.json</td><td class="mono">${formatBytes(files.visitors_index_bytes)}</td></tr>
+      <tr><td class="mono">logs/download-stats.jsonl</td><td class="mono">${formatBytes(files.download_stats_bytes)}</td></tr>
+      <tr><td class="mono">logs/contact-messages.jsonl</td><td class="mono">${formatBytes(files.contact_messages_bytes)}</td></tr>
+      <tr><td class="mono">logs/app-errors.jsonl</td><td class="mono">${formatBytes(files.app_errors_bytes)}</td></tr>
+      <tr><td class="mono">logs/audit-log.jsonl</td><td class="mono">${formatBytes(files.audit_log_bytes)}</td></tr>
+    `;
+
+    $('healthIntegrationsTbody').innerHTML = `
+      <tr><td>Canonical URL (<code class="mono">${esc(ts.canonical_url)}</code>)</td><td><span class="status-dot ${ts.canonical_valid ? 'status-ok' : 'status-warn'}">${ts.canonical_valid ? 'Verified HTTPS' : 'Check Canonical'}</span></td></tr>
+      <tr><td>XML Sitemap (<code class="mono">/sitemap.xml</code>) &amp; <code class="mono">/robots.txt</code></td><td><span class="status-dot ${ts.sitemap_file_present && ts.robots_file_present ? 'status-ok' : 'status-err'}">${ts.sitemap_file_present ? 'Active (HTTP 200 XML)' : 'Missing'}</span></td></tr>
+      <tr><td>JSON-LD Structured Data</td><td><span class="status-dot ${ts.structured_data_json_ld ? 'status-ok' : 'status-warn'}">${ts.structured_data_json_ld ? 'Present in index.html' : 'Missing'}</span></td></tr>
+      <tr><td>Bilibili 1080P/4K SESSDATA</td><td><span class="status-dot ${ig.bilibili_cookie_configured ? 'status-ok' : 'status-neutral'}">${ig.bilibili_cookie_configured ? 'Configured (' + esc(ig.bilibili_cookie_source) + ')' : 'Guest Stream Mode'}</span></td></tr>
+      <tr><td>TikTok Custom Proxy</td><td><span class="status-dot ${ig.tiktok_proxy_configured ? 'status-ok' : 'status-neutral'}">${ig.tiktok_proxy_configured ? 'Proxy Active' : 'Direct Connection'}</span></td></tr>
+      <tr><td>Resend Email API</td><td><span class="status-dot ${ig.resend_email_configured ? 'status-ok' : 'status-warn'}">${ig.resend_email_configured ? 'Configured' : 'Server Inbox Only'}</span></td></tr>
+    `;
+  }
+
+  async function loadErrorsTableOnly() {
+    const sev = $('errorSeverityFilter').value;
+    const route = $('errorRouteFilter').value;
+    const errData = await apiFetch(`/api/admin/errors?severity=${encodeURIComponent(sev)}&route=${encodeURIComponent(route)}`);
+    const items = errData.items || [];
+    $('errorsTableBody').innerHTML = items.length
+      ? items.map(e => `
+          <tr>
+            <td class="mono" style="font-size:11.5px;">${esc(e.timestamp.slice(0, 19).replace('T', ' '))}</td>
+            <td class="mono" style="font-size:11.5px;">${esc(e.request_id)}</td>
+            <td>${renderStatusBadge(e.severity === 'critical' || e.severity === 'error' ? 'failed' : 'unsupported')}</td>
+            <td class="mono">${esc(e.route_category)}</td>
+            <td style="text-transform:capitalize;">${esc(e.platform)}</td>
+            <td class="mono">${e.http_status}</td>
+            <td class="mono" style="color:var(--danger);">${esc(e.error_category)}</td>
+            <td class="mono">${e.duration_ms}ms</td>
+            <td style="font-size:12px;color:var(--text-secondary);">${esc(e.summary)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="9" style="color:var(--text-muted);">No application errors matching filter.</td></tr>`;
+  }
+
+  $('btnFilterErrors').addEventListener('click', loadErrorsTableOnly);
+
+  // ==================== 10. LOAD SETTINGS & NOTIFICATIONS ====================
+  async function loadSettingsAndNotifications() {
+    const [stData, notifData] = await Promise.all([
+      apiFetch('/api/admin/settings'),
+      apiFetch('/api/admin/notifications')
+    ]);
+    const s = stData.settings || {};
+
+    $('setIpLoggingMode').value = s.ip_logging_mode || 'full';
     $('setNotifToEmail').value = s.notification_to_email || '';
     $('setNotifFromEmail').value = s.notification_from_email || '';
     $('setAlertEmail').value = s.admin_alert_email || '';
@@ -2781,29 +3222,43 @@
     $('setShortcutEnabled').checked = Boolean(s.shortcut_enabled);
     $('setNewShortcutPhrase').value = '';
     $('shortcutStatusHint').textContent = s.shortcut_configured
-      ? `Shortcut phrase hash is configured (${s.shortcut_enabled ? 'Enabled' : 'Disabled'}).`
+      ? `Shortcut phrase hash is configured${s.shortcut_updated_at ? ' (updated ' + s.shortcut_updated_at.slice(0, 10) + ')' : ''}.`
       : 'No shortcut phrase configured yet.';
     $('setGa4PropertyId').value = s.ga4_property_id || '';
     $('setGscSiteUrl').value = s.gsc_site_url || 'https://downdouyin.com/';
     $('setRetentionOpDays').value = s.retention_days_operational_logs || 90;
     $('setSessionTtlHours').value = s.session_ttl_hours || 12;
 
-    const bks = data.backups || [];
-    $('settingsBackupsTbody').innerHTML = bks.length
-      ? bks.map(b => `
+    const backups = stData.backups || [];
+    $('settingsBackupsTbody').innerHTML = backups.length
+      ? backups.map(b => `<tr><td class="mono" style="font-size:12px;">${esc(b.filename)}</td><td class="mono" style="font-size:11.5px;">${esc(b.created_at.slice(0, 19).replace('T', ' '))}</td><td class="mono">${formatBytes(b.size_bytes)}</td></tr>`).join('')
+      : `<tr><td colspan="3" style="color:var(--text-muted);">No backups created yet</td></tr>`;
+
+    const nb = $('notifProviderBadge');
+    nb.className = 'status-dot ' + (notifData.configured ? 'status-ok' : 'status-warn');
+    nb.textContent = notifData.configured ? 'Resend API Ready' : 'RESEND_API_KEY Not Set';
+    if (!$('testEmailInput').value && s.notification_to_email) {
+      $('testEmailInput').value = s.notification_to_email;
+    }
+
+    const deliv = notifData.deliveries || [];
+    $('notifDeliveriesTbody').innerHTML = deliv.length
+      ? deliv.slice(0, 15).map(d => `
           <tr>
-            <td class="mono" style="font-size:12px;">${esc(b.filename)}</td>
-            <td class="mono" style="font-size:12px;">${esc(b.created_at.slice(0, 19).replace('T', ' '))}</td>
-            <td class="mono">${formatBytes(b.size_bytes)}</td>
+            <td class="mono" style="font-size:11px;">${esc(d.timestamp.slice(0, 19).replace('T', ' '))}</td>
+            <td class="mono" style="font-size:11px;">${esc(d.event_type)}</td>
+            <td class="mono" style="font-size:11px;">${esc(d.recipient)}</td>
+            <td>${renderStatusBadge(d.status === 'sent' ? 'success' : d.status === 'failed' ? 'failed' : 'info')}</td>
           </tr>
         `).join('')
-      : `<tr><td colspan="3" style="color:var(--text-muted);">No snapshot backups created yet.</td></tr>`;
+      : `<tr><td colspan="4" style="color:var(--text-muted);">No email deliveries logged yet</td></tr>`;
   }
 
   $('settingsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
       const payload = {
+        ip_logging_mode: $('setIpLoggingMode').value,
         notification_to_email: $('setNotifToEmail').value.trim(),
         notification_from_email: $('setNotifFromEmail').value.trim(),
         admin_alert_email: $('setAlertEmail').value.trim(),
@@ -2814,21 +3269,38 @@
         shortcut_enabled: $('setShortcutEnabled').checked,
         ga4_property_id: $('setGa4PropertyId').value.trim(),
         gsc_site_url: $('setGscSiteUrl').value.trim(),
-        retention_days_operational_logs: Number($('setRetentionOpDays').value),
-        session_ttl_hours: Number($('setSessionTtlHours').value)
+        retention_days_operational_logs: Number($('setRetentionOpDays').value) || 90,
+        session_ttl_hours: Number($('setSessionTtlHours').value) || 12
       };
       const newPhrase = $('setNewShortcutPhrase').value.trim();
-      if (newPhrase) {
-        payload.new_shortcut_phrase = newPhrase;
-      }
+      if (newPhrase) payload.new_shortcut_phrase = newPhrase;
+
       await apiFetch('/api/admin/settings', {
         method: 'PUT',
         body: JSON.stringify(payload)
       });
       showToast('Configuration settings saved');
-      loadSettings();
+      loadSettingsAndNotifications();
     } catch (err) {
       showToast(err.message);
+    }
+  });
+
+  $('btnSendTestEmail').addEventListener('click', async () => {
+    const to = $('testEmailInput').value.trim();
+    const fb = $('testEmailFeedback');
+    fb.className = 'alert-box';
+    try {
+      const res = await apiFetch('/api/admin/notifications/test', {
+        method: 'POST',
+        body: JSON.stringify({ to })
+      });
+      fb.className = 'alert-box alert-success show';
+      fb.textContent = `Test email sent via Resend (ID: ${res.provider_id || 'ok'})`;
+      loadSettingsAndNotifications();
+    } catch (err) {
+      fb.className = 'alert-box alert-error show';
+      fb.textContent = err.message;
     }
   });
 
@@ -2836,7 +3308,7 @@
     try {
       const res = await apiFetch('/api/admin/backups/create', { method: 'POST', body: '{}' });
       showToast('Created backup: ' + res.backup.filename);
-      loadSettings();
+      loadSettingsAndNotifications();
     } catch (err) {
       showToast(err.message);
     }
@@ -2845,15 +3317,15 @@
   $('btnRunRetention').addEventListener('click', () => {
     const days = $('setRetentionOpDays').value || 90;
     openConfirmModal(
-      'Run Log Retention Cleanup',
-      `Prune operational log records older than ${days} days from download-stats.jsonl, app-errors.jsonl, and visitor-events.jsonl?`,
+      'Run Log Retention Cleanup?',
+      `Prune operational log entries older than ${days} days from download-stats, activity-events, app-errors, and visitor-events?`,
       async () => {
         try {
           const res = await apiFetch('/api/admin/retention/run', {
             method: 'POST',
             body: JSON.stringify({ confirm: true })
           });
-          showToast(`Pruned ${res.pruned.download_stats + res.pruned.app_errors + res.pruned.visitor_events} expired records.`);
+          showToast(`Cleanup complete (removed ${res.pruned.download_stats + res.pruned.activity_events} expired records)`);
         } catch (err) {
           showToast(err.message);
         }
@@ -2873,9 +3345,21 @@
       });
       $('cpCurrentPassword').value = '';
       $('cpNewPassword').value = '';
-      showToast('Administrator password updated');
+      showToast('Password updated and other sessions revoked');
     } catch (err) {
       showToast(err.message);
+    }
+  });
+
+  // Close modals on Escape or backdrop click
+  document.querySelectorAll('.modal-backdrop').forEach(b => {
+    b.addEventListener('click', (e) => {
+      if (e.target === b) b.classList.remove('show');
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop.show').forEach(b => b.classList.remove('show'));
     }
   });
 

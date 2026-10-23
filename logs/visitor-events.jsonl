@@ -1,1 +1,4 @@
 {"timestamp":"2026-10-23T15:08:07.948Z","event_type":"contact_open","path":"/api/public/telemetry","referrer_host":"direct","device_category":"desktop","lang":"en"}
+{"timestamp":"2026-10-23T16:20:11.690Z","event_type":"page_view","path":"/","referrer_host":"direct","device_category":"desktop","lang":"en"}
+{"timestamp":"2026-10-23T16:45:50.961Z","event_type":"page_view","path":"/","referrer_host":"aistudio.google.com","device_category":"mobile","lang":"en"}
+{"timestamp":"2026-10-23T16:45:59.402Z","event_type":"contact_open","path":"/api/public/telemetry","referrer_host":"ais-dev-nl5zxjsdklymovt53pdapb-953505351059.asia-southeast1.run.","device_category":"mobile","lang":"en"}

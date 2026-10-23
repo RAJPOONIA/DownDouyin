@@ -1,0 +1,156 @@
+[
+  {
+    "visitor_id": "vid_1212bee231bd8b0f",
+    "account_type": "anonymous_visitor",
+    "first_seen_at": "2026-10-23T17:11:59.264Z",
+    "last_active_at": "2026-10-23T17:11:59.309Z",
+    "session_count": 1,
+    "last_session_id": "sid_ab31113fa559",
+    "links_submitted": 2,
+    "valid_links_count": 0,
+    "invalid_links_count": 2,
+    "download_attempts": 0,
+    "successful_downloads": 0,
+    "client_confirmed_downloads": 1,
+    "failed_downloads": 0,
+    "cancelled_downloads": 0,
+    "platform_counts": {
+      "douyin": 0,
+      "bilibili": 0,
+      "tiktok": 0,
+      "xiaohongshu": 0
+    },
+    "most_used_platform": "none",
+    "last_activity_type": "download_client_completed",
+    "last_activity_status": "success",
+    "last_ip": "127.0.0.1",
+    "ip_version": "IPv4",
+    "ip_hash": "ip_fed44f5f8eeb",
+    "ip_history": [
+      {
+        "ip": "2001:db8:85a3::8a2e:370:7334",
+        "ip_version": "IPv6",
+        "first_seen": "2026-10-23T17:11:59.303Z",
+        "last_seen": "2026-10-23T17:11:59.303Z",
+        "count": 1
+      },
+      {
+        "ip": "203.0.113.45",
+        "ip_version": "IPv4",
+        "first_seen": "2026-10-23T17:11:59.288Z",
+        "last_seen": "2026-10-23T17:11:59.288Z",
+        "count": 1
+      },
+      {
+        "ip": "127.0.0.1",
+        "ip_version": "IPv4",
+        "first_seen": "2026-10-23T17:11:59.264Z",
+        "last_seen": "2026-10-23T17:11:59.309Z",
+        "count": 3
+      }
+    ],
+    "user_agent_summary": "Unknown Browser",
+    "device_category": "desktop",
+    "blocked": false,
+    "rate_limit_override_rpm": null,
+    "admin_notes": ""
+  },
+  {
+    "visitor_id": "vid_a732b1ada846baf8",
+    "account_type": "anonymous_visitor",
+    "first_seen_at": "2026-10-23T17:10:05.163Z",
+    "last_active_at": "2026-10-23T17:10:05.163Z",
+    "session_count": 1,
+    "last_session_id": "sid_436c12b04979",
+    "links_submitted": 1,
+    "valid_links_count": 0,
+    "invalid_links_count": 1,
+    "download_attempts": 0,
+    "successful_downloads": 0,
+    "client_confirmed_downloads": 0,
+    "failed_downloads": 0,
+    "cancelled_downloads": 0,
+    "platform_counts": {
+      "douyin": 0,
+      "bilibili": 0,
+      "tiktok": 0,
+      "xiaohongshu": 0
+    },
+    "most_used_platform": "none",
+    "last_activity_type": "invalid_url",
+    "last_activity_status": "invalid",
+    "last_ip": "127.0.0.1",
+    "ip_version": "IPv4",
+    "ip_hash": "ip_fed44f5f8eeb",
+    "ip_history": [
+      {
+        "ip": "127.0.0.1",
+        "ip_version": "IPv4",
+        "first_seen": "2026-10-23T17:10:05.163Z",
+        "last_seen": "2026-10-23T17:10:05.163Z",
+        "count": 1
+      }
+    ],
+    "user_agent_summary": "Unknown Browser",
+    "device_category": "desktop",
+    "blocked": false,
+    "rate_limit_override_rpm": null,
+    "admin_notes": ""
+  },
+  {
+    "visitor_id": "vid_cb29ff3c02d7f0e5",
+    "account_type": "anonymous_visitor",
+    "first_seen_at": "2026-10-23T17:09:50.671Z",
+    "last_active_at": "2026-10-23T17:09:50.718Z",
+    "session_count": 1,
+    "last_session_id": "sid_f91b0e2c7ec7",
+    "links_submitted": 2,
+    "valid_links_count": 0,
+    "invalid_links_count": 2,
+    "download_attempts": 0,
+    "successful_downloads": 0,
+    "client_confirmed_downloads": 0,
+    "failed_downloads": 0,
+    "cancelled_downloads": 0,
+    "platform_counts": {
+      "douyin": 0,
+      "bilibili": 0,
+      "tiktok": 0,
+      "xiaohongshu": 0
+    },
+    "most_used_platform": "none",
+    "last_activity_type": "invalid_url",
+    "last_activity_status": "invalid",
+    "last_ip": "2001:db8:85a3::8a2e:370:7334",
+    "ip_version": "IPv6",
+    "ip_hash": "ip_1f100945707b",
+    "ip_history": [
+      {
+        "ip": "2001:db8:85a3::8a2e:370:7334",
+        "ip_version": "IPv6",
+        "first_seen": "2026-10-23T17:09:50.718Z",
+        "last_seen": "2026-10-23T17:09:50.718Z",
+        "count": 1
+      },
+      {
+        "ip": "203.0.113.45",
+        "ip_version": "IPv4",
+        "first_seen": "2026-10-23T17:09:50.714Z",
+        "last_seen": "2026-10-23T17:09:50.714Z",
+        "count": 1
+      },
+      {
+        "ip": "127.0.0.1",
+        "ip_version": "IPv4",
+        "first_seen": "2026-10-23T17:09:50.671Z",
+        "last_seen": "2026-10-23T17:09:50.671Z",
+        "count": 1
+      }
+    ],
+    "user_agent_summary": "Unknown Browser",
+    "device_category": "desktop",
+    "blocked": false,
+    "rate_limit_override_rpm": null,
+    "admin_notes": ""
+  }
+]

@@ -137,11 +137,35 @@ function getScopedFetchDispatcher(): any {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Resolve project root (compatible with both `tsx server.ts` in /var/www/DownDouyin and `node dist/server.js` in /var/www/DownDouyin/dist)
-const PROJECT_ROOT = fs.existsSync(path.join(__dirname, 'static')) ? __dirname : path.resolve(__dirname, '..');
+// Resolve project root reliably whether running via `tsx server.ts` in /var/www/DownDouyin or `node dist/server.js` in /var/www/DownDouyin/dist
+const PROJECT_ROOT = path.basename(__dirname) === 'dist'
+  ? path.resolve(__dirname, '..')
+  : (fs.existsSync(path.join(__dirname, 'static')) ? __dirname : path.resolve(__dirname, '..'));
 const STATIC_DIR = path.join(PROJECT_ROOT, 'static');
 const LOGS_DIR = path.join(PROJECT_ROOT, 'logs');
 const STATS_LOG_FILE = path.join(LOGS_DIR, 'download-stats.jsonl');
+
+// Non-destructively migrate any state/log files written to dist/logs/ by older builds into PROJECT_ROOT/logs/
+function migrateLegacyDistLogsIfPresent(): void {
+  try {
+    const legacyLogsDir = path.join(PROJECT_ROOT, 'dist', 'logs');
+    if (!fs.existsSync(legacyLogsDir) || path.resolve(legacyLogsDir) === path.resolve(LOGS_DIR)) return;
+    fs.mkdirSync(LOGS_DIR, { recursive: true, mode: 0o700 });
+    const entries = fs.readdirSync(legacyLogsDir);
+    for (const name of entries) {
+      const srcPath = path.join(legacyLogsDir, name);
+      const destPath = path.join(LOGS_DIR, name);
+      try {
+        const st = fs.statSync(srcPath);
+        if (!st.isFile() || st.size === 0) continue;
+        if (!fs.existsSync(destPath) || fs.statSync(destPath).size === 0) {
+          fs.copyFileSync(srcPath, destPath);
+        }
+      } catch {}
+    }
+  } catch {}
+}
+migrateLegacyDistLogsIfPresent();
 
 // Load .env file from PROJECT_ROOT if present (without overriding existing process.env variables)
 function loadDotEnvIfPresent(): void {
@@ -1636,7 +1660,7 @@ app.get(['/', '/index.html'], (req: Request, res: Response) => {
     return res.status(404).send('index.html not found');
   }
   try {
-    adminCenterHooks?.recordVisitorEvent(req, 'page_view');
+    adminCenterHooks?.recordVisitorEvent(req, 'page_view', { res });
   } catch {}
   let html = fs.readFileSync(indexPath, 'utf-8');
   html = html.replace(/__SERVICE_PORT__/g, String(PORT));
@@ -1713,7 +1737,18 @@ app.post('/api/parse', async (req: Request, res: Response) => {
   const requestId = generateRequestId();
   res.setHeader('X-Request-Id', requestId);
 
+  const blockCheck = adminCenterHooks?.isVisitorBlocked(req);
+  if (blockCheck?.blocked) {
+    return res.status(403).json({
+      success: false,
+      platform: '',
+      error: blockCheck.reason || 'Access restricted by administrator policy.'
+    });
+  }
+
   const text = (req.body?.text || '').trim();
+  const visitorId = typeof req.body?.visitor_id === 'string' ? req.body.visitor_id : undefined;
+  const sessionId = typeof req.body?.session_id === 'string' ? req.body.session_id : undefined;
   let platform = (req.body?.platform || '').trim().toLowerCase();
 
   if (!platform || platform === 'auto' || platform === 'all') {
@@ -1733,8 +1768,26 @@ app.post('/api/parse', async (req: Request, res: Response) => {
       error_category: 'empty_input',
       duration_ms: Date.now() - startTime
     });
+    adminCenterHooks?.recordActivityEvent(req, {
+      res,
+      visitor_id: visitorId,
+      session_id: sessionId,
+      event_category: 'link_submission',
+      event_type: 'invalid_url',
+      status: 'invalid',
+      platform: normalizedPlat,
+      raw_url_or_text: '',
+      valid_url: false,
+      download_initiated: false,
+      request_id: requestId,
+      http_status: 200,
+      error_category: 'empty_input',
+      duration_ms: Date.now() - startTime,
+      detail: 'Empty link submission'
+    });
     return res.json({
       success: false,
+      request_id: requestId,
       platform: '',
       error: '请粘贴有效的视频或图文分享链接'
     });
@@ -1763,8 +1816,26 @@ app.post('/api/parse', async (req: Request, res: Response) => {
         error_category: 'ambiguous_numeric_id',
         duration_ms: Date.now() - startTime
       });
+      adminCenterHooks?.recordActivityEvent(req, {
+        res,
+        visitor_id: visitorId,
+        session_id: sessionId,
+        event_category: 'link_submission',
+        event_type: 'invalid_url',
+        status: 'invalid',
+        platform: normalizedPlat,
+        raw_url_or_text: text,
+        valid_url: false,
+        download_initiated: false,
+        request_id: requestId,
+        http_status: 200,
+        error_category: 'ambiguous_numeric_id',
+        duration_ms: Date.now() - startTime,
+        detail: 'Ambiguous numeric ID without platform selected'
+      });
       return res.json({
         success: false,
+        request_id: requestId,
         platform,
         error: '这看起来是一个纯数字作品 id，但光凭 id 分不清是哪个平台。请先把上方横条切到对应平台（TikTok 或 抖音），再粘贴 id。'
       });
@@ -1780,31 +1851,73 @@ app.post('/api/parse', async (req: Request, res: Response) => {
         error_category: 'unsupported_platform',
         duration_ms: Date.now() - startTime
       });
+      adminCenterHooks?.recordActivityEvent(req, {
+        res,
+        visitor_id: visitorId,
+        session_id: sessionId,
+        event_category: 'link_submission',
+        event_type: 'unsupported_url',
+        status: 'unsupported',
+        platform: 'unknown',
+        raw_url_or_text: text,
+        valid_url: false,
+        download_initiated: false,
+        request_id: requestId,
+        http_status: 200,
+        error_category: 'unsupported_platform',
+        duration_ms: Date.now() - startTime,
+        detail: 'Unsupported platform or unrecognized link format'
+      });
       return res.json({
         success: false,
+        request_id: requestId,
         platform: '',
         error: '没识别出链接所属平台，目前支持抖音、B站、TikTok 与小红书链接'
       });
     }
 
+    const finalPlat = normalizePlatformName(platform, text);
+    const parseDurationMs = Date.now() - startTime;
     recordDownloadStat({
       timestamp: new Date().toISOString(),
       request_id: requestId,
       operation: 'parse_request',
-      platform: normalizePlatformName(platform, text),
+      platform: finalPlat,
       download_method: 'metadata_parse',
       status: 'success',
       http_status: 200,
       error_category: null,
-      duration_ms: Date.now() - startTime
+      duration_ms: parseDurationMs
+    });
+    adminCenterHooks?.recordActivityEvent(req, {
+      res,
+      visitor_id: visitorId,
+      session_id: sessionId,
+      event_category: 'link_submission',
+      event_type: 'link_validated',
+      status: 'valid',
+      platform: finalPlat,
+      raw_url_or_text: text,
+      valid_url: true,
+      download_initiated: false,
+      download_stage: '1_request_processed',
+      request_id: requestId,
+      download_method: 'metadata_parse',
+      http_status: 200,
+      error_category: null,
+      duration_ms: parseDurationMs,
+      detail: `Parsed ${finalPlat} media (${resultData?.type || 'video'})`
     });
 
     return res.json({
       success: true,
+      request_id: requestId,
       platform,
       data: resultData
     });
   } catch (err: any) {
+    const errCat = categorizeError(err, 200);
+    const parseDurationMs = Date.now() - startTime;
     recordDownloadStat({
       timestamp: new Date().toISOString(),
       request_id: requestId,
@@ -1813,11 +1926,30 @@ app.post('/api/parse', async (req: Request, res: Response) => {
       download_method: 'metadata_parse',
       status: 'failed',
       http_status: 200,
-      error_category: categorizeError(err, 200),
-      duration_ms: Date.now() - startTime
+      error_category: errCat,
+      duration_ms: parseDurationMs
+    });
+    adminCenterHooks?.recordActivityEvent(req, {
+      res,
+      visitor_id: visitorId,
+      session_id: sessionId,
+      event_category: 'link_submission',
+      event_type: errCat.includes('timeout') ? 'timed_out' : 'download_failed',
+      status: errCat.includes('timeout') ? 'timed_out' : 'failed',
+      platform: normalizedPlat,
+      raw_url_or_text: text,
+      valid_url: true,
+      download_initiated: false,
+      request_id: requestId,
+      download_method: 'metadata_parse',
+      http_status: 200,
+      error_category: errCat,
+      duration_ms: parseDurationMs,
+      detail: err?.message || 'Parse failed'
     });
     return res.json({
       success: false,
+      request_id: requestId,
       platform,
       error: err.message || '解析失败，请检查链接或稍后重试'
     });
@@ -2325,9 +2457,10 @@ async function handleProxyRequest(req: Request, res: Response) {
     }
   }
 
-  const recordProxyStatOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
+  const recordProxyStatOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null, bytesTransferred = 0) => {
     if (!isDownloadTransfer) return;
     if (markTransferFinalized(requestId)) return;
+    const durationMs = Math.max(0, Date.now() - transferStartTime);
     recordDownloadStat({
       timestamp: new Date().toISOString(),
       request_id: requestId,
@@ -2337,7 +2470,24 @@ async function handleProxyRequest(req: Request, res: Response) {
       status,
       http_status: httpStatus,
       error_category: errorCategory,
-      duration_ms: Math.max(0, Date.now() - transferStartTime)
+      duration_ms: durationMs
+    });
+    adminCenterHooks?.recordActivityEvent(req, {
+      event_category: 'download_lifecycle',
+      event_type: status === 'success' ? 'download_succeeded' : status === 'aborted' ? 'cancelled' : 'download_failed',
+      status: status === 'success' ? 'success' : status === 'aborted' ? 'cancelled' : 'failed',
+      platform: normalizedPlat,
+      raw_url_or_text: targetUrl,
+      valid_url: true,
+      download_initiated: true,
+      download_stage: status === 'success' ? '3_stream_started' : '2_upstream_retrieved',
+      request_id: requestId,
+      download_method: dlMethod,
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: durationMs,
+      bytes_transferred: bytesTransferred,
+      detail: `Proxy stream ${status} (${dlMethod})`
     });
   };
 
@@ -2429,13 +2579,13 @@ async function handleProxyRequest(req: Request, res: Response) {
     }
 
     if (clientAborted) {
-      recordProxyStatOnce('aborted', upstream.status, 'client_aborted');
+      recordProxyStatOnce('aborted', upstream.status, 'client_aborted', bytesWritten);
     } else if (bytesWritten === 0) {
-      recordProxyStatOnce('failed', upstream.status, 'empty_upstream_body');
+      recordProxyStatOnce('failed', upstream.status, 'empty_upstream_body', 0);
     } else if (!completedFullOrRequestedRange) {
-      recordProxyStatOnce('failed', upstream.status, 'incomplete_upstream_stream');
+      recordProxyStatOnce('failed', upstream.status, 'incomplete_upstream_stream', bytesWritten);
     } else if (isFinalChunkOrFullFile) {
-      recordProxyStatOnce('success', upstream.status, null);
+      recordProxyStatOnce('success', upstream.status, null, bytesWritten);
     }
   } catch (err: any) {
     const statusCode = (err?.code === 'representation_size_mismatch' || err?.code === 'range_offset_mismatch') ? 409 : 502;
@@ -2485,10 +2635,11 @@ async function handleDownloadRequest(req: Request, res: Response) {
   }
 
   let statRecorded = false;
-  const recordDownloadOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
+  const recordDownloadOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null, bytesTransferred = 0) => {
     if (isHeadRequest || statRecorded) return;
     if (markTransferFinalized(requestId)) return;
     statRecorded = true;
+    const durationMs = Math.max(0, Date.now() - transferStartTime);
     recordDownloadStat({
       timestamp: new Date().toISOString(),
       request_id: requestId,
@@ -2498,7 +2649,24 @@ async function handleDownloadRequest(req: Request, res: Response) {
       status,
       http_status: httpStatus,
       error_category: errorCategory,
-      duration_ms: Math.max(0, Date.now() - transferStartTime)
+      duration_ms: durationMs
+    });
+    adminCenterHooks?.recordActivityEvent(req, {
+      event_category: 'download_lifecycle',
+      event_type: status === 'success' ? 'download_succeeded' : status === 'aborted' ? 'cancelled' : 'download_failed',
+      status: status === 'success' ? 'success' : status === 'aborted' ? 'cancelled' : 'failed',
+      platform: normalizedPlat,
+      raw_url_or_text: targetUrl,
+      valid_url: true,
+      download_initiated: true,
+      download_stage: status === 'success' ? '3_stream_started' : '2_upstream_retrieved',
+      request_id: requestId,
+      download_method: dlMethod,
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: durationMs,
+      bytes_transferred: bytesTransferred,
+      detail: `Attachment download ${status} (${dlMethod})`
     });
   };
 
@@ -2594,13 +2762,13 @@ async function handleDownloadRequest(req: Request, res: Response) {
     }
 
     if (clientAborted) {
-      recordDownloadOnce('aborted', upstream.status, 'client_aborted');
+      recordDownloadOnce('aborted', upstream.status, 'client_aborted', bytesWritten);
     } else if (bytesWritten === 0) {
-      recordDownloadOnce('failed', upstream.status, 'empty_upstream_body');
+      recordDownloadOnce('failed', upstream.status, 'empty_upstream_body', 0);
     } else if (!completedFullOrRequestedRange) {
-      recordDownloadOnce('failed', upstream.status, 'incomplete_upstream_stream');
+      recordDownloadOnce('failed', upstream.status, 'incomplete_upstream_stream', bytesWritten);
     } else if (isFinalChunkOrFullFile) {
-      recordDownloadOnce('success', upstream.status, null);
+      recordDownloadOnce('success', upstream.status, null, bytesWritten);
     }
   } catch (err: any) {
     const statusCode = (err?.code === 'representation_size_mismatch' || err?.code === 'range_offset_mismatch') ? 409 : 502;
@@ -2634,6 +2802,7 @@ app.post('/api/zip', async (req: Request, res: Response) => {
   const recordZipOnce = (status: StatStatus, httpStatus: number, errorCategory: string | null) => {
     if (statRecorded) return;
     statRecorded = true;
+    const durationMs = Math.max(0, Date.now() - startTime);
     recordDownloadStat({
       timestamp: new Date().toISOString(),
       request_id: requestId,
@@ -2643,7 +2812,23 @@ app.post('/api/zip', async (req: Request, res: Response) => {
       status,
       http_status: httpStatus,
       error_category: errorCategory,
-      duration_ms: Math.max(0, Date.now() - startTime)
+      duration_ms: durationMs
+    });
+    adminCenterHooks?.recordActivityEvent(req, {
+      event_category: 'download_lifecycle',
+      event_type: status === 'success' ? 'download_succeeded' : status === 'aborted' ? 'cancelled' : 'download_failed',
+      status: status === 'success' ? 'success' : status === 'aborted' ? 'cancelled' : 'failed',
+      platform: normalizedPlat,
+      raw_url_or_text: items[0]?.url || '',
+      valid_url: true,
+      download_initiated: true,
+      download_stage: '3_stream_started',
+      request_id: requestId,
+      download_method: 'album_zip',
+      http_status: httpStatus,
+      error_category: errorCategory,
+      duration_ms: durationMs,
+      detail: `Album ZIP download ${status} (${items.length} items)`
     });
   };
 

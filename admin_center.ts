@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
+import net from 'net';
 import type { DownloadStatRecord, SupportedPlatform } from './server.js';
 
 // ==================== TYPES & INTERFACES ====================
@@ -91,6 +92,169 @@ export interface VisitorTelemetryEvent {
   device_category: 'desktop' | 'mobile' | 'tablet';
   lang: string;
   platform?: string;
+  visitor_id?: string;
+  session_id?: string;
+  ip_address?: string;
+  ip_version?: 'IPv4' | 'IPv6' | 'unknown';
+}
+
+export type ActivityEventCategory =
+  | 'navigation'
+  | 'link_submission'
+  | 'download_lifecycle'
+  | 'ui_interaction'
+  | 'modal_interaction'
+  | 'settings'
+  | 'contact'
+  | 'admin';
+
+export type ActivityEventType =
+  | 'page_view'
+  | 'platform_select'
+  | 'url_focus'
+  | 'url_paste'
+  | 'link_submitted'
+  | 'link_validated'
+  | 'unsupported_url'
+  | 'invalid_url'
+  | 'quality_select'
+  | 'format_select'
+  | 'download_requested'
+  | 'processing'
+  | 'upstream_retrieved'
+  | 'stream_started'
+  | 'download_succeeded'
+  | 'download_client_completed'
+  | 'download_failed'
+  | 'cancelled'
+  | 'timed_out'
+  | 'retry'
+  | 'settings_modal_open'
+  | 'cookie_saved'
+  | 'cookie_cleared'
+  | 'contact_modal_open'
+  | 'upgrade_modal_open'
+  | 'help_guide_open'
+  | 'faq_modal_open'
+  | 'blog_modal_open';
+
+export type ActivityEventStatus =
+  | 'info'
+  | 'valid'
+  | 'invalid'
+  | 'unsupported'
+  | 'processing'
+  | 'stream_started'
+  | 'success'
+  | 'failed'
+  | 'cancelled'
+  | 'timed_out';
+
+export type DownloadLifecycleStage =
+  | '1_request_processed'
+  | '2_upstream_retrieved'
+  | '3_stream_started'
+  | '4_client_completed';
+
+export interface ActivityEventRecord {
+  event_id: string;
+  timestamp: string;
+  visitor_id: string;
+  session_id: string;
+  ip_address: string;
+  ip_version: 'IPv4' | 'IPv6' | 'unknown';
+  ip_hash: string;
+  event_category: ActivityEventCategory;
+  event_type: ActivityEventType;
+  status: ActivityEventStatus;
+  platform: string;
+  normalized_hostname: string;
+  valid_url: boolean | null;
+  download_initiated: boolean;
+  download_stage?: DownloadLifecycleStage;
+  request_id: string;
+  download_method?: string;
+  quality?: string;
+  format?: string;
+  http_status?: number;
+  error_category?: string | null;
+  duration_ms?: number;
+  bytes_transferred?: number;
+  user_agent_summary: string;
+  device_category: 'desktop' | 'mobile' | 'tablet';
+  detail?: string;
+}
+
+export interface VisitorIpHistoryEntry {
+  ip: string;
+  ip_version: 'IPv4' | 'IPv6' | 'unknown';
+  first_seen: string;
+  last_seen: string;
+  count: number;
+}
+
+export interface VisitorProfileRecord {
+  visitor_id: string;
+  account_type: 'anonymous_visitor' | 'admin_account';
+  username?: string;
+  email?: string;
+  first_seen_at: string;
+  last_active_at: string;
+  session_count: number;
+  last_session_id: string;
+  links_submitted: number;
+  valid_links_count: number;
+  invalid_links_count: number;
+  download_attempts: number;
+  successful_downloads: number;
+  client_confirmed_downloads: number;
+  failed_downloads: number;
+  cancelled_downloads: number;
+  platform_counts: Record<string, number>;
+  most_used_platform: string;
+  last_activity_type: string;
+  last_activity_status: string;
+  last_ip: string;
+  ip_version: 'IPv4' | 'IPv6' | 'unknown';
+  ip_hash: string;
+  ip_history: VisitorIpHistoryEntry[];
+  user_agent_summary: string;
+  device_category: 'desktop' | 'mobile' | 'tablet';
+  blocked: boolean;
+  rate_limit_override_rpm: number | null;
+  admin_notes: string;
+}
+
+export interface UpgradePricingConfig {
+  enabled: boolean;
+  badge_text: string;
+  headline_en: string;
+  headline_zh: string;
+  subheadline_en: string;
+  subheadline_zh: string;
+  free_plan: {
+    name_en: string;
+    name_zh: string;
+    price_label: string;
+    status_badge_en: string;
+    status_badge_zh: string;
+    features_en: string[];
+    features_zh: string[];
+  };
+  pro_plan: {
+    name_en: string;
+    name_zh: string;
+    price_label: string;
+    status_badge_en: string;
+    status_badge_zh: string;
+    coming_soon: boolean;
+    features_en: string[];
+    features_zh: string[];
+    cta_label_en: string;
+    cta_label_zh: string;
+  };
+  contact_cta_enabled: boolean;
+  updated_at: string;
 }
 
 export interface AppErrorRecord {
@@ -148,6 +312,8 @@ export interface AdminSettings {
   retention_days_operational_logs: number;
   retention_days_contact_messages: number;
   session_ttl_hours: number;
+  ip_logging_mode: 'full' | 'masked' | 'hashed';
+  pricing_config?: UpgradePricingConfig;
   updated_at: string;
 }
 
@@ -166,6 +332,8 @@ const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const SCRYPT_KEYLEN = 64;
 const ADMIN_COOKIE_NAME = 'dd_admin_sid';
+const VISITOR_COOKIE_NAME = 'dd_vid';
+const VISITOR_SESSION_COOKIE_NAME = 'dd_sid';
 
 export function hashPasswordScrypt(plainPassword: string): string {
   const salt = crypto.randomBytes(16);
@@ -215,13 +383,156 @@ export function timingSafeHexEqual(aHex: string, bHex: string): boolean {
   }
 }
 
+// ==================== TRUSTED PROXY IP EXTRACTION & NORMALIZATION ====================
+
+function normalizeRawIp(raw?: string): string {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  if (!s || s === 'unknown') return '';
+  // Strip port from IPv4:port if present (e.g. "1.2.3.4:5678")
+  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(s)) {
+    s = s.split(':')[0];
+  }
+  // Strip brackets from [IPv6]:port
+  if (s.startsWith('[')) {
+    const closeIdx = s.indexOf(']');
+    if (closeIdx > 1) s = s.slice(1, closeIdx);
+  }
+  // Unwrap IPv4-mapped IPv6 address (::ffff:a.b.c.d)
+  if (s.toLowerCase().startsWith('::ffff:')) {
+    const v4Candidate = s.slice(7);
+    if (net.isIP(v4Candidate) === 4) {
+      return v4Candidate;
+    }
+  }
+  return s;
+}
+
+function isLoopbackOrPrivateProxyIp(ip: string): boolean {
+  const clean = normalizeRawIp(ip);
+  if (!clean) return false;
+  if (clean === '127.0.0.1' || clean === '::1') return true;
+  const trustedEnv = (process.env.TRUSTED_PROXY_IPS || '')
+    .split(',')
+    .map(x => normalizeRawIp(x))
+    .filter(Boolean);
+  if (trustedEnv.includes(clean)) return true;
+
+  if (net.isIP(clean) === 4) {
+    const parts = clean.split('.').map(n => parseInt(n, 10));
+    if (parts[0] === 10) return true;
+    if (parts[0] === 127) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  }
+  if (net.isIP(clean) === 6) {
+    const lower = clean.toLowerCase();
+    if (lower === '::1' || lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe80:')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export interface ClientIpInfo {
+  ip_address: string;
+  ip_version: 'IPv4' | 'IPv6' | 'unknown';
+  ip_hash: string;
+  trusted_proxy: boolean;
+}
+
+export function extractClientIpInfo(req: Request, mode: 'full' | 'masked' | 'hashed' = 'full'): ClientIpInfo {
+  const socketIp = normalizeRawIp(req.socket?.remoteAddress || '');
+  const trustedProxy = isLoopbackOrPrivateProxyIp(socketIp);
+
+  let effectiveIp = socketIp;
+  if (trustedProxy) {
+    // Only trust X-Forwarded-For / X-Real-IP / CF-Connecting-IP when request arrives via a trusted reverse proxy
+    const xff = String(req.headers['x-forwarded-for'] || '').trim();
+    const xRealIp = String(req.headers['x-real-ip'] || '').trim();
+    const cfIp = String(req.headers['cf-connecting-ip'] || '').trim();
+
+    if (cfIp && net.isIP(normalizeRawIp(cfIp)) !== 0) {
+      effectiveIp = normalizeRawIp(cfIp);
+    } else if (xff) {
+      const chain = xff.split(',').map(part => normalizeRawIp(part)).filter(ip => net.isIP(ip) !== 0);
+      if (chain.length > 0) {
+        effectiveIp = chain[0];
+      }
+    } else if (xRealIp && net.isIP(normalizeRawIp(xRealIp)) !== 0) {
+      effectiveIp = normalizeRawIp(xRealIp);
+    }
+  }
+
+  const ipVerNum = net.isIP(effectiveIp);
+  const ipVersion: 'IPv4' | 'IPv6' | 'unknown' =
+    ipVerNum === 4 ? 'IPv4' : ipVerNum === 6 ? 'IPv6' : 'unknown';
+
+  const ipHash = effectiveIp
+    ? 'ip_' + crypto.createHash('sha256').update('dd_ip_salt_v1:' + effectiveIp).digest('hex').slice(0, 12)
+    : 'ip_unknown';
+
+  let formattedIp = effectiveIp || 'unknown';
+  if (mode === 'hashed') {
+    formattedIp = ipHash;
+  } else if (mode === 'masked' && effectiveIp) {
+    if (ipVersion === 'IPv4') {
+      const octets = effectiveIp.split('.');
+      formattedIp = octets.length === 4 ? `${octets[0]}.${octets[1]}.${octets[2]}.xxx` : ipHash;
+    } else if (ipVersion === 'IPv6') {
+      const hextets = effectiveIp.split(':').filter(Boolean);
+      formattedIp = hextets.slice(0, 3).join(':') + '::xxxx';
+    }
+  }
+
+  return {
+    ip_address: formattedIp,
+    ip_version: ipVersion,
+    ip_hash: ipHash,
+    trusted_proxy: trustedProxy
+  };
+}
+
 function hashClientIp(req: Request): string {
-  const rawIp = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown')
-    .split(',')[0]
-    .trim();
-  if (!rawIp || rawIp === 'unknown') return 'ip_unknown';
-  // Privacy-preserving salted hash of IP address (never stores raw visitor IP on disk)
-  return 'ip_' + crypto.createHash('sha256').update('dd_ip_salt_v1:' + rawIp).digest('hex').slice(0, 12);
+  return extractClientIpInfo(req, 'hashed').ip_hash;
+}
+
+export function extractNormalizedHostAndPath(rawInput: string): {
+  normalized_hostname: string;
+  valid_url: boolean;
+} {
+  if (!rawInput || typeof rawInput !== 'string') {
+    return { normalized_hostname: 'empty', valid_url: false };
+  }
+  const trimmed = rawInput.trim();
+  const urlMatch = trimmed.match(/https?:\/\/[^\s"'<>]+/i);
+  const candidate = urlMatch ? urlMatch[0] : trimmed;
+  try {
+    const parsed = new URL(candidate.startsWith('http') ? candidate : `https://${candidate}`);
+    if (!parsed.hostname || !parsed.hostname.includes('.')) {
+      return { normalized_hostname: 'invalid-host', valid_url: false };
+    }
+    const host = parsed.hostname.toLowerCase().slice(0, 64);
+    // Keep only first 2 path segments without query parameters or tokens
+    const cleanSegments = parsed.pathname
+      .split('/')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(seg => seg.replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 24));
+    const pathPreview = cleanSegments.length > 0 ? '/' + cleanSegments.join('/') : '';
+    return {
+      normalized_hostname: `${host}${pathPreview}`,
+      valid_url: true
+    };
+  } catch {
+    if (/^BV[a-zA-Z0-9]{10}$/i.test(trimmed) || /^av\d+$/i.test(trimmed)) {
+      return { normalized_hostname: `bilibili.com/${trimmed.slice(0, 14)}`, valid_url: true };
+    }
+    if (/^\d{15,25}$/.test(trimmed)) {
+      return { normalized_hostname: 'numeric-id-input', valid_url: false };
+    }
+    return { normalized_hostname: 'invalid-url', valid_url: false };
+  }
 }
 
 function summarizeUserAgent(uaRaw?: string): string {
@@ -251,11 +562,8 @@ function detectDeviceCategory(uaRaw?: string): 'desktop' | 'mobile' | 'tablet' {
 function sanitizeLogSummary(raw: string): string {
   if (!raw) return 'Operation error';
   return String(raw)
-    // Redact any URLs with query strings or tokens
     .replace(/https?:\/\/[^\s"'<>]+/gi, '[redacted-url]')
-    // Redact filesystem paths
     .replace(/\/(?:var|home|app|tmp|usr|etc)\/[^\s"'<>]+/gi, '[redacted-path]')
-    // Redact potential tokens/keys
     .replace(/(?:Bearer|SESSDATA|token|key|password|secret)[=:\s]+[^\s&"']+/gi, '[redacted-secret]')
     .replace(/[\r\n\t]+/g, ' ')
     .trim()
@@ -280,6 +588,60 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
   }
   return out;
 }
+
+// ==================== DEFAULT UPGRADE & PRICING CONFIG ====================
+
+export const DEFAULT_PRICING_CONFIG: UpgradePricingConfig = {
+  enabled: true,
+  badge_text: 'PLANS & HD CAPABILITIES',
+  headline_en: 'DownDouyin Plans & Capabilities',
+  headline_zh: 'DownDouyin 套餐与高清解析能力',
+  subheadline_en: 'All core watermark-free parsing and downloads are 100% free. Optional high-volume API tiers are coming soon.',
+  subheadline_zh: '基础无水印解析与下载功能永久免费开放，高频批量 API 套餐即将推出。',
+  free_plan: {
+    name_en: 'Standard Web Downloader',
+    name_zh: '标准网页版（当前使用）',
+    price_label: '$0 / Free Forever',
+    status_badge_en: 'Active Now',
+    status_badge_zh: '当前已激活',
+    features_en: [
+      'Watermark-free Douyin, TikTok, Bilibili & Xiaohongshu parsing',
+      'Up to 1080P / 4K Bilibili DASH & Douyin multi-CDN failover',
+      'Live Photo & Multi-Photo Album ZIP batch packaging',
+      'Custom SESSDATA & Proxy configuration in HD Settings'
+    ],
+    features_zh: [
+      '支持抖音、TikTok、B站、小红书无水印视频与图文解析',
+      '支持 B站 1080P/4K DASH 与抖音多节点容灾高速下载',
+      '支持实况图 (Live Photo) 与多图图集一键打包 ZIP',
+      '支持在「高清设置」中配置自定义 SESSDATA 与代理'
+    ]
+  },
+  pro_plan: {
+    name_en: 'Pro Batch & Developer API',
+    name_zh: '专业批量版 & 开发者 API',
+    price_label: 'Coming Soon',
+    status_badge_en: 'Paid Plans Not Yet Available',
+    status_badge_zh: '付费计划暂未开放',
+    coming_soon: true,
+    features_en: [
+      'Automated creator profile & playlist bulk archiving',
+      'Dedicated high-concurrency REST API keys & webhooks',
+      'Server-side cloud muxing for 4K/8K Bilibili streams',
+      'Priority enterprise support & SLA guarantees'
+    ],
+    features_zh: [
+      '支持主页作品与收藏夹全量批量归档下载',
+      '专属高并发 REST API 密钥与 Webhook 回调',
+      '云端自动音视频封装合并（4K/8K 免本地混流）',
+      '优先技术支持与企业级 SLA 稳定性保障'
+    ],
+    cta_label_en: 'Configure Free 1080P/4K Cookie Now',
+    cta_label_zh: '立即免费配置 1080P/4K 高清 Cookie'
+  },
+  contact_cta_enabled: true,
+  updated_at: new Date().toISOString()
+};
 
 // ==================== ADMIN CENTER CONTROLLER ====================
 
@@ -310,6 +672,8 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
   const CONTACT_STATE_FILE = path.join(logsDir, 'contact-state.json');
   const CONTACT_FUNNEL_FILE = path.join(logsDir, 'contact-events.jsonl');
   const VISITOR_LOG_FILE = path.join(logsDir, 'visitor-events.jsonl');
+  const ACTIVITY_LOG_FILE = path.join(logsDir, 'activity-events.jsonl');
+  const VISITORS_INDEX_FILE = path.join(logsDir, 'visitors-index.json');
   const ERRORS_LOG_FILE = path.join(logsDir, 'app-errors.jsonl');
   const AUDIT_LOG_FILE = path.join(logsDir, 'audit-log.jsonl');
   const EMAIL_LOG_FILE = path.join(logsDir, 'email-deliveries.jsonl');
@@ -338,7 +702,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
   function writeJsonFileAtomic(filePath: string, data: unknown): void {
     try {
       fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
-      const tmpPath = `${filePath}.tmp.${process.pid}.${Date.now()}`;
+      const tmpPath = `${filePath}.tmp.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}`;
       fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), { encoding: 'utf8', mode: 0o600 });
       fs.renameSync(tmpPath, filePath);
     } catch {}
@@ -383,7 +747,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
   function appendJsonlSafe(filePath: string, record: unknown, maxFileSizeBytes = 10 * 1024 * 1024): void {
     try {
       fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
-      // Bound log growth automatically: if file exceeds maxFileSizeBytes, keep newest 60%
       if (fs.existsSync(filePath)) {
         const st = fs.statSync(filePath);
         if (st.size > maxFileSizeBytes) {
@@ -428,6 +791,8 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     retention_days_operational_logs: 90,
     retention_days_contact_messages: 365,
     session_ttl_hours: 12,
+    ip_logging_mode: 'full',
+    pricing_config: DEFAULT_PRICING_CONFIG,
     updated_at: new Date().toISOString()
   };
 
@@ -435,6 +800,9 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     ...defaultSettings,
     ...readJsonFileSafe<Partial<AdminSettings>>(SETTINGS_FILE, {})
   };
+  if (!adminSettings.pricing_config) {
+    adminSettings.pricing_config = { ...DEFAULT_PRICING_CONFIG };
+  }
   if (process.env.ADMIN_SHORTCUT_PHRASE && !adminSettings.shortcut_phrase_hash) {
     adminSettings.shortcut_phrase_hash = sha256Hex(process.env.ADMIN_SHORTCUT_PHRASE.trim());
     adminSettings.shortcut_enabled = true;
@@ -468,7 +836,351 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     appendJsonlSafe(AUDIT_LOG_FILE, entry, 5 * 1024 * 1024);
   }
 
-  // ---------------- 4. Admin Users & Bootstrap Setup ----------------
+  // ---------------- 4. Visitor Profiles & Activity Log Engine ----------------
+
+  const visitorsMap = new Map<string, VisitorProfileRecord>();
+  const MAX_VISITOR_PROFILES = 5000;
+  let visitorsDirty = false;
+  let lastVisitorsSaveMs = 0;
+
+  function loadVisitorsIndex(): void {
+    const stored = readJsonFileSafe<VisitorProfileRecord[]>(VISITORS_INDEX_FILE, []);
+    if (Array.isArray(stored)) {
+      for (const v of stored) {
+        if (v && typeof v.visitor_id === 'string' && v.visitor_id) {
+          visitorsMap.set(v.visitor_id, v);
+        }
+      }
+    }
+  }
+  loadVisitorsIndex();
+
+  function saveVisitorsIndex(force = false): void {
+    const now = Date.now();
+    if (!force && (!visitorsDirty || now - lastVisitorsSaveMs < 2500)) return;
+    visitorsDirty = false;
+    lastVisitorsSaveMs = now;
+    const all = Array.from(visitorsMap.values());
+    all.sort((a, b) => b.last_active_at.localeCompare(a.last_active_at));
+    writeJsonFileAtomic(VISITORS_INDEX_FILE, all.slice(0, MAX_VISITOR_PROFILES));
+  }
+
+  // Periodic flush for visitor profiles
+  setInterval(() => {
+    if (visitorsDirty) saveVisitorsIndex(true);
+  }, 10000).unref?.();
+
+  interface VisitorContext {
+    visitor_id: string;
+    session_id: string;
+    ip_address: string;
+    ip_version: 'IPv4' | 'IPv6' | 'unknown';
+    ip_hash: string;
+    user_agent_summary: string;
+    device_category: 'desktop' | 'mobile' | 'tablet';
+    is_new_session: boolean;
+  }
+
+  function resolveVisitorContext(req: Request, res?: Response, explicitIds?: { visitor_id?: string; session_id?: string }): VisitorContext {
+    const cookies = parseCookies(req.headers.cookie);
+    const ipInfo = extractClientIpInfo(req, adminSettings.ip_logging_mode || 'full');
+    const uaSummary = summarizeUserAgent(req.headers['user-agent']);
+    const deviceCat = detectDeviceCategory(req.headers['user-agent']);
+
+    const sanitizeId = (raw?: string) =>
+      typeof raw === 'string' ? raw.trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) : '';
+
+    let vid = sanitizeId(explicitIds?.visitor_id) || sanitizeId(cookies[VISITOR_COOKIE_NAME]) || sanitizeId(String(req.headers['x-visitor-id'] || ''));
+    let sid = sanitizeId(explicitIds?.session_id) || sanitizeId(cookies[VISITOR_SESSION_COOKIE_NAME]) || sanitizeId(String(req.headers['x-session-id'] || ''));
+
+    let isNewSession = false;
+    if (!vid || !vid.startsWith('vid_')) {
+      // Deterministic fallback by IP hash + UA within the same day if cookies aren't sent yet, or generate fresh cookie
+      if (res && !res.headersSent) {
+        vid = 'vid_' + crypto.randomBytes(8).toString('hex');
+      } else {
+        vid = 'vid_' + sha256Hex(`${ipInfo.ip_hash}:${uaSummary}`).slice(0, 16);
+      }
+    }
+    if (!sid || !sid.startsWith('sid_')) {
+      isNewSession = true;
+      if (res && !res.headersSent) {
+        sid = 'sid_' + crypto.randomBytes(6).toString('hex');
+      } else {
+        const halfHourBucket = Math.floor(Date.now() / (30 * 60 * 1000));
+        sid = 'sid_' + sha256Hex(`${vid}:${halfHourBucket}`).slice(0, 12);
+      }
+    }
+
+    if (res && !res.headersSent) {
+      const existingSetCookie = res.getHeader('Set-Cookie');
+      const cookieList: string[] = Array.isArray(existingSetCookie)
+        ? existingSetCookie.map(String)
+        : existingSetCookie
+        ? [String(existingSetCookie)]
+        : [];
+
+      if (!cookies[VISITOR_COOKIE_NAME]) {
+        cookieList.push(`${VISITOR_COOKIE_NAME}=${encodeURIComponent(vid)}; Path=/; SameSite=Lax; Max-Age=${180 * 24 * 3600}`);
+      }
+      if (!cookies[VISITOR_SESSION_COOKIE_NAME]) {
+        cookieList.push(`${VISITOR_SESSION_COOKIE_NAME}=${encodeURIComponent(sid)}; Path=/; SameSite=Lax; Max-Age=1800`);
+      }
+      if (cookieList.length > 0) {
+        res.setHeader('Set-Cookie', cookieList);
+      }
+    }
+
+    return {
+      visitor_id: vid,
+      session_id: sid,
+      ip_address: ipInfo.ip_address,
+      ip_version: ipInfo.ip_version,
+      ip_hash: ipInfo.ip_hash,
+      user_agent_summary: uaSummary,
+      device_category: deviceCat,
+      is_new_session: isNewSession
+    };
+  }
+
+  function isVisitorBlocked(req: Request): { blocked: boolean; reason?: string } {
+    const ctx = resolveVisitorContext(req);
+    const byId = visitorsMap.get(ctx.visitor_id);
+    if (byId && byId.blocked) {
+      return { blocked: true, reason: 'Visitor ID is blocked by administrator policy.' };
+    }
+    for (const v of visitorsMap.values()) {
+      if (v.blocked && v.ip_hash === ctx.ip_hash && ctx.ip_hash !== 'ip_unknown') {
+        return { blocked: true, reason: 'IP address is blocked by administrator policy.' };
+      }
+    }
+    return { blocked: false };
+  }
+
+  // Deduplication map for rapid duplicate events: key -> timestampMs
+  const recentEventDedupMap = new Map<string, number>();
+
+  function shouldDeduplicateEvent(dedupKey: string, windowMs = 2500): boolean {
+    const now = Date.now();
+    const prev = recentEventDedupMap.get(dedupKey);
+    if (prev && now - prev < windowMs) {
+      return true;
+    }
+    recentEventDedupMap.set(dedupKey, now);
+    if (recentEventDedupMap.size > 4000) {
+      for (const [k, ts] of recentEventDedupMap.entries()) {
+        if (now - ts > 15000) recentEventDedupMap.delete(k);
+      }
+    }
+    return false;
+  }
+
+  function updateVisitorProfileFromEvent(ctx: VisitorContext, ev: ActivityEventRecord): void {
+    const nowIso = ev.timestamp;
+    let profile = visitorsMap.get(ctx.visitor_id);
+
+    if (!profile) {
+      profile = {
+        visitor_id: ctx.visitor_id,
+        account_type: 'anonymous_visitor',
+        first_seen_at: nowIso,
+        last_active_at: nowIso,
+        session_count: 1,
+        last_session_id: ctx.session_id,
+        links_submitted: 0,
+        valid_links_count: 0,
+        invalid_links_count: 0,
+        download_attempts: 0,
+        successful_downloads: 0,
+        client_confirmed_downloads: 0,
+        failed_downloads: 0,
+        cancelled_downloads: 0,
+        platform_counts: { douyin: 0, bilibili: 0, tiktok: 0, xiaohongshu: 0 },
+        most_used_platform: 'none',
+        last_activity_type: ev.event_type,
+        last_activity_status: ev.status,
+        last_ip: ctx.ip_address,
+        ip_version: ctx.ip_version,
+        ip_hash: ctx.ip_hash,
+        ip_history: [
+          {
+            ip: ctx.ip_address,
+            ip_version: ctx.ip_version,
+            first_seen: nowIso,
+            last_seen: nowIso,
+            count: 1
+          }
+        ],
+        user_agent_summary: ctx.user_agent_summary,
+        device_category: ctx.device_category,
+        blocked: false,
+        rate_limit_override_rpm: null,
+        admin_notes: ''
+      };
+      visitorsMap.set(ctx.visitor_id, profile);
+      if (visitorsMap.size > MAX_VISITOR_PROFILES + 200) {
+        const oldestKey = visitorsMap.keys().next().value;
+        if (oldestKey) visitorsMap.delete(oldestKey);
+      }
+    } else {
+      profile.last_active_at = nowIso;
+      if (profile.last_session_id !== ctx.session_id) {
+        profile.session_count = (profile.session_count || 1) + 1;
+        profile.last_session_id = ctx.session_id;
+      }
+      profile.last_activity_type = ev.event_type;
+      profile.last_activity_status = ev.status;
+      profile.last_ip = ctx.ip_address;
+      profile.ip_version = ctx.ip_version;
+      profile.ip_hash = ctx.ip_hash;
+      profile.user_agent_summary = ctx.user_agent_summary;
+      profile.device_category = ctx.device_category;
+
+      const existingIpEntry = profile.ip_history.find(h => h.ip === ctx.ip_address);
+      if (existingIpEntry) {
+        existingIpEntry.last_seen = nowIso;
+        existingIpEntry.count++;
+      } else {
+        profile.ip_history.unshift({
+          ip: ctx.ip_address,
+          ip_version: ctx.ip_version,
+          first_seen: nowIso,
+          last_seen: nowIso,
+          count: 1
+        });
+        if (profile.ip_history.length > 15) {
+          profile.ip_history = profile.ip_history.slice(0, 15);
+        }
+      }
+    }
+
+    // Increment counters accurately without double-counting stages
+    if (ev.event_type === 'link_submitted' || ev.event_type === 'link_validated' || ev.event_type === 'unsupported_url' || ev.event_type === 'invalid_url') {
+      if (ev.event_type === 'link_validated') {
+        profile.links_submitted++;
+        profile.valid_links_count++;
+      } else if (ev.event_type === 'unsupported_url' || ev.event_type === 'invalid_url') {
+        profile.links_submitted++;
+        profile.invalid_links_count++;
+      }
+    } else if (ev.event_type === 'download_requested') {
+      profile.download_attempts++;
+    } else if (ev.event_type === 'download_succeeded') {
+      profile.successful_downloads++;
+    } else if (ev.event_type === 'download_client_completed') {
+      profile.client_confirmed_downloads = (profile.client_confirmed_downloads || 0) + 1;
+    } else if (ev.event_type === 'download_failed' || ev.event_type === 'timed_out') {
+      profile.failed_downloads++;
+    } else if (ev.event_type === 'cancelled') {
+      profile.cancelled_downloads = (profile.cancelled_downloads || 0) + 1;
+    }
+
+    const plat = (ev.platform || '').toLowerCase();
+    if (plat === 'douyin' || plat === 'bilibili' || plat === 'tiktok' || plat === 'xiaohongshu') {
+      if (ev.event_type === 'link_validated' || ev.event_type === 'download_succeeded' || ev.event_type === 'platform_select') {
+        profile.platform_counts[plat] = (profile.platform_counts[plat] || 0) + 1;
+      }
+    }
+
+    // Recompute most_used_platform
+    let topPlat = profile.most_used_platform || 'none';
+    let topCount = 0;
+    for (const [p, c] of Object.entries(profile.platform_counts || {})) {
+      if (c > topCount) {
+        topCount = c;
+        topPlat = p;
+      }
+    }
+    profile.most_used_platform = topPlat;
+
+    visitorsDirty = true;
+    saveVisitorsIndex(false);
+  }
+
+  function recordActivityEvent(
+    req: Request,
+    params: {
+      res?: Response;
+      visitor_id?: string;
+      session_id?: string;
+      event_category: ActivityEventCategory;
+      event_type: ActivityEventType;
+      status: ActivityEventStatus;
+      platform?: string;
+      raw_url_or_text?: string;
+      normalized_hostname?: string;
+      valid_url?: boolean | null;
+      download_initiated?: boolean;
+      download_stage?: DownloadLifecycleStage;
+      request_id?: string;
+      download_method?: string;
+      quality?: string;
+      format?: string;
+      http_status?: number;
+      error_category?: string | null;
+      duration_ms?: number;
+      bytes_transferred?: number;
+      detail?: string;
+      dedup_window_ms?: number;
+    }
+  ): ActivityEventRecord | null {
+    const ctx = resolveVisitorContext(req, params.res, {
+      visitor_id: params.visitor_id,
+      session_id: params.session_id
+    });
+
+    const reqId = (params.request_id || 'req_' + crypto.randomBytes(6).toString('hex')).slice(0, 48);
+    const dedupKey = `${ctx.visitor_id}:${params.event_type}:${params.download_stage || ''}:${params.request_id || params.raw_url_or_text || ''}`;
+    if (params.dedup_window_ms !== 0 && shouldDeduplicateEvent(dedupKey, params.dedup_window_ms ?? 2000)) {
+      return null;
+    }
+
+    let normHost = params.normalized_hostname || '';
+    let validUrl: boolean | null = params.valid_url ?? null;
+    if (!normHost && params.raw_url_or_text) {
+      const extracted = extractNormalizedHostAndPath(params.raw_url_or_text);
+      normHost = extracted.normalized_hostname;
+      if (validUrl === null) validUrl = extracted.valid_url;
+    }
+    if (!normHost) {
+      normHost = String(req.path || '/').slice(0, 64);
+    }
+
+    const record: ActivityEventRecord = {
+      event_id: 'act_' + crypto.randomBytes(6).toString('hex'),
+      timestamp: new Date().toISOString(),
+      visitor_id: ctx.visitor_id,
+      session_id: ctx.session_id,
+      ip_address: ctx.ip_address,
+      ip_version: ctx.ip_version,
+      ip_hash: ctx.ip_hash,
+      event_category: params.event_category,
+      event_type: params.event_type,
+      status: params.status,
+      platform: (params.platform || 'unknown').toLowerCase().slice(0, 24),
+      normalized_hostname: normHost.slice(0, 80),
+      valid_url: validUrl,
+      download_initiated: Boolean(params.download_initiated),
+      ...(params.download_stage ? { download_stage: params.download_stage } : {}),
+      request_id: reqId,
+      ...(params.download_method ? { download_method: String(params.download_method).slice(0, 40) } : {}),
+      ...(params.quality ? { quality: String(params.quality).slice(0, 32) } : {}),
+      ...(params.format ? { format: String(params.format).slice(0, 24) } : {}),
+      ...(params.http_status !== undefined ? { http_status: Number(params.http_status) } : {}),
+      ...(params.error_category !== undefined ? { error_category: params.error_category } : {}),
+      ...(params.duration_ms !== undefined ? { duration_ms: Math.max(0, Math.round(params.duration_ms)) } : {}),
+      ...(params.bytes_transferred !== undefined ? { bytes_transferred: Math.max(0, Math.round(params.bytes_transferred)) } : {}),
+      user_agent_summary: ctx.user_agent_summary,
+      device_category: ctx.device_category,
+      ...(params.detail ? { detail: sanitizeLogSummary(params.detail) } : {})
+    };
+
+    appendJsonlSafe(ACTIVITY_LOG_FILE, record, 12 * 1024 * 1024);
+    updateVisitorProfileFromEvent(ctx, record);
+    return record;
+  }
+
+  // ---------------- 5. Admin Users & Bootstrap Setup ----------------
 
   let adminUsers: AdminUser[] = readJsonFileSafe<AdminUser[]>(USERS_FILE, []);
   let generatedSetupToken = '';
@@ -484,7 +1196,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const envPasswordHash = (process.env.ADMIN_PASSWORD_HASH || '').trim();
     const envResetPassword = (process.env.ADMIN_RESET_PASSWORD || '').trim();
 
-    // Emergency password reset via ADMIN_RESET_PASSWORD env var (requires server access)
     if (envResetPassword && envResetPassword.length >= 10 && adminUsers.length > 0) {
       const targetUser = adminUsers.find(u => u.username === envUsername) || adminUsers[0];
       targetUser.password_hash = hashPasswordScrypt(envResetPassword);
@@ -544,7 +1255,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
           detail: 'Initial owner account provisioned from ADMIN_INITIAL_PASSWORD.'
         });
       } else {
-        // Generate or load one-time setup token stored on server disk (mode 0600)
         const envSetupToken = (process.env.ADMIN_SETUP_TOKEN || '').trim();
         if (envSetupToken && envSetupToken.length >= 12) {
           generatedSetupToken = envSetupToken;
@@ -572,7 +1282,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
   }
   bootstrapAdminUsersOnStartup();
 
-  // ---------------- 5. Session Management & Rate Limiting ----------------
+  // ---------------- 6. Session Management & Rate Limiting ----------------
 
   const activeSessions = new Map<string, AdminSession>();
 
@@ -671,7 +1381,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     return session;
   }
 
-  // Brute-force login rate limiter
   const loginAttemptsByKey = new Map<string, { count: number; firstAttemptAt: number; lockedUntil: number }>();
   const LOGIN_WINDOW_MS = 15 * 60 * 1000;
   const MAX_LOGIN_ATTEMPTS = 5;
@@ -708,7 +1417,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     loginAttemptsByKey.delete(key);
   }
 
-  // Middleware for protecting all /api/admin/* endpoints
   function requireAdminAuth(minRole: AdminRole = 'viewer') {
     const roleRank: Record<AdminRole, number> = { viewer: 1, admin: 2, owner: 3 };
     return (req: Request, res: Response, next: NextFunction) => {
@@ -730,7 +1438,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         });
       }
 
-      // Enforce CSRF token on all state-changing methods
       const method = req.method.toUpperCase();
       if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
         const providedCsrf = String(req.headers['x-csrf-token'] || req.body?._csrf || '').trim();
@@ -747,7 +1454,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     };
   }
 
-  // ---------------- 6. Transactional Email Provider (Resend) & Alerting ----------------
+  // ---------------- 7. Transactional Email Provider (Resend) & Alerting ----------------
 
   const alertCooldownMap = new Map<string, number>();
   let recentFailureTimestamps: number[] = [];
@@ -829,7 +1536,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         }
 
         lastError = String(data?.message || data?.error || `HTTP ${resp.status}`);
-        // Retry only on 429 or 5xx
         if (resp.status < 500 && resp.status !== 429) {
           break;
         }
@@ -858,7 +1564,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     return { sent: false, error: sanitizeLogSummary(lastError), status: 'failed' };
   }
 
-  // ---------------- 7. Contact State, Funnel Events, Visitor & Error Hooks ----------------
+  // ---------------- 8. Contact State, Funnel Events, Visitor & Error Hooks ----------------
 
   let contactStates: Record<string, ContactInquiryState> = readJsonFileSafe<Record<string, ContactInquiryState>>(
     CONTACT_STATE_FILE,
@@ -918,7 +1624,11 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     appendJsonlSafe(CONTACT_FUNNEL_FILE, ev, 3 * 1024 * 1024);
   }
 
-  function recordVisitorEvent(req: Request, eventType: VisitorTelemetryEvent['event_type'], extra?: { platform?: string }): void {
+  function recordVisitorEvent(
+    req: Request,
+    eventType: VisitorTelemetryEvent['event_type'],
+    extra?: { platform?: string; res?: Response; visitor_id?: string; session_id?: string }
+  ): void {
     let refHost = 'direct';
     const rawRef = String(req.headers.referer || req.headers.referrer || '').trim();
     if (rawRef) {
@@ -933,16 +1643,40 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const acceptLang = String(req.headers['accept-language'] || '').toLowerCase();
     const lang = acceptLang.startsWith('zh') ? 'zh' : 'en';
 
+    const ctx = resolveVisitorContext(req, extra?.res, {
+      visitor_id: extra?.visitor_id,
+      session_id: extra?.session_id
+    });
+
     const ev: VisitorTelemetryEvent = {
       timestamp: new Date().toISOString(),
       event_type: eventType,
       path: String(req.path || '/').slice(0, 64),
       referrer_host: refHost,
-      device_category: detectDeviceCategory(req.headers['user-agent']),
+      device_category: ctx.device_category,
       lang,
-      ...(extra?.platform ? { platform: String(extra.platform).slice(0, 24) } : {})
+      ...(extra?.platform ? { platform: String(extra.platform).slice(0, 24) } : {}),
+      visitor_id: ctx.visitor_id,
+      session_id: ctx.session_id,
+      ip_address: ctx.ip_address,
+      ip_version: ctx.ip_version
     };
     appendJsonlSafe(VISITOR_LOG_FILE, ev, 5 * 1024 * 1024);
+
+    if (eventType === 'page_view') {
+      recordActivityEvent(req, {
+        res: extra?.res,
+        visitor_id: ctx.visitor_id,
+        session_id: ctx.session_id,
+        event_category: 'navigation',
+        event_type: 'page_view',
+        status: 'info',
+        platform: extra?.platform || 'unknown',
+        normalized_hostname: String(req.path || '/').slice(0, 64),
+        detail: `Page view (${refHost})`,
+        dedup_window_ms: 1500
+      });
+    }
   }
 
   function recordAppError(params: {
@@ -970,7 +1704,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     };
     appendJsonlSafe(ERRORS_LOG_FILE, entry, 5 * 1024 * 1024);
 
-    // Track repeated download/API failures in a 10-minute rolling window
     recentFailureTimestamps = recentFailureTimestamps.filter(ts => now - ts < 10 * 60 * 1000);
     recentFailureTimestamps.push(now);
 
@@ -1101,7 +1834,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     saveContactStates();
   }
 
-  // ---------------- 8. Optional Google Service Account JWT Helper (GA4 & Search Console) ----------------
+  // ---------------- 9. Optional Google Service Account JWT Helper (GA4 & Search Console) ----------------
 
   let cachedGoogleAccessToken: { token: string; expiresAt: number; scopeKey: string } | null = null;
 
@@ -1174,7 +1907,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     return null;
   }
 
-  // ---------------- 9. Date Range Filtering Helper ----------------
+  // ---------------- 10. Date Range Filtering Helper ----------------
 
   function resolveDateRangeWindow(query: any): {
     preset: string;
@@ -1193,7 +1926,10 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     let startMs = todayStart - 6 * dayMs;
     let endMs = now.getTime();
 
-    if (preset === 'today') {
+    if (preset === '24h') {
+      startMs = now.getTime() - dayMs;
+      endMs = now.getTime();
+    } else if (preset === 'today') {
       startMs = todayStart;
       endMs = now.getTime();
     } else if (preset === 'yesterday') {
@@ -1201,8 +1937,8 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       endMs = todayStart - 1;
     } else if (preset === '7d') {
       startMs = todayStart - 6 * dayMs;
-    } else if (preset === '28d') {
-      startMs = todayStart - 27 * dayMs;
+    } else if (preset === '28d' || preset === '30d') {
+      startMs = todayStart - 29 * dayMs;
     } else if (preset === '90d') {
       startMs = todayStart - 89 * dayMs;
     } else if (preset === 'custom' && query?.start && query?.end) {
@@ -1246,7 +1982,16 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     res.send(fs.readFileSync(adminHtmlPath, 'utf8'));
   });
 
-  // 2. Public Search-Box Shortcut Check (Never authenticates; only returns { matched: true, redirect: '/admin' })
+  // 2. Public Upgrade & Pricing Config Endpoint (/api/public/pricing)
+  app.get('/api/public/pricing', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({
+      success: true,
+      pricing: adminSettings.pricing_config || DEFAULT_PRICING_CONFIG
+    });
+  });
+
+  // 3. Public Search-Box Shortcut Check (Never authenticates; only returns { matched: true, redirect: '/admin' })
   const shortcutRateLimitMap = new Map<string, number[]>();
   app.post('/api/public/shortcut-check', (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -1274,14 +2019,14 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     return res.json({ matched: false });
   });
 
-  // 3. Public Telemetry Hook for Contact Form Funnel & First-Party PageView
+  // 4. Public Telemetry Hook for Visitor Activity, Link/Button Clicks, Download Completion & Contact Funnel
   const telemetryRateMap = new Map<string, number[]>();
   app.post('/api/public/telemetry', (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-store');
     const ipHash = hashClientIp(req);
     const now = Date.now();
     const hits = (telemetryRateMap.get(ipHash) || []).filter(ts => now - ts < 60000);
-    if (hits.length >= 30) {
+    if (hits.length >= 90) {
       return res.status(204).end();
     }
     hits.push(now);
@@ -1291,14 +2036,111 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const platform = typeof req.body?.platform === 'string' ? req.body.platform.slice(0, 24) : undefined;
     const category = typeof req.body?.category === 'string' ? req.body.category.slice(0, 48) : undefined;
     const reason = typeof req.body?.reason === 'string' ? req.body.reason.slice(0, 80) : undefined;
+    const visitorId = typeof req.body?.visitor_id === 'string' ? req.body.visitor_id.slice(0, 40) : undefined;
+    const sessionId = typeof req.body?.session_id === 'string' ? req.body.session_id.slice(0, 40) : undefined;
+    const requestId = typeof req.body?.request_id === 'string' ? req.body.request_id.slice(0, 48) : undefined;
+    const quality = typeof req.body?.quality === 'string' ? req.body.quality.slice(0, 32) : undefined;
+    const format = typeof req.body?.format === 'string' ? req.body.format.slice(0, 24) : undefined;
+    const durationMs = Number.isFinite(Number(req.body?.duration_ms)) ? Number(req.body.duration_ms) : undefined;
+    const bytesTransferred = Number.isFinite(Number(req.body?.bytes_transferred)) ? Number(req.body.bytes_transferred) : undefined;
+    const detail = typeof req.body?.detail === 'string' ? req.body.detail.slice(0, 140) : undefined;
 
     if (eventType === 'page_view' || eventType === 'link_submit' || eventType === 'download_click') {
-      recordVisitorEvent(req, eventType, { platform });
-    } else if (eventType === 'contact_form_opened') {
-      recordVisitorEvent(req, 'contact_open');
+      recordVisitorEvent(req, eventType, { platform, res, visitor_id: visitorId, session_id: sessionId });
+      if (eventType === 'download_click') {
+        recordActivityEvent(req, {
+          res,
+          visitor_id: visitorId,
+          session_id: sessionId,
+          event_category: 'download_lifecycle',
+          event_type: 'download_requested',
+          status: 'processing',
+          platform,
+          download_initiated: true,
+          request_id: requestId,
+          quality,
+          format,
+          detail: detail || `User clicked download (${quality || format || 'default'})`
+        });
+      }
+    } else if (eventType === 'contact_form_opened' || eventType === 'contact_modal_open') {
+      recordVisitorEvent(req, 'contact_open', { res, visitor_id: visitorId, session_id: sessionId });
       recordContactFunnelEvent('form_opened', { category, platform });
+      recordActivityEvent(req, {
+        res,
+        visitor_id: visitorId,
+        session_id: sessionId,
+        event_category: 'modal_interaction',
+        event_type: 'contact_modal_open',
+        status: 'info',
+        platform,
+        detail: 'Opened Contact Support modal'
+      });
     } else if (eventType === 'contact_validation_failed') {
       recordContactFunnelEvent('validation_failed', { category, platform, reason });
+    } else if (eventType === 'upgrade_modal_open') {
+      recordActivityEvent(req, {
+        res,
+        visitor_id: visitorId,
+        session_id: sessionId,
+        event_category: 'modal_interaction',
+        event_type: 'upgrade_modal_open',
+        status: 'info',
+        platform,
+        detail: 'Opened Upgrade & Pricing modal'
+      });
+    } else if (
+      eventType === 'platform_select' ||
+      eventType === 'url_focus' ||
+      eventType === 'url_paste' ||
+      eventType === 'quality_select' ||
+      eventType === 'format_select' ||
+      eventType === 'settings_modal_open' ||
+      eventType === 'cookie_saved' ||
+      eventType === 'cookie_cleared' ||
+      eventType === 'help_guide_open' ||
+      eventType === 'faq_modal_open' ||
+      eventType === 'blog_modal_open' ||
+      eventType === 'retry' ||
+      eventType === 'cancelled' ||
+      eventType === 'download_client_completed' ||
+      eventType === 'download_failed'
+    ) {
+      const cat: ActivityEventCategory =
+        eventType === 'download_client_completed' || eventType === 'download_failed' || eventType === 'cancelled' || eventType === 'retry'
+          ? 'download_lifecycle'
+          : eventType === 'settings_modal_open' || eventType === 'cookie_saved' || eventType === 'cookie_cleared'
+          ? 'settings'
+          : eventType.endsWith('_open')
+          ? 'modal_interaction'
+          : 'ui_interaction';
+
+      const st: ActivityEventStatus =
+        eventType === 'download_client_completed'
+          ? 'success'
+          : eventType === 'download_failed'
+          ? 'failed'
+          : eventType === 'cancelled'
+          ? 'cancelled'
+          : 'info';
+
+      recordActivityEvent(req, {
+        res,
+        visitor_id: visitorId,
+        session_id: sessionId,
+        event_category: cat,
+        event_type: eventType as ActivityEventType,
+        status: st,
+        platform,
+        download_initiated: eventType === 'download_client_completed' || eventType === 'download_failed',
+        download_stage: eventType === 'download_client_completed' ? '4_client_completed' : undefined,
+        request_id: requestId,
+        quality,
+        format,
+        duration_ms: durationMs,
+        bytes_transferred: bytesTransferred,
+        detail: detail || `Client event: ${eventType}`
+      });
     }
     return res.status(204).end();
   });
@@ -1471,7 +2313,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     }
 
     const user = adminUsers.find(u => u.username === username && !u.disabled);
-    // Always perform scrypt verification even if user not found to prevent timing enumeration
     const dummyHash =
       'scrypt$16384$8$1$00112233445566778899aabbccddeeff$' + '0'.repeat(128);
     const validPassword = verifyPasswordScrypt(password, user ? user.password_hash : dummyHash);
@@ -1493,7 +2334,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       });
     }
 
-    // Regenerate session (remove any existing session cookie from request first)
     const oldCookies = parseCookies(req.headers.cookie);
     if (oldCookies[ADMIN_COOKIE_NAME]) {
       activeSessions.delete(sha256Hex(oldCookies[ADMIN_COOKIE_NAME]));
@@ -1610,7 +2450,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     user.updated_at = new Date().toISOString();
     saveAdminUsers();
 
-    // Revoke other sessions and issue a fresh session for current user
     for (const key of activeSessions.keys()) {
       if (key !== session.sid_hash) activeSessions.delete(key);
     }
@@ -1771,6 +2610,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
 
     const allDownloadEvents = readJsonlTail<DownloadStatRecord>(STATS_LOG_FILE, 10000);
     const allVisitorEvents = readJsonlTail<VisitorTelemetryEvent>(VISITOR_LOG_FILE, 10000);
+    const allActivityEvents = readJsonlTail<ActivityEventRecord>(ACTIVITY_LOG_FILE, 10000);
     const allContacts = readJsonlTail<RawContactRecord>(CONTACT_LOG_FILE, 5000);
     const allErrors = readJsonlTail<AppErrorRecord>(ERRORS_LOG_FILE, 5000);
     const allFunnel = readJsonlTail<ContactFunnelEvent>(CONTACT_FUNNEL_FILE, 5000);
@@ -1786,17 +2626,18 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const curVisitors = allVisitorEvents.filter(v => inRange(v.timestamp, win.startMs, win.endMs));
     const prevVisitors = allVisitorEvents.filter(v => inRange(v.timestamp, win.prevStartMs, win.prevEndMs));
 
+    const curActivities = allActivityEvents.filter(a => inRange(a.timestamp, win.startMs, win.endMs));
     const curErrors = allErrors.filter(e => inRange(e.timestamp, win.startMs, win.endMs));
 
     const summarizeDl = (records: DownloadStatRecord[]) => {
       let parseTotal = 0, parseSuccess = 0, parseFailed = 0;
       let dlTotal = 0, dlSuccess = 0, dlFailed = 0, dlAborted = 0;
       let totalLatencyMs = 0;
-      const byPlatform: Record<string, { total: number; success: number; failed: number }> = {
-        douyin: { total: 0, success: 0, failed: 0 },
-        bilibili: { total: 0, success: 0, failed: 0 },
-        tiktok: { total: 0, success: 0, failed: 0 },
-        xiaohongshu: { total: 0, success: 0, failed: 0 }
+      const byPlatform: Record<string, { total: number; success: number; failed: number; parse_total: number; download_total: number }> = {
+        douyin: { total: 0, success: 0, failed: 0, parse_total: 0, download_total: 0 },
+        bilibili: { total: 0, success: 0, failed: 0, parse_total: 0, download_total: 0 },
+        tiktok: { total: 0, success: 0, failed: 0, parse_total: 0, download_total: 0 },
+        xiaohongshu: { total: 0, success: 0, failed: 0, parse_total: 0, download_total: 0 }
       };
 
       for (const r of records) {
@@ -1808,6 +2649,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
           else parseFailed++;
           if (p) {
             p.total++;
+            p.parse_total++;
             if (r.status === 'success') p.success++;
             else p.failed++;
           }
@@ -1818,6 +2660,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
           else dlFailed++;
           if (p) {
             p.total++;
+            p.download_total++;
             if (r.status === 'success') p.success++;
             else if (r.status === 'failed') p.failed++;
           }
@@ -1829,6 +2672,8 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       const totalFailed = parseFailed + dlFailed;
       const nonAborted = totalSuccess + totalFailed;
       const successRate = nonAborted > 0 ? Number(((totalSuccess / nonAborted) * 100).toFixed(1)) : null;
+      const dlNonAborted = dlSuccess + dlFailed;
+      const dlSuccessRate = dlNonAborted > 0 ? Number(((dlSuccess / dlNonAborted) * 100).toFixed(1)) : null;
 
       return {
         total_attempts: totalAttempts,
@@ -1842,6 +2687,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         file_download_failed: dlFailed,
         file_download_aborted: dlAborted,
         success_rate_pct: successRate,
+        download_only_success_rate_pct: dlSuccessRate,
         avg_duration_ms: records.length > 0 ? Math.round(totalLatencyMs / records.length) : 0,
         by_platform: byPlatform
       };
@@ -1849,6 +2695,58 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
 
     const currentDlSummary = summarizeDl(curDownloads);
     const previousDlSummary = summarizeDl(prevDownloads);
+    const allTimeDlSummary = summarizeDl(allDownloadEvents);
+
+    // Visitor & session counts
+    const nowMs = Date.now();
+    const dayMs = 24 * 3600 * 1000;
+    const allVisitorProfiles = Array.from(visitorsMap.values());
+    const active24hCount = allVisitorProfiles.filter(v => Date.parse(v.last_active_at) >= nowMs - dayMs).length;
+    const active7dCount = allVisitorProfiles.filter(v => Date.parse(v.last_active_at) >= nowMs - 7 * dayMs).length;
+
+    const windowVisitorIds = new Set<string>();
+    const windowSessionIds = new Set<string>();
+    for (const a of curActivities) {
+      if (a.visitor_id) windowVisitorIds.add(a.visitor_id);
+      if (a.session_id) windowSessionIds.add(a.session_id);
+    }
+    for (const v of curVisitors) {
+      if (v.visitor_id) windowVisitorIds.add(v.visitor_id);
+      if (v.session_id) windowSessionIds.add(v.session_id);
+    }
+
+    const totalSessionsAllTime = allVisitorProfiles.reduce((acc, v) => acc + (v.session_count || 1), 0);
+    const clientConfirmedInWindow = curActivities.filter(a => a.event_type === 'download_client_completed').length;
+
+    // Most popular platforms ranking
+    const platformRanking = Object.entries(currentDlSummary.by_platform)
+      .map(([platform, stats]) => ({
+        platform,
+        total: stats.total,
+        success: stats.success,
+        failed: stats.failed,
+        share_pct: currentDlSummary.total_attempts > 0
+          ? Number(((stats.total / currentDlSummary.total_attempts) * 100).toFixed(1))
+          : 0
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    // Top error categories in window
+    const topErrorsMap: Record<string, number> = {};
+    for (const r of curDownloads) {
+      if (r.status === 'failed' && r.error_category) {
+        topErrorsMap[r.error_category] = (topErrorsMap[r.error_category] || 0) + 1;
+      }
+    }
+    for (const e of curErrors) {
+      if (e.error_category) {
+        topErrorsMap[e.error_category] = Math.max(topErrorsMap[e.error_category] || 0, 1);
+      }
+    }
+    const topErrorsList = Object.entries(topErrorsMap)
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
 
     // Contact inbox counts
     let unreadInquiries = 0;
@@ -1871,9 +2769,9 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
 
     // Daily trend series within window
     const dailyMap = new Map<string, { date: string; page_views: number; parse_requests: number; downloads_success: number; downloads_failed: number }>();
-    const daySpan = Math.min(90, Math.max(1, Math.ceil((win.endMs - win.startMs) / (24 * 3600 * 1000))));
+    const daySpan = Math.min(90, Math.max(1, Math.ceil((win.endMs - win.startMs) / dayMs)));
     for (let i = daySpan - 1; i >= 0; i--) {
-      const dStr = new Date(win.endMs - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const dStr = new Date(win.endMs - i * dayMs).toISOString().slice(0, 10);
       dailyMap.set(dStr, { date: dStr, page_views: 0, parse_requests: 0, downloads_success: 0, downloads_failed: 0 });
     }
     for (const v of curVisitors) {
@@ -1902,12 +2800,33 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         start_date: win.startDateStr,
         end_date: win.endDateStr
       },
+      summary_kpis: {
+        total_registered_users: adminUsers.length,
+        unique_visitors_window: Math.max(windowVisitorIds.size, allVisitorProfiles.length > 0 && win.preset !== 'today' ? allVisitorProfiles.length : windowVisitorIds.size),
+        unique_visitors_all_time: allVisitorProfiles.length,
+        total_sessions_window: Math.max(windowSessionIds.size, windowVisitorIds.size),
+        total_sessions_all_time: Math.max(totalSessionsAllTime, allVisitorProfiles.length),
+        active_users_24h: active24hCount,
+        active_users_7d: active7dCount,
+        total_link_submissions: currentDlSummary.parse_total,
+        total_download_attempts: currentDlSummary.file_download_total,
+        successful_downloads: currentDlSummary.file_download_success,
+        client_confirmed_downloads: clientConfirmedInWindow,
+        failed_downloads: currentDlSummary.file_download_failed,
+        cancelled_downloads: currentDlSummary.file_download_aborted,
+        download_success_rate_pct: currentDlSummary.download_only_success_rate_pct ?? currentDlSummary.success_rate_pct,
+        total_videos_downloaded_all_time: allTimeDlSummary.file_download_success,
+        avg_api_latency_ms: currentDlSummary.avg_duration_ms
+      },
+      most_popular_platforms: platformRanking,
+      top_error_types: topErrorsList,
+      recent_activity: allActivityEvents.slice(-25).reverse(),
       traffic: {
         first_party_page_views: curVisitors.filter(v => v.event_type === 'page_view').length,
         prev_first_party_page_views: prevVisitors.filter(v => v.event_type === 'page_view').length,
         ga4_measurement_id: adminSettings.ga4_measurement_id,
         ga4_data_api_configured: ga4DataApiConfigured,
-        unique_visitors_status: ga4DataApiConfigured ? 'available_in_analytics_tab' : 'requires_ga4_data_api'
+        unique_visitors_status: 'first_party_tracked'
       },
       downloads: {
         current: currentDlSummary,
@@ -1937,6 +2856,383 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     });
   });
 
+  // 1b. Visitors & User Management (/api/admin/visitors)
+  app.get('/api/admin/visitors', requireAdminAuth('viewer'), (req: Request, res: Response) => {
+    const search = String(req.query.q || '').trim().toLowerCase();
+    const statusFilter = String(req.query.status || 'all').trim().toLowerCase();
+    const platformFilter = String(req.query.platform || 'all').trim().toLowerCase();
+    const ipVersionFilter = String(req.query.ip_version || 'all').trim();
+    const sortBy = String(req.query.sort_by || 'last_active_at').trim();
+    const sortDir = String(req.query.sort_dir || 'desc').trim().toLowerCase() === 'asc' ? 1 : -1;
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const pageSize = Math.min(100, Math.max(10, parseInt(String(req.query.page_size || '25'), 10) || 25));
+
+    const nowMs = Date.now();
+    const dayMs = 24 * 3600 * 1000;
+
+    const allProfiles = Array.from(visitorsMap.values());
+    const filtered = allProfiles.filter(v => {
+      if (statusFilter === 'active_24h' && Date.parse(v.last_active_at) < nowMs - dayMs) return false;
+      if (statusFilter === 'active_7d' && Date.parse(v.last_active_at) < nowMs - 7 * dayMs) return false;
+      if (statusFilter === 'blocked' && !v.blocked) return false;
+      if (platformFilter !== 'all' && v.most_used_platform !== platformFilter && !(v.platform_counts?.[platformFilter] > 0)) return false;
+      if (ipVersionFilter !== 'all' && v.ip_version !== ipVersionFilter) return false;
+      if (search) {
+        const hay = `${v.visitor_id} ${v.last_ip} ${v.ip_hash} ${v.most_used_platform} ${v.user_agent_summary} ${v.admin_notes || ''}`.toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
+    });
+
+    filtered.sort((a: any, b: any) => {
+      if (sortBy === 'first_seen_at' || sortBy === 'last_active_at') {
+        return String(a[sortBy] || '').localeCompare(String(b[sortBy] || '')) * sortDir;
+      }
+      const numA = Number(a[sortBy] || 0);
+      const numB = Number(b[sortBy] || 0);
+      return (numA - numB) * sortDir;
+    });
+
+    const total = filtered.length;
+    const items = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+    return res.json({
+      success: true,
+      total,
+      page,
+      page_size: pageSize,
+      summary: {
+        total_tracked_visitors: allProfiles.length,
+        active_24h: allProfiles.filter(v => Date.parse(v.last_active_at) >= nowMs - dayMs).length,
+        active_7d: allProfiles.filter(v => Date.parse(v.last_active_at) >= nowMs - 7 * dayMs).length,
+        blocked_count: allProfiles.filter(v => v.blocked).length,
+        ipv4_visitors: allProfiles.filter(v => v.ip_version === 'IPv4').length,
+        ipv6_visitors: allProfiles.filter(v => v.ip_version === 'IPv6').length
+      },
+      items
+    });
+  });
+
+  // 1c. Visitor Detail Modal Endpoint (/api/admin/visitors/:id)
+  app.get('/api/admin/visitors/:id', requireAdminAuth('viewer'), (req: Request, res: Response) => {
+    const vid = String(req.params.id || '').trim();
+    const profile = visitorsMap.get(vid);
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Visitor profile not found.' });
+    }
+    const allActivities = readJsonlTail<ActivityEventRecord>(ACTIVITY_LOG_FILE, 5000);
+    const visitorEvents = allActivities.filter(a => a.visitor_id === vid).reverse();
+
+    return res.json({
+      success: true,
+      profile,
+      recent_link_submissions: visitorEvents
+        .filter(e => e.event_category === 'link_submission')
+        .slice(0, 50),
+      recent_downloads: visitorEvents
+        .filter(e => e.event_category === 'download_lifecycle')
+        .slice(0, 50),
+      recent_activity_timeline: visitorEvents.slice(0, 100)
+    });
+  });
+
+  // 1d. Update Visitor Block / Rate-Limit / Notes (/api/admin/visitors/:id)
+  app.patch('/api/admin/visitors/:id', requireAdminAuth('admin'), (req: Request, res: Response) => {
+    const session: AdminSession = (req as any).adminSession;
+    const vid = String(req.params.id || '').trim();
+    const profile = visitorsMap.get(vid);
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Visitor profile not found.' });
+    }
+
+    const changes: string[] = [];
+    if (typeof req.body?.blocked === 'boolean' && req.body.blocked !== profile.blocked) {
+      profile.blocked = req.body.blocked;
+      changes.push(profile.blocked ? 'Blocked visitor/IP' : 'Unblocked visitor/IP');
+    }
+    if (req.body?.rate_limit_override_rpm !== undefined) {
+      const val = req.body.rate_limit_override_rpm === null ? null : Math.max(1, Math.min(600, Number(req.body.rate_limit_override_rpm) || 30));
+      profile.rate_limit_override_rpm = val;
+      changes.push(`Set rate limit override to ${val ?? 'default'}`);
+    }
+    if (typeof req.body?.admin_notes === 'string') {
+      profile.admin_notes = req.body.admin_notes.trim().slice(0, 1000);
+      changes.push('Updated visitor notes');
+    }
+
+    visitorsDirty = true;
+    saveVisitorsIndex(true);
+
+    if (changes.length > 0) {
+      recordAuditLog({
+        actor: session.username,
+        action: 'visitor_profile_updated',
+        target: vid,
+        req,
+        status: profile.blocked ? 'warning' : 'success',
+        detail: changes.join('; ')
+      });
+    }
+
+    return res.json({ success: true, profile });
+  });
+
+  // 1e. Dedicated Activity Log Page Endpoint (/api/admin/activity)
+  app.get('/api/admin/activity', requireAdminAuth('viewer'), (req: Request, res: Response) => {
+    const win = resolveDateRangeWindow(req.query);
+    const search = String(req.query.q || '').trim().toLowerCase();
+    const platformFilter = String(req.query.platform || 'all').trim().toLowerCase();
+    const categoryFilter = String(req.query.category || 'all').trim().toLowerCase();
+    const eventTypeFilter = String(req.query.event_type || 'all').trim().toLowerCase();
+    const statusFilter = String(req.query.status || 'all').trim().toLowerCase();
+    const ipVersionFilter = String(req.query.ip_version || 'all').trim();
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const pageSize = Math.min(100, Math.max(10, parseInt(String(req.query.page_size || '30'), 10) || 30));
+
+    const allEvents = readJsonlTail<ActivityEventRecord>(ACTIVITY_LOG_FILE, 10000).reverse();
+
+    const filtered = allEvents.filter(ev => {
+      const t = Date.parse(ev.timestamp);
+      if (!Number.isNaN(t) && (t < win.startMs || t > win.endMs)) return false;
+      if (platformFilter !== 'all' && ev.platform !== platformFilter) return false;
+      if (categoryFilter !== 'all' && ev.event_category !== categoryFilter) return false;
+      if (eventTypeFilter !== 'all' && ev.event_type !== eventTypeFilter) return false;
+      if (statusFilter !== 'all' && ev.status !== statusFilter) return false;
+      if (ipVersionFilter !== 'all' && ev.ip_version !== ipVersionFilter) return false;
+      if (search) {
+        const hay = `${ev.event_id} ${ev.visitor_id} ${ev.session_id} ${ev.ip_address} ${ev.ip_hash} ${ev.request_id} ${ev.normalized_hostname} ${ev.event_type} ${ev.error_category || ''} ${ev.detail || ''}`.toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
+    });
+
+    const total = filtered.length;
+    const items = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+    // Breakdown counters for current filtered set
+    const countsByCategory: Record<string, number> = {};
+    const countsByStatus: Record<string, number> = {};
+    for (const ev of filtered) {
+      countsByCategory[ev.event_category] = (countsByCategory[ev.event_category] || 0) + 1;
+      countsByStatus[ev.status] = (countsByStatus[ev.status] || 0) + 1;
+    }
+
+    return res.json({
+      success: true,
+      window: { preset: win.preset, start_date: win.startDateStr, end_date: win.endDateStr },
+      total,
+      page,
+      page_size: pageSize,
+      counts_by_category: countsByCategory,
+      counts_by_status: countsByStatus,
+      items
+    });
+  });
+
+  // 1f. Activity Event Detail & Correlated Lifecycle View (/api/admin/activity/:id)
+  app.get('/api/admin/activity/:id', requireAdminAuth('viewer'), (req: Request, res: Response) => {
+    const eventId = String(req.params.id || '').trim();
+    const allEvents = readJsonlTail<ActivityEventRecord>(ACTIVITY_LOG_FILE, 10000);
+    const event = allEvents.find(e => e.event_id === eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, error: 'Activity event not found.' });
+    }
+    const correlatedByRequest = event.request_id
+      ? allEvents.filter(e => e.request_id === event.request_id)
+      : [];
+    const visitorProfile = visitorsMap.get(event.visitor_id) || null;
+
+    return res.json({
+      success: true,
+      event,
+      correlated_request_events: correlatedByRequest,
+      visitor_profile: visitorProfile
+    });
+  });
+
+  // 1g. CSV Exports for Visitors & Activity Logs
+  app.get('/api/admin/export/visitors.csv', requireAdminAuth('admin'), (req: Request, res: Response) => {
+    const session: AdminSession = (req as any).adminSession;
+    const rows = Array.from(visitorsMap.values());
+    const escapeCsv = (val: unknown) => `"${String(val ?? '').replace(/\r?\n/g, ' ').replace(/"/g, '""')}"`;
+
+    const lines = [
+      [
+        'visitor_id',
+        'first_seen_at',
+        'last_active_at',
+        'session_count',
+        'last_ip',
+        'ip_version',
+        'links_submitted',
+        'download_attempts',
+        'successful_downloads',
+        'client_confirmed_downloads',
+        'failed_downloads',
+        'most_used_platform',
+        'device_category',
+        'user_agent_summary',
+        'blocked'
+      ].join(',')
+    ];
+    for (const r of rows) {
+      lines.push([
+        escapeCsv(r.visitor_id),
+        escapeCsv(r.first_seen_at),
+        escapeCsv(r.last_active_at),
+        escapeCsv(r.session_count),
+        escapeCsv(r.last_ip),
+        escapeCsv(r.ip_version),
+        escapeCsv(r.links_submitted),
+        escapeCsv(r.download_attempts),
+        escapeCsv(r.successful_downloads),
+        escapeCsv(r.client_confirmed_downloads || 0),
+        escapeCsv(r.failed_downloads),
+        escapeCsv(r.most_used_platform),
+        escapeCsv(r.device_category),
+        escapeCsv(r.user_agent_summary),
+        escapeCsv(r.blocked)
+      ].join(','));
+    }
+
+    recordAuditLog({
+      actor: session.username,
+      action: 'csv_export_visitors',
+      target: `${rows.length}_visitors`,
+      req,
+      status: 'success',
+      detail: `Exported ${rows.length} visitor profiles to CSV.`
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="downdouyin-visitors-${new Date().toISOString().slice(0, 10)}.csv"`);
+    return res.send('\uFEFF' + lines.join('\n') + '\n');
+  });
+
+  app.get('/api/admin/export/activity.csv', requireAdminAuth('admin'), (req: Request, res: Response) => {
+    const session: AdminSession = (req as any).adminSession;
+    const records = readJsonlTail<ActivityEventRecord>(ACTIVITY_LOG_FILE, 5000).reverse();
+    const escapeCsv = (val: unknown) => `"${String(val ?? '').replace(/\r?\n/g, ' ').replace(/"/g, '""')}"`;
+
+    const lines = [
+      [
+        'timestamp',
+        'event_id',
+        'visitor_id',
+        'session_id',
+        'ip_address',
+        'ip_version',
+        'event_category',
+        'event_type',
+        'status',
+        'platform',
+        'normalized_hostname',
+        'valid_url',
+        'download_initiated',
+        'download_stage',
+        'request_id',
+        'duration_ms',
+        'error_category',
+        'detail'
+      ].join(',')
+    ];
+    for (const r of records) {
+      lines.push([
+        escapeCsv(r.timestamp),
+        escapeCsv(r.event_id),
+        escapeCsv(r.visitor_id),
+        escapeCsv(r.session_id),
+        escapeCsv(r.ip_address),
+        escapeCsv(r.ip_version),
+        escapeCsv(r.event_category),
+        escapeCsv(r.event_type),
+        escapeCsv(r.status),
+        escapeCsv(r.platform),
+        escapeCsv(r.normalized_hostname),
+        escapeCsv(r.valid_url ?? ''),
+        escapeCsv(r.download_initiated),
+        escapeCsv(r.download_stage || ''),
+        escapeCsv(r.request_id),
+        escapeCsv(r.duration_ms ?? ''),
+        escapeCsv(r.error_category || ''),
+        escapeCsv(r.detail || '')
+      ].join(','));
+    }
+
+    recordAuditLog({
+      actor: session.username,
+      action: 'csv_export_activity',
+      target: `${records.length}_events`,
+      req,
+      status: 'success',
+      detail: `Exported ${records.length} activity log events to CSV.`
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="downdouyin-activity-${new Date().toISOString().slice(0, 10)}.csv"`);
+    return res.send('\uFEFF' + lines.join('\n') + '\n');
+  });
+
+  // 1h. Upgrade & Pricing Admin Management (/api/admin/pricing)
+  app.get('/api/admin/pricing', requireAdminAuth('viewer'), (req: Request, res: Response) => {
+    return res.json({
+      success: true,
+      pricing: adminSettings.pricing_config || DEFAULT_PRICING_CONFIG
+    });
+  });
+
+  app.put('/api/admin/pricing', requireAdminAuth('admin'), (req: Request, res: Response) => {
+    const session: AdminSession = (req as any).adminSession;
+    const current = adminSettings.pricing_config || { ...DEFAULT_PRICING_CONFIG };
+    const b = req.body || {};
+
+    const updated: UpgradePricingConfig = {
+      enabled: typeof b.enabled === 'boolean' ? b.enabled : current.enabled,
+      badge_text: typeof b.badge_text === 'string' ? b.badge_text.trim().slice(0, 48) : current.badge_text,
+      headline_en: typeof b.headline_en === 'string' ? b.headline_en.trim().slice(0, 120) : current.headline_en,
+      headline_zh: typeof b.headline_zh === 'string' ? b.headline_zh.trim().slice(0, 120) : current.headline_zh,
+      subheadline_en: typeof b.subheadline_en === 'string' ? b.subheadline_en.trim().slice(0, 240) : current.subheadline_en,
+      subheadline_zh: typeof b.subheadline_zh === 'string' ? b.subheadline_zh.trim().slice(0, 240) : current.subheadline_zh,
+      free_plan: {
+        name_en: typeof b.free_plan?.name_en === 'string' ? b.free_plan.name_en.trim().slice(0, 60) : current.free_plan.name_en,
+        name_zh: typeof b.free_plan?.name_zh === 'string' ? b.free_plan.name_zh.trim().slice(0, 60) : current.free_plan.name_zh,
+        price_label: typeof b.free_plan?.price_label === 'string' ? b.free_plan.price_label.trim().slice(0, 40) : current.free_plan.price_label,
+        status_badge_en: typeof b.free_plan?.status_badge_en === 'string' ? b.free_plan.status_badge_en.trim().slice(0, 40) : current.free_plan.status_badge_en,
+        status_badge_zh: typeof b.free_plan?.status_badge_zh === 'string' ? b.free_plan.status_badge_zh.trim().slice(0, 40) : current.free_plan.status_badge_zh,
+        features_en: Array.isArray(b.free_plan?.features_en) ? b.free_plan.features_en.map((s: any) => String(s).trim().slice(0, 120)).filter(Boolean).slice(0, 8) : current.free_plan.features_en,
+        features_zh: Array.isArray(b.free_plan?.features_zh) ? b.free_plan.features_zh.map((s: any) => String(s).trim().slice(0, 120)).filter(Boolean).slice(0, 8) : current.free_plan.features_zh
+      },
+      pro_plan: {
+        name_en: typeof b.pro_plan?.name_en === 'string' ? b.pro_plan.name_en.trim().slice(0, 60) : current.pro_plan.name_en,
+        name_zh: typeof b.pro_plan?.name_zh === 'string' ? b.pro_plan.name_zh.trim().slice(0, 60) : current.pro_plan.name_zh,
+        price_label: typeof b.pro_plan?.price_label === 'string' ? b.pro_plan.price_label.trim().slice(0, 40) : current.pro_plan.price_label,
+        status_badge_en: typeof b.pro_plan?.status_badge_en === 'string' ? b.pro_plan.status_badge_en.trim().slice(0, 40) : current.pro_plan.status_badge_en,
+        status_badge_zh: typeof b.pro_plan?.status_badge_zh === 'string' ? b.pro_plan.status_badge_zh.trim().slice(0, 40) : current.pro_plan.status_badge_zh,
+        coming_soon: typeof b.pro_plan?.coming_soon === 'boolean' ? b.pro_plan.coming_soon : current.pro_plan.coming_soon,
+        features_en: Array.isArray(b.pro_plan?.features_en) ? b.pro_plan.features_en.map((s: any) => String(s).trim().slice(0, 120)).filter(Boolean).slice(0, 8) : current.pro_plan.features_en,
+        features_zh: Array.isArray(b.pro_plan?.features_zh) ? b.pro_plan.features_zh.map((s: any) => String(s).trim().slice(0, 120)).filter(Boolean).slice(0, 8) : current.pro_plan.features_zh,
+        cta_label_en: typeof b.pro_plan?.cta_label_en === 'string' ? b.pro_plan.cta_label_en.trim().slice(0, 60) : current.pro_plan.cta_label_en,
+        cta_label_zh: typeof b.pro_plan?.cta_label_zh === 'string' ? b.pro_plan.cta_label_zh.trim().slice(0, 60) : current.pro_plan.cta_label_zh
+      },
+      contact_cta_enabled: typeof b.contact_cta_enabled === 'boolean' ? b.contact_cta_enabled : current.contact_cta_enabled,
+      updated_at: new Date().toISOString()
+    };
+
+    adminSettings.pricing_config = updated;
+    saveAdminSettings();
+
+    recordAuditLog({
+      actor: session.username,
+      action: 'pricing_config_updated',
+      target: 'upgrade_pricing_modal',
+      req,
+      status: 'success',
+      detail: `Updated public Upgrade & Pricing configuration (coming_soon=${updated.pro_plan.coming_soon}).`
+    });
+
+    return res.json({ success: true, pricing: updated });
+  });
+
   // 2. Website Analytics (/api/admin/analytics)
   app.get('/api/admin/analytics', requireAdminAuth('viewer'), async (req: Request, res: Response) => {
     const win = resolveDateRangeWindow(req.query);
@@ -1953,7 +3249,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const periodDownloads = allDownloads.filter(d => inRange(d.timestamp));
     const periodFunnel = allFunnel.filter(f => inRange(f.timestamp));
 
-    // Referrer / Channel breakdown from first-party page_view telemetry
     const referrers: Record<string, number> = {};
     const devices: Record<string, number> = { desktop: 0, mobile: 0, tablet: 0 };
     const languages: Record<string, number> = { en: 0, zh: 0 };
@@ -1966,7 +3261,6 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       }
     }
 
-    // Optional live query to Google Analytics Data API if configured
     let ga4LiveReport: any = null;
     let ga4Error: string | null = null;
     const propId = (adminSettings.ga4_property_id || process.env.GA4_PROPERTY_ID || '').trim();
@@ -2046,8 +3340,14 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
   app.get('/api/admin/downloads', requireAdminAuth('viewer'), (req: Request, res: Response) => {
     const win = resolveDateRangeWindow(req.query);
     const allRecords = readJsonlTail<DownloadStatRecord>(STATS_LOG_FILE, 10000);
+    const allActivities = readJsonlTail<ActivityEventRecord>(ACTIVITY_LOG_FILE, 10000);
+
     const periodRecords = allRecords.filter(r => {
       const t = Date.parse(r.timestamp);
+      return !Number.isNaN(t) && t >= win.startMs && t <= win.endMs;
+    });
+    const periodActivities = allActivities.filter(a => {
+      const t = Date.parse(a.timestamp);
       return !Number.isNaN(t) && t >= win.startMs && t <= win.endMs;
     });
 
@@ -2060,6 +3360,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       download_success: number;
       download_failed: number;
       download_aborted: number;
+      client_completed: number;
       avg_latency_ms: number;
       latency_sum: number;
       count: number;
@@ -2074,6 +3375,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         download_success: 0,
         download_failed: 0,
         download_aborted: 0,
+        client_completed: 0,
         avg_latency_ms: 0,
         latency_sum: 0,
         count: 0
@@ -2103,6 +3405,24 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       }
     }
 
+    // Lifecycle stage counts in window
+    const stageCounts = {
+      stage_1_request_processed: 0,
+      stage_2_upstream_retrieved: 0,
+      stage_3_stream_started: 0,
+      stage_4_client_completed: 0
+    };
+    for (const a of periodActivities) {
+      if (a.download_stage === '1_request_processed') stageCounts.stage_1_request_processed++;
+      if (a.download_stage === '2_upstream_retrieved') stageCounts.stage_2_upstream_retrieved++;
+      if (a.download_stage === '3_stream_started') stageCounts.stage_3_stream_started++;
+      if (a.download_stage === '4_client_completed' || a.event_type === 'download_client_completed') {
+        stageCounts.stage_4_client_completed++;
+        const pb = byPlatform[a.platform] || byPlatform.unknown;
+        if (pb) pb.client_completed++;
+      }
+    }
+
     for (const p of platforms) {
       const b = byPlatform[p];
       b.avg_latency_ms = b.count > 0 ? Math.round(b.latency_sum / b.count) : 0;
@@ -2120,6 +3440,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       window: { preset: win.preset, start_date: win.startDateStr, end_date: win.endDateStr },
       total_events_in_window: periodRecords.length,
       timeout_count: timeoutCount,
+      lifecycle_stages: stageCounts,
       by_platform: byPlatform,
       error_categories: errorCategories,
       recent_failures: recentFailures,
@@ -2153,7 +3474,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         updated_at: st.updated_at,
         timeline: st.timeline
       };
-    }).reverse(); // Newest first
+    }).reverse();
 
     saveContactStates();
 
@@ -2194,7 +3515,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     });
   });
 
-  // 4b. Update Contact Inquiry State (Mark read/unread, resolved/open, issue_type, notes)
+  // 4b. Update Contact Inquiry State
   app.patch('/api/admin/contacts/:id', requireAdminAuth('admin'), (req: Request, res: Response) => {
     const session: AdminSession = (req as any).adminSession;
     const inquiryId = String(req.params.id || '').trim();
@@ -2254,7 +3575,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     return res.json({ success: true, state });
   });
 
-  // 4c. Delete Individual Contact Record (GDPR/Privacy Removal with Explicit Confirmation)
+  // 4c. Delete Individual Contact Record
   app.delete('/api/admin/contacts/:id', requireAdminAuth('admin'), (req: Request, res: Response) => {
     const session: AdminSession = (req as any).adminSession;
     const inquiryId = String(req.params.id || '').trim();
@@ -2306,7 +3627,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     return res.json({ success: true, deleted_id: inquiryId });
   });
 
-  // 4c. Export Authenticated Contact Records or Download Stats to CSV
+  // 4d. Export Authenticated Contact Records or Download Stats to CSV
   app.get('/api/admin/export/contacts.csv', requireAdminAuth('admin'), (req: Request, res: Response) => {
     const session: AdminSession = (req as any).adminSession;
     const rawRecords = readJsonlTail<RawContactRecord>(CONTACT_LOG_FILE, 5000);
@@ -2461,6 +3782,8 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         })(),
         files: {
           download_stats_bytes: getFileSize(STATS_LOG_FILE),
+          activity_events_bytes: getFileSize(ACTIVITY_LOG_FILE),
+          visitors_index_bytes: getFileSize(VISITORS_INDEX_FILE),
           contact_messages_bytes: getFileSize(CONTACT_LOG_FILE),
           app_errors_bytes: getFileSize(ERRORS_LOG_FILE),
           audit_log_bytes: getFileSize(AUDIT_LOG_FILE),
@@ -2685,6 +4008,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         retention_days_operational_logs: adminSettings.retention_days_operational_logs,
         retention_days_contact_messages: adminSettings.retention_days_contact_messages,
         session_ttl_hours: adminSettings.session_ttl_hours,
+        ip_logging_mode: adminSettings.ip_logging_mode || 'full',
         updated_at: adminSettings.updated_at
       },
       backups: getBackupsList()
@@ -2715,6 +4039,9 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     }
     if (b.summary_schedule === 'off' || b.summary_schedule === 'daily' || b.summary_schedule === 'weekly') {
       adminSettings.summary_schedule = b.summary_schedule;
+    }
+    if (b.ip_logging_mode === 'full' || b.ip_logging_mode === 'masked' || b.ip_logging_mode === 'hashed') {
+      adminSettings.ip_logging_mode = b.ip_logging_mode;
     }
     if (typeof b.shortcut_enabled === 'boolean') {
       adminSettings.shortcut_enabled = b.shortcut_enabled;
@@ -2780,6 +4107,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       settings: adminSettings,
       contact_inquiries: readJsonlTail<RawContactRecord>(CONTACT_LOG_FILE, 5000),
       contact_states: contactStates,
+      visitors_count: visitorsMap.size,
       download_stats_summary: deps.getDownloadStats().summary
     };
 
@@ -2845,6 +4173,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const prunedStats = pruneJsonlByTimestamp(STATS_LOG_FILE, opCutoffMs);
     const prunedErrors = pruneJsonlByTimestamp(ERRORS_LOG_FILE, opCutoffMs);
     const prunedVisitors = pruneJsonlByTimestamp(VISITOR_LOG_FILE, opCutoffMs);
+    const prunedActivity = pruneJsonlByTimestamp(ACTIVITY_LOG_FILE, opCutoffMs);
 
     recordAuditLog({
       actor: session.username,
@@ -2852,13 +4181,14 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       target: `${adminSettings.retention_days_operational_logs}d_policy`,
       req,
       status: 'success',
-      detail: `Pruned expired operational logs (stats: ${prunedStats}, errors: ${prunedErrors}, visitors: ${prunedVisitors}).`
+      detail: `Pruned expired operational logs (stats: ${prunedStats}, activity: ${prunedActivity}, errors: ${prunedErrors}, visitors: ${prunedVisitors}).`
     });
 
     return res.json({
       success: true,
       pruned: {
         download_stats: prunedStats,
+        activity_events: prunedActivity,
         app_errors: prunedErrors,
         visitor_events: prunedVisitors
       }
@@ -2869,6 +4199,8 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     recordAppError,
     recordContactFunnelEvent,
     recordVisitorEvent,
+    recordActivityEvent,
+    isVisitorBlocked,
     onNewContactInquiryStored
   };
 }
