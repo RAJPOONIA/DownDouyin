@@ -2417,6 +2417,60 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     return res.json({ success: true, revoked_sessions: revokedCount });
   });
 
+  function getSessionRef(sidHash: string): string {
+    return 'ses_' + sha256Hex('dd_sref_v1:' + sidHash).slice(0, 12);
+  }
+
+  // 5b. Revoke Individual Session by Safe Reference ID
+  app.delete('/api/admin/sessions/:ref', requireAdminAuth('admin'), (req: Request, res: Response) => {
+    const currentSession: AdminSession = (req as any).adminSession;
+    const targetRef = String(req.params.ref || '').trim();
+    if (!targetRef || !/^ses_[a-f0-9]{12}$/.test(targetRef)) {
+      return res.status(400).json({ success: false, error: 'Invalid session reference identifier.' });
+    }
+
+    let matchedKey: string | null = null;
+    let matchedSession: AdminSession | null = null;
+    for (const [k, s] of activeSessions.entries()) {
+      if (getSessionRef(k) === targetRef) {
+        matchedKey = k;
+        matchedSession = s;
+        break;
+      }
+    }
+
+    if (!matchedKey || !matchedSession) {
+      return res.status(404).json({ success: false, error: 'Active session not found or already expired.' });
+    }
+
+    // Non-owner admins cannot revoke an owner's session
+    if (matchedSession.role === 'owner' && currentSession.role !== 'owner') {
+      return res.status(403).json({ success: false, error: 'Only an Owner can revoke an Owner session.' });
+    }
+
+    const revokedSelf = matchedKey === currentSession.sid_hash;
+    activeSessions.delete(matchedKey);
+    persistSessionsToDisk();
+    if (revokedSelf) {
+      clearSessionCookie(res);
+    }
+
+    recordAuditLog({
+      actor: currentSession.username,
+      action: 'admin_session_revoked',
+      target: `${matchedSession.username} (${targetRef})`,
+      req,
+      status: 'warning',
+      detail: `Revoked individual session ${targetRef} for ${matchedSession.username} (${matchedSession.user_agent_summary}).`
+    });
+
+    return res.json({
+      success: true,
+      revoked_ref: targetRef,
+      revoked_current: revokedSelf
+    });
+  });
+
   // 6. Change Password / Manage Staff Users
   app.post('/api/admin/auth/change-password', requireAdminAuth('viewer'), (req: Request, res: Response) => {
     const session: AdminSession = (req as any).adminSession;
@@ -2474,7 +2528,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const email = String(req.body?.email || '').trim();
     const password = String(req.body?.password || '');
     const roleRaw = String(req.body?.role || 'viewer').trim().toLowerCase();
-    const role: AdminRole = roleRaw === 'admin' ? 'admin' : 'viewer';
+    const role: AdminRole = roleRaw === 'owner' ? 'owner' : roleRaw === 'admin' ? 'admin' : 'viewer';
 
     if (!/^[a-z0-9_.-]{3,32}$/.test(username)) {
       return res.status(400).json({
@@ -2546,16 +2600,31 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       return res.status(404).json({ success: false, error: 'User account not found.' });
     }
     if (targetUser.id === session.user_id && req.body?.disabled === true) {
-      return res.status(400).json({ success: false, error: 'You cannot disable your own active owner account.' });
+      return res.status(400).json({ success: false, error: 'You cannot disable your own active account.' });
+    }
+
+    const activeOwnersCount = adminUsers.filter(u => u.role === 'owner' && !u.disabled).length;
+    const wantsDisable = req.body?.disabled === true && !targetUser.disabled;
+    const wantsDemoteOwner =
+      targetUser.role === 'owner' &&
+      typeof req.body?.role === 'string' &&
+      req.body.role !== 'owner';
+
+    if (targetUser.role === 'owner' && (wantsDisable || wantsDemoteOwner) && activeOwnersCount <= 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot disable or demote the final active Owner account.'
+      });
     }
 
     if (typeof req.body?.disabled === 'boolean') {
       targetUser.disabled = req.body.disabled;
     }
-    if (req.body?.role === 'admin' || req.body?.role === 'viewer') {
-      if (targetUser.role !== 'owner') {
-        targetUser.role = req.body.role;
-      }
+    if (req.body?.role === 'owner' || req.body?.role === 'admin' || req.body?.role === 'viewer') {
+      targetUser.role = req.body.role;
+    }
+    if (typeof req.body?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email.trim())) {
+      targetUser.email = req.body.email.trim();
     }
     targetUser.updated_at = new Date().toISOString();
     saveAdminUsers();
@@ -2577,6 +2646,42 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     });
 
     return res.json({ success: true });
+  });
+
+  app.delete('/api/admin/users/:id', requireAdminAuth('owner'), (req: Request, res: Response) => {
+    const session: AdminSession = (req as any).adminSession;
+    const targetId = String(req.params.id || '').trim();
+    const idx = adminUsers.findIndex(u => u.id === targetId);
+    if (idx < 0) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+    const targetUser = adminUsers[idx];
+    if (targetUser.id === session.user_id) {
+      return res.status(400).json({ success: false, error: 'You cannot delete your own currently signed-in account.' });
+    }
+    const activeOwnersCount = adminUsers.filter(u => u.role === 'owner' && !u.disabled).length;
+    if (targetUser.role === 'owner' && !targetUser.disabled && activeOwnersCount <= 1) {
+      return res.status(400).json({ success: false, error: 'Cannot delete the final active Owner account.' });
+    }
+
+    adminUsers.splice(idx, 1);
+    saveAdminUsers();
+
+    for (const [k, s] of activeSessions.entries()) {
+      if (s.user_id === targetUser.id) activeSessions.delete(k);
+    }
+    persistSessionsToDisk();
+
+    recordAuditLog({
+      actor: session.username,
+      action: 'staff_user_deleted',
+      target: targetUser.username,
+      req,
+      status: 'warning',
+      detail: `Deleted staff account ${targetUser.username} (${targetUser.role}).`
+    });
+
+    return res.json({ success: true, deleted_id: targetId });
   });
 
   // ==================== ADMIN DASHBOARD DATA ENDPOINTS ====================
@@ -2627,7 +2732,9 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const prevVisitors = allVisitorEvents.filter(v => inRange(v.timestamp, win.prevStartMs, win.prevEndMs));
 
     const curActivities = allActivityEvents.filter(a => inRange(a.timestamp, win.startMs, win.endMs));
+    const prevActivities = allActivityEvents.filter(a => inRange(a.timestamp, win.prevStartMs, win.prevEndMs));
     const curErrors = allErrors.filter(e => inRange(e.timestamp, win.startMs, win.endMs));
+    const prevErrors = allErrors.filter(e => inRange(e.timestamp, win.prevStartMs, win.prevEndMs));
 
     const summarizeDl = (records: DownloadStatRecord[]) => {
       let parseTotal = 0, parseSuccess = 0, parseFailed = 0;
@@ -2672,6 +2779,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       const totalFailed = parseFailed + dlFailed;
       const nonAborted = totalSuccess + totalFailed;
       const successRate = nonAborted > 0 ? Number(((totalSuccess / nonAborted) * 100).toFixed(1)) : null;
+      const failureRate = nonAborted > 0 ? Number(((totalFailed / nonAborted) * 100).toFixed(1)) : null;
       const dlNonAborted = dlSuccess + dlFailed;
       const dlSuccessRate = dlNonAborted > 0 ? Number(((dlSuccess / dlNonAborted) * 100).toFixed(1)) : null;
 
@@ -2687,6 +2795,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         file_download_failed: dlFailed,
         file_download_aborted: dlAborted,
         success_rate_pct: successRate,
+        failure_rate_pct: failureRate,
         download_only_success_rate_pct: dlSuccessRate,
         avg_duration_ms: records.length > 0 ? Math.round(totalLatencyMs / records.length) : 0,
         by_platform: byPlatform
@@ -2697,7 +2806,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const previousDlSummary = summarizeDl(prevDownloads);
     const allTimeDlSummary = summarizeDl(allDownloadEvents);
 
-    // Visitor & session counts
+    // Visitor & session counts (exact window counts without artificial Math.max inflation)
     const nowMs = Date.now();
     const dayMs = 24 * 3600 * 1000;
     const allVisitorProfiles = Array.from(visitorsMap.values());
@@ -2714,22 +2823,55 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       if (v.visitor_id) windowVisitorIds.add(v.visitor_id);
       if (v.session_id) windowSessionIds.add(v.session_id);
     }
+    for (const vp of allVisitorProfiles) {
+      if (inRange(vp.last_active_at, win.startMs, win.endMs) || inRange(vp.first_seen_at, win.startMs, win.endMs)) {
+        windowVisitorIds.add(vp.visitor_id);
+      }
+    }
+
+    const prevWindowVisitorIds = new Set<string>();
+    for (const a of prevActivities) {
+      if (a.visitor_id) prevWindowVisitorIds.add(a.visitor_id);
+    }
+    for (const v of prevVisitors) {
+      if (v.visitor_id) prevWindowVisitorIds.add(v.visitor_id);
+    }
 
     const totalSessionsAllTime = allVisitorProfiles.reduce((acc, v) => acc + (v.session_count || 1), 0);
     const clientConfirmedInWindow = curActivities.filter(a => a.event_type === 'download_client_completed').length;
 
-    // Most popular platforms ranking
+    // Most popular platforms ranking & most failing platform/endpoint
     const platformRanking = Object.entries(currentDlSummary.by_platform)
       .map(([platform, stats]) => ({
         platform,
         total: stats.total,
         success: stats.success,
         failed: stats.failed,
+        parse_total: stats.parse_total,
+        download_total: stats.download_total,
         share_pct: currentDlSummary.total_attempts > 0
           ? Number(((stats.total / currentDlSummary.total_attempts) * 100).toFixed(1))
           : 0
       }))
       .sort((a, b) => b.total - a.total);
+
+    const failingPlatforms = [...platformRanking].filter(p => p.failed > 0).sort((a, b) => b.failed - a.failed);
+    const mostFailingPlatform = failingPlatforms.length > 0 ? failingPlatforms[0] : null;
+
+    const endpointFailuresMap: Record<string, number> = {};
+    for (const e of curErrors) {
+      endpointFailuresMap[e.route_category] = (endpointFailuresMap[e.route_category] || 0) + 1;
+    }
+    for (const d of curDownloads) {
+      if (d.status === 'failed') {
+        const ep = d.operation === 'parse_request' ? 'parse (/api/parse)' : d.operation === 'zip_download' ? 'zip (/api/zip)' : 'download (/api/download)';
+        endpointFailuresMap[ep] = (endpointFailuresMap[ep] || 0) + 1;
+      }
+    }
+    const failingEndpoints = Object.entries(endpointFailuresMap)
+      .map(([endpoint, count]) => ({ endpoint, count }))
+      .sort((a, b) => b.count - a.count);
+    const mostFailingEndpoint = failingEndpoints.length > 0 ? failingEndpoints[0] : null;
 
     // Top error categories in window
     const topErrorsMap: Record<string, number> = {};
@@ -2759,7 +2901,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       if (st.status !== 'spam') {
         if (!st.read) unreadInquiries++;
         if (st.status === 'open' || st.status === 'in_progress') unresolvedInquiries++;
-        if (st.issue_type === 'feedback') feedbackCount++;
+        if (st.issue_type === 'feedback' || st.issue_type === 'bug_report') feedbackCount++;
       }
       if (inRange(c.timestamp, win.startMs, win.endMs)) {
         periodInquiries++;
@@ -2795,6 +2937,8 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
 
     return res.json({
       success: true,
+      checked_at: new Date().toISOString(),
+      timezone: 'UTC',
       window: {
         preset: win.preset,
         start_date: win.startDateStr,
@@ -2802,25 +2946,35 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       },
       summary_kpis: {
         total_registered_users: adminUsers.length,
-        unique_visitors_window: Math.max(windowVisitorIds.size, allVisitorProfiles.length > 0 && win.preset !== 'today' ? allVisitorProfiles.length : windowVisitorIds.size),
+        unique_visitors_window: windowVisitorIds.size,
+        prev_unique_visitors_window: prevWindowVisitorIds.size,
         unique_visitors_all_time: allVisitorProfiles.length,
         total_sessions_window: Math.max(windowSessionIds.size, windowVisitorIds.size),
         total_sessions_all_time: Math.max(totalSessionsAllTime, allVisitorProfiles.length),
         active_users_24h: active24hCount,
         active_users_7d: active7dCount,
         total_link_submissions: currentDlSummary.parse_total,
+        prev_link_submissions: previousDlSummary.parse_total,
         total_download_attempts: currentDlSummary.file_download_total,
+        prev_download_attempts: previousDlSummary.file_download_total,
         successful_downloads: currentDlSummary.file_download_success,
+        prev_successful_downloads: previousDlSummary.file_download_success,
         client_confirmed_downloads: clientConfirmedInWindow,
         failed_downloads: currentDlSummary.file_download_failed,
+        prev_failed_downloads: previousDlSummary.file_download_failed,
         cancelled_downloads: currentDlSummary.file_download_aborted,
         download_success_rate_pct: currentDlSummary.download_only_success_rate_pct ?? currentDlSummary.success_rate_pct,
+        download_failure_rate_pct: currentDlSummary.failure_rate_pct,
         total_videos_downloaded_all_time: allTimeDlSummary.file_download_success,
         avg_api_latency_ms: currentDlSummary.avg_duration_ms
       },
       most_popular_platforms: platformRanking,
+      most_failing_platform: mostFailingPlatform,
+      most_failing_endpoint: mostFailingEndpoint,
       top_error_types: topErrorsList,
-      recent_activity: allActivityEvents.slice(-25).reverse(),
+      recent_activity: curActivities.slice(-20).reverse(),
+      recent_errors: curErrors.slice(-10).reverse(),
+      prev_errors_count: prevErrors.length,
       traffic: {
         first_party_page_views: curVisitors.filter(v => v.event_type === 'page_view').length,
         prev_first_party_page_views: prevVisitors.filter(v => v.event_type === 'page_view').length,
@@ -3382,7 +3536,21 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       };
     }
 
+    const describeErrorCategory = (cat: string): string => {
+      const c = (cat || '').toLowerCase();
+      if (c.includes('missing_sessdata') || c.includes('auth_cookie')) return 'Bilibili SESSDATA cookie missing or expired (1080p+/4K restricted)';
+      if (c.includes('timeout')) return 'Upstream platform request timed out';
+      if (c.includes('rate_limit') || c.includes('429')) return 'Rate-limited by upstream platform or anti-bot guard';
+      if (c.includes('invalid_url') || c.includes('validation') || c.includes('unsupported')) return 'Invalid or unsupported share link submitted by visitor';
+      if (c.includes('not_found') || c.includes('deleted') || c.includes('404')) return 'Video deleted, private, or unavailable on source platform';
+      if (c.includes('stream_abort') || c.includes('client_closed')) return 'Visitor cancelled or closed browser during stream transfer';
+      if (c.includes('upstream_403') || c.includes('forbidden')) return 'Upstream CDN rejected request (403 Forbidden / signature expired)';
+      if (c.includes('upstream_error') || c.includes('parse_failed')) return 'Upstream parser structure changed or returned empty media stream';
+      return cat.replace(/_/g, ' ');
+    };
+
     const errorCategories: Record<string, number> = {};
+    const errorReasonsDetailed: Array<{ category: string; count: number; description: string }> = [];
     let timeoutCount = 0;
 
     for (const r of periodRecords) {
@@ -3403,6 +3571,14 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         errorCategories[r.error_category] = (errorCategories[r.error_category] || 0) + 1;
         if (r.error_category.includes('timeout')) timeoutCount++;
       }
+    }
+
+    for (const [cat, count] of Object.entries(errorCategories).sort((a, b) => b[1] - a[1])) {
+      errorReasonsDetailed.push({
+        category: cat,
+        count,
+        description: describeErrorCategory(cat)
+      });
     }
 
     // Lifecycle stage counts in window
@@ -3428,23 +3604,46 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       b.avg_latency_ms = b.count > 0 ? Math.round(b.latency_sum / b.count) : 0;
     }
 
+    // Optional filtering and pagination for recent events & failures
+    const platformFilter = String(req.query.platform || 'all').trim().toLowerCase();
+    const statusFilter = String(req.query.status || 'all').trim().toLowerCase();
+    const operationFilter = String(req.query.operation || 'all').trim().toLowerCase();
+    const search = String(req.query.q || '').trim().toLowerCase();
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const pageSize = Math.min(100, Math.max(10, parseInt(String(req.query.page_size || '25'), 10) || 25));
+
+    const filteredEvents = periodRecords.filter(r => {
+      if (platformFilter !== 'all' && r.platform !== platformFilter) return false;
+      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (operationFilter !== 'all' && r.operation !== operationFilter) return false;
+      if (search) {
+        const hay = `${r.request_id} ${r.platform} ${r.operation} ${r.download_method} ${r.error_category || ''} ${r.http_status}`.toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
+    }).reverse();
+
     const recentFailures = periodRecords
-      .filter(r => r.status === 'failed')
-      .slice(-50)
+      .filter(r => r.status === 'failed' && (platformFilter === 'all' || r.platform === platformFilter))
+      .slice(-100)
       .reverse();
 
-    const recentEvents = periodRecords.slice(-100).reverse();
+    const paginatedEvents = filteredEvents.slice((page - 1) * pageSize, page * pageSize);
 
     return res.json({
       success: true,
-      window: { preset: win.preset, start_date: win.startDateStr, end_date: win.endDateStr },
+      window: { preset: win.preset, start_date: win.startDateStr, end_date: win.endDateStr, timezone: 'UTC' },
       total_events_in_window: periodRecords.length,
+      filtered_total: filteredEvents.length,
+      page,
+      page_size: pageSize,
       timeout_count: timeoutCount,
       lifecycle_stages: stageCounts,
       by_platform: byPlatform,
       error_categories: errorCategories,
+      error_reasons_detailed: errorReasonsDetailed,
       recent_failures: recentFailures,
-      recent_events: recentEvents
+      recent_events: paginatedEvents
     });
   });
 
@@ -3712,29 +3911,89 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
 
   // 5. Errors & Structured Logs (/api/admin/errors)
   app.get('/api/admin/errors', requireAdminAuth('viewer'), (req: Request, res: Response) => {
-    const allErrors = readJsonlTail<AppErrorRecord>(ERRORS_LOG_FILE, 2000).reverse();
-    const severityFilter = String(req.query.severity || 'all').toLowerCase();
-    const routeFilter = String(req.query.route || 'all').toLowerCase();
+    const allErrors = readJsonlTail<AppErrorRecord>(ERRORS_LOG_FILE, 3000).reverse();
+    const severityFilter = String(req.query.severity || 'all').trim().toLowerCase();
+    const routeFilter = String(req.query.route || 'all').trim().toLowerCase();
+    const platformFilter = String(req.query.platform || 'all').trim().toLowerCase();
+    const search = String(req.query.q || '').trim().toLowerCase();
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const pageSize = Math.min(100, Math.max(10, parseInt(String(req.query.page_size || '25'), 10) || 25));
 
     const filtered = allErrors.filter(e => {
       if (severityFilter !== 'all' && e.severity !== severityFilter) return false;
       if (routeFilter !== 'all' && e.route_category !== routeFilter) return false;
+      if (platformFilter !== 'all' && e.platform !== platformFilter) return false;
+      if (search) {
+        const hay = `${e.event_id} ${e.request_id} ${e.route_category} ${e.platform} ${e.error_category} ${e.summary} ${e.http_status}`.toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
       return true;
     });
 
     const byRoute: Record<string, number> = {};
     const byCategory: Record<string, number> = {};
+    const byPlatform: Record<string, number> = {};
+    const groupedMap = new Map<string, {
+      signature: string;
+      route_category: string;
+      platform: string;
+      error_category: string;
+      severity: string;
+      count: number;
+      first_seen: string;
+      last_seen: string;
+      sample_summary: string;
+      http_status: number;
+    }>();
+
     for (const e of allErrors) {
       byRoute[e.route_category] = (byRoute[e.route_category] || 0) + 1;
       byCategory[e.error_category] = (byCategory[e.error_category] || 0) + 1;
+      byPlatform[e.platform] = (byPlatform[e.platform] || 0) + 1;
+
+      const sig = `${e.route_category}|${e.platform}|${e.error_category}`;
+      const existing = groupedMap.get(sig);
+      if (!existing) {
+        groupedMap.set(sig, {
+          signature: sig,
+          route_category: e.route_category,
+          platform: e.platform,
+          error_category: e.error_category,
+          severity: e.severity,
+          count: 1,
+          first_seen: e.timestamp,
+          last_seen: e.timestamp,
+          sample_summary: e.summary,
+          http_status: e.http_status
+        });
+      } else {
+        existing.count++;
+        if (e.timestamp < existing.first_seen) existing.first_seen = e.timestamp;
+        if (e.timestamp > existing.last_seen) {
+          existing.last_seen = e.timestamp;
+          existing.sample_summary = e.summary;
+        }
+      }
     }
+
+    const groupedErrors = Array.from(groupedMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 25);
+
+    const paginatedItems = filtered.slice((page - 1) * pageSize, page * pageSize);
 
     return res.json({
       success: true,
       total: filtered.length,
+      total_unfiltered: allErrors.length,
+      page,
+      page_size: pageSize,
+      retention_days: adminSettings.retention_days_operational_logs,
       by_route: byRoute,
       by_category: byCategory,
-      items: filtered.slice(0, 200)
+      by_platform: byPlatform,
+      grouped_errors: groupedErrors,
+      items: paginatedItems
     });
   });
 
@@ -3753,25 +4012,59 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       }
     };
 
+    // Disk space check via fs.statfsSync when available (Node 18.15+)
+    let diskFreeMb: number | null = null;
+    let diskTotalMb: number | null = null;
+    let diskUsedPct: number | null = null;
+    try {
+      if (typeof (fs as any).statfsSync === 'function') {
+        const stfs = (fs as any).statfsSync(logsDir);
+        const blockSize = Number(stfs.bsize || 4096);
+        const totalBytes = Number(stfs.blocks || 0) * blockSize;
+        const availBytes = Number(stfs.bavail || stfs.bfree || 0) * blockSize;
+        if (totalBytes > 0) {
+          diskTotalMb = Math.round(totalBytes / (1024 * 1024));
+          diskFreeMb = Math.round(availBytes / (1024 * 1024));
+          diskUsedPct = Math.round(((totalBytes - availBytes) / totalBytes) * 1000) / 10;
+        }
+      }
+    } catch {}
+
+    const backupsTotalBytes = backups.reduce((acc, b) => acc + (b.size_bytes || 0), 0);
+    const pm2Managed = Boolean(process.env.pm_id !== undefined || process.env.PM2_HOME || process.env.NODE_APP_INSTANCE !== undefined);
+
     return res.json({
       success: true,
+      checked_at: new Date().toISOString(),
       application: {
         name: pkg.name || 'douyin-downloader',
         version: pkg.version || '1.0.0',
         node_version: process.version,
         platform_arch: `${process.platform}/${process.arch}`,
+        pid: process.pid,
+        pm2_managed: pm2Managed,
+        pm2_id: process.env.pm_id ?? null,
+        env_mode: process.env.NODE_ENV || 'development',
+        port: Number(process.env.PORT || 3000),
         server_started_at: new Date(serverStartTime).toISOString(),
         uptime_seconds: Math.floor((Date.now() - serverStartTime) / 1000)
       },
       resources: {
         process_rss_mb: Math.round(mem.rss / (1024 * 1024)),
         heap_used_mb: Math.round(mem.heapUsed / (1024 * 1024)),
+        heap_total_mb: Math.round(mem.heapTotal / (1024 * 1024)),
         system_total_ram_mb: Math.round(os.totalmem() / (1024 * 1024)),
         system_free_ram_mb: Math.round(os.freemem() / (1024 * 1024)),
-        load_average_1m: Number((os.loadavg()[0] || 0).toFixed(2))
+        load_average_1m: Number((os.loadavg()[0] || 0).toFixed(2)),
+        load_average_5m: Number((os.loadavg()[1] || 0).toFixed(2)),
+        cpu_cores: os.cpus().length,
+        disk_free_mb: diskFreeMb,
+        disk_total_mb: diskTotalMb,
+        disk_used_pct: diskUsedPct
       },
       storage: {
         mode: 'local_persistent_jsonl_and_atomic_json',
+        logs_directory: logsDir,
         writable: (() => {
           try {
             fs.accessSync(logsDir, fs.constants.W_OK);
@@ -3790,6 +4083,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
           visitor_events_bytes: getFileSize(VISITOR_LOG_FILE)
         },
         backups_count: backups.length,
+        backups_total_bytes: backupsTotalBytes,
         last_backup: backups[0] || null
       },
       integrations: {
@@ -3805,14 +4099,77 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
   });
 
   // 7. SEO & Search Console Overview (/api/admin/seo)
+  // Performs real HTTP loopback checks against the running Express routes (/ , /sitemap.xml , /robots.txt)
   app.get('/api/admin/seo', requireAdminAuth('viewer'), async (req: Request, res: Response) => {
     const indexPath = path.join(staticDir, 'index.html');
-    const sitemapPath = path.join(staticDir, 'sitemap.xml');
-    const robotsPath = path.join(staticDir, 'robots.txt');
+    const localPort = Number(process.env.PORT || 3000);
+    const localBaseUrl = `http://127.0.0.1:${localPort}`;
 
     let html = '';
+    let homepageHttpStatus = 0;
+    let homepageLatencyMs = 0;
+
     try {
-      if (fs.existsSync(indexPath)) html = fs.readFileSync(indexPath, 'utf8');
+      const t0 = Date.now();
+      const homeResp = await fetch(`${localBaseUrl}/`, {
+        headers: { 'User-Agent': 'DownDouyin-SEO-Inspector/1.0' }
+      });
+      homepageHttpStatus = homeResp.status;
+      homepageLatencyMs = Date.now() - t0;
+      if (homeResp.ok) {
+        html = await homeResp.text();
+      }
+    } catch {}
+
+    if (!html) {
+      try {
+        if (fs.existsSync(indexPath)) html = fs.readFileSync(indexPath, 'utf8');
+      } catch {}
+    }
+
+    // Live check /sitemap.xml route
+    let sitemapHttpStatus = 0;
+    let sitemapContentType = '';
+    let sitemapXmlValid = false;
+    let sitemapBody = '';
+    let sitemapUrlCount = 0;
+    let sitemapLatencyMs = 0;
+    try {
+      const t0 = Date.now();
+      const smResp = await fetch(`${localBaseUrl}/sitemap.xml`, {
+        headers: { 'User-Agent': 'DownDouyin-SEO-Inspector/1.0' }
+      });
+      sitemapHttpStatus = smResp.status;
+      sitemapLatencyMs = Date.now() - t0;
+      sitemapContentType = smResp.headers.get('content-type') || '';
+      sitemapBody = await smResp.text();
+      sitemapXmlValid =
+        smResp.status === 200 &&
+        sitemapContentType.toLowerCase().includes('xml') &&
+        sitemapBody.includes('<urlset') &&
+        sitemapBody.includes('<loc>https://downdouyin.com/</loc>');
+      const locMatches = sitemapBody.match(/<loc>/g);
+      sitemapUrlCount = locMatches ? locMatches.length : 0;
+    } catch {}
+
+    // Live check /robots.txt route
+    let robotsHttpStatus = 0;
+    let robotsContentType = '';
+    let robotsBody = '';
+    let robotsHasSitemapDirective = false;
+    let robotsDisallowsAdmin = false;
+    let robotsLatencyMs = 0;
+    try {
+      const t0 = Date.now();
+      const rbResp = await fetch(`${localBaseUrl}/robots.txt`, {
+        headers: { 'User-Agent': 'DownDouyin-SEO-Inspector/1.0' }
+      });
+      robotsHttpStatus = rbResp.status;
+      robotsLatencyMs = Date.now() - t0;
+      robotsContentType = rbResp.headers.get('content-type') || '';
+      robotsBody = await rbResp.text();
+      robotsHasSitemapDirective = /Sitemap:\s*https:\/\/downdouyin\.com\/sitemap\.xml/i.test(robotsBody);
+      robotsDisallowsAdmin = /Disallow:\s*\/admin/i.test(robotsBody);
     } catch {}
 
     const extractTag = (regex: RegExp) => {
@@ -3821,11 +4178,30 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     };
 
     const title = extractTag(/<title>([^<]+)<\/title>/i);
-    const metaDesc = extractTag(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-    const canonical = extractTag(/<link\s+rel=["']canonical["']\s+href=["']([^"']+)["']/i);
-    const metaRobots = extractTag(/<meta\s+name=["']robots["']\s+content=["']([^"']+)["']/i);
-    const ogTitle = extractTag(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
-    const ogUrl = extractTag(/<meta\s+property=["']og:url["']\s+content=["']([^"']+)["']/i);
+    const metaDesc =
+      extractTag(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i) ||
+      extractTag(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i);
+    const canonical =
+      extractTag(/<link\s+rel=["']canonical["']\s+href=["']([^"']+)["']/i) ||
+      extractTag(/<link\s+href=["']([^"']+)["']\s+rel=["']canonical["']/i);
+    const metaRobots =
+      extractTag(/<meta\s+name=["']robots["']\s+content=["']([^"']+)["']/i) ||
+      extractTag(/<meta\s+content=["']([^"']+)["']\s+name=["']robots["']/i);
+    const ogTitle =
+      extractTag(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i) ||
+      extractTag(/<meta\s+content=["']([^"']+)["']\s+property=["']og:title["']/i);
+    const ogDescription =
+      extractTag(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i) ||
+      extractTag(/<meta\s+content=["']([^"']+)["']\s+property=["']og:description["']/i);
+    const ogUrl =
+      extractTag(/<meta\s+property=["']og:url["']\s+content=["']([^"']+)["']/i) ||
+      extractTag(/<meta\s+content=["']([^"']+)["']\s+property=["']og:url["']/i);
+    const ogImage =
+      extractTag(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+      extractTag(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i);
+    const twitterCard =
+      extractTag(/<meta\s+name=["']twitter:card["']\s+content=["']([^"']+)["']/i) ||
+      extractTag(/<meta\s+property=["']twitter:card["']\s+content=["']([^"']+)["']/i);
     const hasJsonLd = html.includes('application/ld+json');
 
     let gscReport: any = null;
@@ -3864,9 +4240,14 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       }
     }
 
+    const checkedAt = new Date().toISOString();
+
     return res.json({
       success: true,
+      last_checked_at: checkedAt,
       technical_seo: {
+        homepage_http_status: homepageHttpStatus,
+        homepage_latency_ms: homepageLatencyMs,
         canonical_url: canonical || 'https://downdouyin.com/',
         canonical_valid: canonical === 'https://downdouyin.com/',
         https_enforced_in_canonical: Boolean(canonical && canonical.startsWith('https://downdouyin.com')),
@@ -3875,14 +4256,29 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         meta_description: metaDesc,
         meta_description_length: metaDesc ? metaDesc.length : 0,
         meta_robots: metaRobots,
+        indexable: !metaRobots || !metaRobots.toLowerCase().includes('noindex'),
         og_title: ogTitle,
+        og_description: ogDescription,
         og_url: ogUrl,
+        og_image: ogImage,
+        twitter_card: twitterCard,
         structured_data_json_ld: hasJsonLd,
         sitemap_endpoint: 'https://downdouyin.com/sitemap.xml',
-        sitemap_file_present: fs.existsSync(sitemapPath),
+        sitemap_http_status: sitemapHttpStatus,
+        sitemap_content_type: sitemapContentType,
+        sitemap_xml_valid: sitemapXmlValid,
+        sitemap_url_count: sitemapUrlCount,
+        sitemap_latency_ms: sitemapLatencyMs,
+        sitemap_file_present: sitemapXmlValid,
+        sitemap_content_preview: sitemapBody.slice(0, 1200),
         robots_endpoint: 'https://downdouyin.com/robots.txt',
-        robots_file_present: fs.existsSync(robotsPath),
-        robots_content: fs.existsSync(robotsPath) ? fs.readFileSync(robotsPath, 'utf8') : ''
+        robots_http_status: robotsHttpStatus,
+        robots_content_type: robotsContentType,
+        robots_has_sitemap_directive: robotsHasSitemapDirective,
+        robots_disallows_admin: robotsDisallowsAdmin,
+        robots_latency_ms: robotsLatencyMs,
+        robots_file_present: robotsHttpStatus === 200 && robotsBody.length > 0,
+        robots_content: robotsBody
       },
       search_console: {
         site_url: siteUrl,
@@ -3944,7 +4340,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
       target: recipient,
       req,
       status: result.sent ? 'success' : 'failed',
-      detail: result.sent ? `Test email sent (${result.providerId})` : `Test email failed: ${result.error}`
+      detail: result.sent ? `Test email accepted by Resend (${result.providerId})` : `Test email failed: ${result.error}`
     });
 
     if (!result.sent) {
@@ -3953,19 +4349,170 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         error: result.error || 'Failed to send test email.'
       });
     }
-    return res.json({ success: true, provider_id: result.providerId });
+    return res.json({
+      success: true,
+      provider_id: result.providerId,
+      recipient,
+      sent_at: new Date().toISOString(),
+      message: `Accepted by Resend API (Message ID: ${result.providerId || 'verified'}).`
+    });
+  });
+
+  // 8b. Integrations Status & Live Verification (/api/admin/integrations)
+  app.get('/api/admin/integrations', requireAdminAuth('viewer'), (req: Request, res: Response) => {
+    const runtimeCfg = deps.getRuntimeConfigStatus();
+    const sa = parseGoogleServiceAccount();
+    return res.json({
+      success: true,
+      checked_at: new Date().toISOString(),
+      integrations: {
+        resend: {
+          name: 'Resend Transactional Email API',
+          configured: isResendConfigured(),
+          from_email: adminSettings.notification_from_email || process.env.NOTIFICATION_FROM_EMAIL || 'onboarding@resend.dev',
+          to_email: adminSettings.notification_to_email || adminSettings.admin_alert_email || process.env.NOTIFICATION_TO_EMAIL || ''
+        },
+        ga4: {
+          name: 'Google Analytics 4',
+          frontend_tag_installed: true,
+          measurement_id: adminSettings.ga4_measurement_id || 'G-S9BHCYX6EN',
+          property_id: adminSettings.ga4_property_id || process.env.GA4_PROPERTY_ID || '',
+          service_account_configured: Boolean(sa),
+          data_api_ready: Boolean((adminSettings.ga4_property_id || process.env.GA4_PROPERTY_ID) && sa)
+        },
+        gsc: {
+          name: 'Google Search Console API',
+          site_url: adminSettings.gsc_site_url || process.env.GSC_SITE_URL || 'https://downdouyin.com/',
+          service_account_configured: Boolean(sa),
+          api_ready: Boolean((adminSettings.gsc_site_url || process.env.GSC_SITE_URL) && sa)
+        },
+        bilibili: {
+          name: 'Bilibili High-Res Extractor (1080p+/4K)',
+          cookie_configured: runtimeCfg.bilibiliConfigured,
+          source: runtimeCfg.bilibiliSource
+        },
+        tiktok: {
+          name: 'TikTok Extractor & Optional Proxy',
+          proxy_configured: runtimeCfg.tiktokProxyConfigured
+        }
+      }
+    });
+  });
+
+  app.post('/api/admin/integrations/test', requireAdminAuth('admin'), async (req: Request, res: Response) => {
+    const session: AdminSession = (req as any).adminSession;
+    const service = String(req.body?.service || '').trim().toLowerCase();
+    const runtimeCfg = deps.getRuntimeConfigStatus();
+    const checkedAt = new Date().toISOString();
+
+    if (service === 'bilibili') {
+      try {
+        const t0 = Date.now();
+        const resp = await fetch('https://api.bilibili.com/x/web-interface/nav', {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        const latencyMs = Date.now() - t0;
+        const ok = resp.status === 200;
+        recordAuditLog({
+          actor: session.username,
+          action: 'integration_test_bilibili',
+          target: 'bilibili',
+          req,
+          status: ok ? 'success' : 'warning',
+          detail: `Tested Bilibili API connectivity (HTTP ${resp.status}, ${latencyMs}ms, SESSDATA configured: ${runtimeCfg.bilibiliConfigured}).`
+        });
+        return res.json({
+          success: true,
+          service: 'bilibili',
+          checked_at: checkedAt,
+          reachable: ok,
+          cookie_configured: runtimeCfg.bilibiliConfigured,
+          cookie_source: runtimeCfg.bilibiliSource,
+          latency_ms: latencyMs,
+          message: runtimeCfg.bilibiliConfigured
+            ? `Bilibili API reachable (${latencyMs}ms) and SESSDATA cookie is configured via ${runtimeCfg.bilibiliSource}.`
+            : `Bilibili public API reachable (${latencyMs}ms). Note: SESSDATA cookie is not configured, so streams default to standard 360p/720p quality.`
+        });
+      } catch (err: any) {
+        return res.status(400).json({
+          success: false,
+          error: `Bilibili connectivity check failed: ${sanitizeLogSummary(err?.message || 'Network error')}`
+        });
+      }
+    }
+
+    if (service === 'tiktok') {
+      try {
+        const t0 = Date.now();
+        const resp = await fetch('https://www.tikwm.com/api/', {
+          method: 'HEAD',
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        }).catch(() => null);
+        const latencyMs = Date.now() - t0;
+        const ok = Boolean(resp && resp.status < 500);
+        recordAuditLog({
+          actor: session.username,
+          action: 'integration_test_tiktok',
+          target: 'tiktok',
+          req,
+          status: ok ? 'success' : 'warning',
+          detail: `Tested TikTok upstream reachability (${latencyMs}ms, proxy configured: ${runtimeCfg.tiktokProxyConfigured}).`
+        });
+        return res.json({
+          success: true,
+          service: 'tiktok',
+          checked_at: checkedAt,
+          reachable: ok,
+          proxy_configured: runtimeCfg.tiktokProxyConfigured,
+          latency_ms: latencyMs,
+          message: ok
+            ? `TikTok upstream extractor reachable (${latencyMs}ms). Custom proxy: ${runtimeCfg.tiktokProxyConfigured ? 'Configured' : 'Direct connection (no proxy needed)'}.`
+            : 'TikTok upstream check returned an unexpected response.'
+        });
+      } catch (err: any) {
+        return res.status(400).json({
+          success: false,
+          error: `TikTok connectivity check failed: ${sanitizeLogSummary(err?.message || 'Network error')}`
+        });
+      }
+    }
+
+    return res.status(400).json({
+      success: false,
+      error: 'Unsupported integration test target. Supported values: bilibili, tiktok.'
+    });
   });
 
   // 9. Security & Audit Log (/api/admin/audit)
   app.get('/api/admin/audit', requireAdminAuth('viewer'), (req: Request, res: Response) => {
-    const logs = readJsonlTail<AuditLogRecord>(AUDIT_LOG_FILE, 1000).reverse();
+    const allLogs = readJsonlTail<AuditLogRecord>(AUDIT_LOG_FILE, 2000).reverse();
+    const search = String(req.query.q || '').trim().toLowerCase();
+    const actionFilter = String(req.query.action || 'all').trim().toLowerCase();
+    const statusFilter = String(req.query.status || 'all').trim().toLowerCase();
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const pageSize = Math.min(100, Math.max(10, parseInt(String(req.query.page_size || '50'), 10) || 50));
+
+    const filteredLogs = allLogs.filter(l => {
+      if (actionFilter !== 'all' && l.action.toLowerCase() !== actionFilter) return false;
+      if (statusFilter !== 'all' && l.status.toLowerCase() !== statusFilter) return false;
+      if (search) {
+        const hay = `${l.actor} ${l.action} ${l.target} ${l.detail || ''} ${l.ip_hash}`.toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
+    });
+
     const activeSessionsList = Array.from(activeSessions.values()).map(s => ({
+      session_ref: getSessionRef(s.sid_hash),
       username: s.username,
       role: s.role,
       created_at: new Date(s.created_at).toISOString(),
       last_active_at: new Date(s.last_active_at).toISOString(),
       expires_at: new Date(s.expires_at).toISOString(),
       user_agent_summary: s.user_agent_summary,
+      ip_summary: s.sid_hash.slice(0, 10),
       is_current: s.sid_hash === (req as any).adminSession?.sid_hash
     }));
 
@@ -3981,7 +4528,10 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         last_login_at: u.last_login_at,
         disabled: u.disabled
       })),
-      audit_logs: logs.slice(0, 250)
+      total_audit_logs: filteredLogs.length,
+      page,
+      page_size: pageSize,
+      audit_logs: filteredLogs.slice((page - 1) * pageSize, page * pageSize)
     });
   });
 
@@ -4094,48 +4644,201 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     return res.json({ success: true, updated_at: adminSettings.updated_at });
   });
 
-  // 10b. Create Snapshot Backup
+  // 10b. Create Snapshot Backup (Verifies integrity on disk and excludes secrets)
   app.post('/api/admin/backups/create', requireAdminAuth('admin'), (req: Request, res: Response) => {
     const session: AdminSession = (req as any).adminSession;
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `backup-${stamp}.json`;
     const dest = path.join(backupsDir, filename);
 
+    const safeSettings = {
+      ...adminSettings,
+      shortcut_phrase_hash: adminSettings.shortcut_phrase_hash ? '[REDACTED_SHA256_HASH]' : null
+    };
+
     const payload = {
+      schema_version: 2,
       created_at: new Date().toISOString(),
       created_by: session.username,
-      settings: adminSettings,
+      settings: safeSettings,
       contact_inquiries: readJsonlTail<RawContactRecord>(CONTACT_LOG_FILE, 5000),
       contact_states: contactStates,
       visitors_count: visitorsMap.size,
       download_stats_summary: deps.getDownloadStats().summary
     };
 
-    writeJsonFileAtomic(dest, payload);
-    const st = fs.statSync(dest);
+    try {
+      writeJsonFileAtomic(dest, payload);
+      if (!fs.existsSync(dest)) {
+        throw new Error('Backup file was not found on disk after write.');
+      }
+      const st = fs.statSync(dest);
+      if (st.size <= 10) {
+        throw new Error('Backup file is unexpectedly empty.');
+      }
+      // Verify JSON parse integrity
+      const verifyParsed = JSON.parse(fs.readFileSync(dest, 'utf8'));
+      if (!verifyParsed || !verifyParsed.created_at) {
+        throw new Error('Backup JSON verification failed.');
+      }
+
+      recordAuditLog({
+        actor: session.username,
+        action: 'backup_created',
+        target: filename,
+        req,
+        status: 'success',
+        detail: `Created & verified operational snapshot backup (${st.size} bytes).`
+      });
+
+      return res.json({
+        success: true,
+        backup: {
+          backup_id: filename.replace(/\.json$/, ''),
+          filename,
+          created_at: st.mtime.toISOString(),
+          size_bytes: st.size,
+          created_by: session.username
+        },
+        backups: getBackupsList()
+      });
+    } catch (err: any) {
+      recordAuditLog({
+        actor: session.username,
+        action: 'backup_failed',
+        target: filename,
+        req,
+        status: 'failed',
+        detail: `Backup creation failed: ${sanitizeLogSummary(err?.message || 'Disk write error')}`
+      });
+      return res.status(500).json({
+        success: false,
+        error: `Backup creation failed: ${sanitizeLogSummary(err?.message || 'Unable to write backup file')}`
+      });
+    }
+  });
+
+  // 10c. Download Snapshot Backup File Safely
+  app.get('/api/admin/backups/:filename/download', requireAdminAuth('admin'), (req: Request, res: Response) => {
+    const session: AdminSession = (req as any).adminSession;
+    const rawName = String(req.params.filename || '').trim();
+    if (!/^backup-[a-zA-Z0-9_-]+\.json$/.test(rawName)) {
+      return res.status(400).json({ success: false, error: 'Invalid backup filename format.' });
+    }
+    const targetPath = path.resolve(backupsDir, rawName);
+    if (!targetPath.startsWith(path.resolve(backupsDir) + path.sep) || !fs.existsSync(targetPath)) {
+      return res.status(404).json({ success: false, error: 'Backup snapshot not found.' });
+    }
 
     recordAuditLog({
       actor: session.username,
-      action: 'backup_created',
-      target: filename,
+      action: 'backup_downloaded',
+      target: rawName,
       req,
       status: 'success',
-      detail: `Created operational & contact snapshot backup (${st.size} bytes).`
+      detail: `Downloaded backup snapshot ${rawName}.`
     });
 
-    return res.json({
-      success: true,
-      backup: {
-        backup_id: filename.replace(/\.json$/, ''),
-        filename,
-        created_at: st.mtime.toISOString(),
-        size_bytes: st.size,
-        created_by: session.username
-      }
-    });
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${rawName}"`);
+    return res.sendFile(targetPath);
   });
 
-  // 10c. Apply Retention Cleanup Policy (Requires confirmation flag)
+  // 10d. Restore Settings & Contact State from Snapshot Backup (Owner only, creates pre-restore safety snapshot first)
+  app.post('/api/admin/backups/:filename/restore', requireAdminAuth('owner'), (req: Request, res: Response) => {
+    const session: AdminSession = (req as any).adminSession;
+    if (req.body?.confirm !== true) {
+      return res.status(400).json({
+        success: false,
+        error: 'Explicit confirmation (confirm: true) is required to restore from a backup snapshot.'
+      });
+    }
+    const rawName = String(req.params.filename || '').trim();
+    if (!/^backup-[a-zA-Z0-9_-]+\.json$/.test(rawName)) {
+      return res.status(400).json({ success: false, error: 'Invalid backup filename format.' });
+    }
+    const targetPath = path.resolve(backupsDir, rawName);
+    if (!targetPath.startsWith(path.resolve(backupsDir) + path.sep) || !fs.existsSync(targetPath)) {
+      return res.status(404).json({ success: false, error: 'Backup snapshot not found.' });
+    }
+
+    try {
+      const parsed = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+      if (!parsed || typeof parsed !== 'object' || !parsed.settings) {
+        return res.status(400).json({ success: false, error: 'Backup file structure is invalid or corrupted.' });
+      }
+
+      // Create automatic pre-restore safety backup first
+      const preStamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const preFilename = `backup-prerestore-${preStamp}.json`;
+      writeJsonFileAtomic(path.join(backupsDir, preFilename), {
+        schema_version: 2,
+        created_at: new Date().toISOString(),
+        created_by: `${session.username} (auto-prerestore)`,
+        settings: {
+          ...adminSettings,
+          shortcut_phrase_hash: adminSettings.shortcut_phrase_hash ? '[REDACTED_SHA256_HASH]' : null
+        },
+        contact_states: contactStates
+      });
+
+      // Restore non-secret settings safely
+      const s = parsed.settings;
+      if (typeof s.notification_to_email === 'string') adminSettings.notification_to_email = s.notification_to_email;
+      if (typeof s.notification_from_email === 'string') adminSettings.notification_from_email = s.notification_from_email;
+      if (typeof s.admin_alert_email === 'string') adminSettings.admin_alert_email = s.notification_alert_email || s.admin_alert_email;
+      if (typeof s.notify_on_contact === 'boolean') adminSettings.notify_on_contact = s.notify_on_contact;
+      if (typeof s.notify_on_feedback === 'boolean') adminSettings.notify_on_feedback = s.notify_on_feedback;
+      if (typeof s.notify_on_app_errors === 'boolean') adminSettings.notify_on_app_errors = s.notify_on_app_errors;
+      if (typeof s.notify_on_repeated_failures === 'boolean') adminSettings.notify_on_repeated_failures = s.notify_on_repeated_failures;
+      if (Number.isFinite(Number(s.repeated_failure_threshold))) adminSettings.repeated_failure_threshold = Number(s.repeated_failure_threshold);
+      if (s.summary_schedule === 'off' || s.summary_schedule === 'daily' || s.summary_schedule === 'weekly') adminSettings.summary_schedule = s.summary_schedule;
+      if (typeof s.ga4_measurement_id === 'string') adminSettings.ga4_measurement_id = s.ga4_measurement_id;
+      if (typeof s.ga4_property_id === 'string') adminSettings.ga4_property_id = s.ga4_property_id;
+      if (typeof s.gsc_site_url === 'string') adminSettings.gsc_site_url = s.gsc_site_url;
+      if (Number.isFinite(Number(s.retention_days_operational_logs))) adminSettings.retention_days_operational_logs = Number(s.retention_days_operational_logs);
+      if (Number.isFinite(Number(s.retention_days_contact_messages))) adminSettings.retention_days_contact_messages = Number(s.retention_days_contact_messages);
+      if (Number.isFinite(Number(s.session_ttl_hours))) adminSettings.session_ttl_hours = Number(s.session_ttl_hours);
+      if (s.ip_logging_mode === 'full' || s.ip_logging_mode === 'masked' || s.ip_logging_mode === 'hashed') adminSettings.ip_logging_mode = s.ip_logging_mode;
+      saveAdminSettings();
+
+      // Merge contact inquiry workflow states without losing newer inquiries
+      let restoredStatesCount = 0;
+      if (parsed.contact_states && typeof parsed.contact_states === 'object') {
+        for (const [k, val] of Object.entries(parsed.contact_states)) {
+          if (val && typeof val === 'object') {
+            contactStates[k] = val as ContactInquiryState;
+            restoredStatesCount++;
+          }
+        }
+        saveContactStates();
+      }
+
+      recordAuditLog({
+        actor: session.username,
+        action: 'backup_restored',
+        target: rawName,
+        req,
+        status: 'warning',
+        detail: `Restored settings and ${restoredStatesCount} contact states from ${rawName} (pre-restore snapshot: ${preFilename}).`
+      });
+
+      return res.json({
+        success: true,
+        restored_from: rawName,
+        pre_restore_backup: preFilename,
+        restored_contact_states: restoredStatesCount,
+        backups: getBackupsList()
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        success: false,
+        error: `Failed to restore backup: ${sanitizeLogSummary(err?.message || 'Parse error')}`
+      });
+    }
+  });
+
+  // 10e. Apply Retention Cleanup Policy (Requires confirmation flag, preserves at least 5 recent backups)
   app.post('/api/admin/retention/run', requireAdminAuth('admin'), (req: Request, res: Response) => {
     const session: AdminSession = (req as any).adminSession;
     if (req.body?.confirm !== true) {
@@ -4147,6 +4850,7 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
 
     const now = Date.now();
     const opCutoffMs = now - adminSettings.retention_days_operational_logs * 24 * 3600 * 1000;
+    const contactCutoffMs = now - adminSettings.retention_days_contact_messages * 24 * 3600 * 1000;
 
     const pruneJsonlByTimestamp = (filePath: string, cutoffMs: number): number => {
       if (!fs.existsSync(filePath)) return 0;
@@ -4174,14 +4878,33 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
     const prunedErrors = pruneJsonlByTimestamp(ERRORS_LOG_FILE, opCutoffMs);
     const prunedVisitors = pruneJsonlByTimestamp(VISITOR_LOG_FILE, opCutoffMs);
     const prunedActivity = pruneJsonlByTimestamp(ACTIVITY_LOG_FILE, opCutoffMs);
+    const prunedContacts = pruneJsonlByTimestamp(CONTACT_LOG_FILE, contactCutoffMs);
+
+    // Prune very old backups beyond operational retention while keeping at least the 5 most recent backups
+    let prunedBackups = 0;
+    try {
+      const allBackups = getBackupsList();
+      if (allBackups.length > 5) {
+        for (const b of allBackups.slice(5)) {
+          const t = Date.parse(b.created_at);
+          if (!Number.isNaN(t) && t < opCutoffMs) {
+            const p = path.join(backupsDir, b.filename);
+            if (fs.existsSync(p)) {
+              fs.unlinkSync(p);
+              prunedBackups++;
+            }
+          }
+        }
+      }
+    } catch {}
 
     recordAuditLog({
       actor: session.username,
       action: 'retention_cleanup_executed',
-      target: `${adminSettings.retention_days_operational_logs}d_policy`,
+      target: `${adminSettings.retention_days_operational_logs}d_op_${adminSettings.retention_days_contact_messages}d_contact`,
       req,
       status: 'success',
-      detail: `Pruned expired operational logs (stats: ${prunedStats}, activity: ${prunedActivity}, errors: ${prunedErrors}, visitors: ${prunedVisitors}).`
+      detail: `Pruned expired records (stats: ${prunedStats}, activity: ${prunedActivity}, errors: ${prunedErrors}, visitors: ${prunedVisitors}, contacts: ${prunedContacts}, old backups: ${prunedBackups}).`
     });
 
     return res.json({
@@ -4190,7 +4913,9 @@ export function setupAdminControlCenter(app: express.Express, deps: AdminCenterD
         download_stats: prunedStats,
         activity_events: prunedActivity,
         app_errors: prunedErrors,
-        visitor_events: prunedVisitors
+        visitor_events: prunedVisitors,
+        contact_messages: prunedContacts,
+        old_backups: prunedBackups
       }
     });
   });

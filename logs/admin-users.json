@@ -1,0 +1,13 @@
+[
+  {
+    "id": "usr_c911528a041a",
+    "username": "admin",
+    "email": "rfjatt002@gmail.com",
+    "role": "owner",
+    "password_hash": "scrypt$16384$8$1$1579630a43b0bf32fb5a12bf5983a4a9$9d35e6b3a259c6a417df7ffe63ef9b9eac723b4b652ed4aaa9eadd1a1bc12c096fe763bc366af5183a11be907a308f36498669160c528e682108a6f0346b87c3",
+    "created_at": "2026-10-24T05:59:53.409Z",
+    "updated_at": "2026-10-24T05:59:53.409Z",
+    "last_login_at": "2026-10-24T06:00:23.660Z",
+    "disabled": false
+  }
+]

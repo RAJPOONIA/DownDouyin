@@ -1,0 +1,5 @@
+{"timestamp":"2026-10-24T05:59:32.573Z","audit_id":"aud_8fc71bb7b543","actor":"admin","action":"initial_setup_failed","target":"admin_setup","ip_hash":"ip_18c555d02508","status":"failed","detail":"Invalid one-time setup [redacted-secret]"}
+{"timestamp":"2026-10-24T05:59:53.499Z","audit_id":"aud_b7fe5647f387","actor":"admin","action":"initial_setup_completed","target":"admin","ip_hash":"ip_18c555d02508","status":"success","detail":"Initial owner administrator account created via setup token."}
+{"timestamp":"2026-10-24T06:00:07.142Z","audit_id":"aud_caca88b3255a","actor":"admin","action":"admin_login_success","target":"/admin","ip_hash":"ip_18c555d02508","status":"success","detail":"Signed in (Chrome on Windows)."}
+{"timestamp":"2026-10-24T06:00:16.001Z","audit_id":"aud_a73b6dcfc060","actor":"admin","action":"admin_login_success","target":"/admin","ip_hash":"ip_18c555d02508","status":"success","detail":"Signed in (Chrome on Windows)."}
+{"timestamp":"2026-10-24T06:00:23.661Z","audit_id":"aud_e284f962348c","actor":"admin","action":"admin_login_success","target":"/admin","ip_hash":"ip_18c555d02508","status":"success","detail":"Signed in (Chrome on Windows)."}

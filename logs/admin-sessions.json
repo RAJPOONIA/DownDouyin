@@ -1,0 +1,46 @@
+[
+  {
+    "sid_hash": "386a6e6eda84634d975efbcf952ba6e00c22b4e287bbf5dee354bc9d751d71e5",
+    "user_id": "usr_c911528a041a",
+    "username": "admin",
+    "role": "owner",
+    "csrf_token": "8f2c0b0448eeb9e03220c98715b939245282b543adcf812f",
+    "created_at": 1792821593499,
+    "expires_at": 1792864793499,
+    "last_active_at": 1792821593499,
+    "user_agent_summary": "Chrome on Windows"
+  },
+  {
+    "sid_hash": "4622d4fe9cab46aabe51fe943faff8e745972e10323ef4094c6e0cdce6623afe",
+    "user_id": "usr_c911528a041a",
+    "username": "admin",
+    "role": "owner",
+    "csrf_token": "07ee04b85ff46222fa4e4414681f2ed9d7d826262899e64b",
+    "created_at": 1792821607141,
+    "expires_at": 1792864807141,
+    "last_active_at": 1792821607141,
+    "user_agent_summary": "Chrome on Windows"
+  },
+  {
+    "sid_hash": "dc1c8687cbda5e907c7b594a43c003a39492d4f407a68280885eab8791dc7d7e",
+    "user_id": "usr_c911528a041a",
+    "username": "admin",
+    "role": "owner",
+    "csrf_token": "2940b4ab63466b89fa52d2ee279efea045805f91bbedb9b8",
+    "created_at": 1792821616001,
+    "expires_at": 1792864816001,
+    "last_active_at": 1792821616001,
+    "user_agent_summary": "Chrome on Windows"
+  },
+  {
+    "sid_hash": "3274d9332c7b6f17c0f287bbf1dea32afc50c49da162ca0c648ff257f6a9caa3",
+    "user_id": "usr_c911528a041a",
+    "username": "admin",
+    "role": "owner",
+    "csrf_token": "22528ca249fa354e74c18d1bdd5f18f188537259da96bcd5",
+    "created_at": 1792821623660,
+    "expires_at": 1792864823660,
+    "last_active_at": 1792821623660,
+    "user_agent_summary": "Chrome on Windows"
+  }
+]

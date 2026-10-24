@@ -1,5 +1,173 @@
 [
   {
+    "visitor_id": "vid_4cb44f5bf910650d",
+    "account_type": "anonymous_visitor",
+    "first_seen_at": "2026-10-24T06:00:31.266Z",
+    "last_active_at": "2026-10-24T06:00:31.266Z",
+    "session_count": 1,
+    "last_session_id": "sid_6e9c5fae9af3",
+    "links_submitted": 0,
+    "valid_links_count": 0,
+    "invalid_links_count": 0,
+    "download_attempts": 0,
+    "successful_downloads": 0,
+    "client_confirmed_downloads": 0,
+    "failed_downloads": 0,
+    "cancelled_downloads": 0,
+    "platform_counts": {
+      "douyin": 0,
+      "bilibili": 0,
+      "tiktok": 0,
+      "xiaohongshu": 0
+    },
+    "most_used_platform": "none",
+    "last_activity_type": "page_view",
+    "last_activity_status": "info",
+    "last_ip": "2409:40d4:3066:ff2c:eccb:c7f4:5915:9e4b",
+    "ip_version": "IPv6",
+    "ip_hash": "ip_18c555d02508",
+    "ip_history": [
+      {
+        "ip": "2409:40d4:3066:ff2c:eccb:c7f4:5915:9e4b",
+        "ip_version": "IPv6",
+        "first_seen": "2026-10-24T06:00:31.266Z",
+        "last_seen": "2026-10-24T06:00:31.266Z",
+        "count": 1
+      }
+    ],
+    "user_agent_summary": "Chrome on Windows",
+    "device_category": "desktop",
+    "blocked": false,
+    "rate_limit_override_rpm": null,
+    "admin_notes": ""
+  },
+  {
+    "visitor_id": "vid_cd1440f75da76818",
+    "account_type": "anonymous_visitor",
+    "first_seen_at": "2026-10-24T05:55:03.347Z",
+    "last_active_at": "2026-10-24T05:55:12.444Z",
+    "session_count": 1,
+    "last_session_id": "sid_ce2430831fb5",
+    "links_submitted": 0,
+    "valid_links_count": 0,
+    "invalid_links_count": 0,
+    "download_attempts": 0,
+    "successful_downloads": 0,
+    "client_confirmed_downloads": 0,
+    "failed_downloads": 0,
+    "cancelled_downloads": 0,
+    "platform_counts": {
+      "douyin": 0,
+      "bilibili": 0,
+      "tiktok": 0,
+      "xiaohongshu": 0
+    },
+    "most_used_platform": "none",
+    "last_activity_type": "contact_modal_open",
+    "last_activity_status": "info",
+    "last_ip": "2409:40d4:3066:ff2c:eccb:c7f4:5915:9e4b",
+    "ip_version": "IPv6",
+    "ip_hash": "ip_18c555d02508",
+    "ip_history": [
+      {
+        "ip": "2409:40d4:3066:ff2c:eccb:c7f4:5915:9e4b",
+        "ip_version": "IPv6",
+        "first_seen": "2026-10-24T05:55:03.347Z",
+        "last_seen": "2026-10-24T05:55:12.444Z",
+        "count": 2
+      }
+    ],
+    "user_agent_summary": "Chrome on Windows",
+    "device_category": "desktop",
+    "blocked": false,
+    "rate_limit_override_rpm": null,
+    "admin_notes": ""
+  },
+  {
+    "visitor_id": "vid_a95fbced85869de4",
+    "account_type": "anonymous_visitor",
+    "first_seen_at": "2026-10-24T05:54:53.854Z",
+    "last_active_at": "2026-10-24T05:54:53.854Z",
+    "session_count": 1,
+    "last_session_id": "sid_8f00b66ccb47",
+    "links_submitted": 0,
+    "valid_links_count": 0,
+    "invalid_links_count": 0,
+    "download_attempts": 0,
+    "successful_downloads": 0,
+    "client_confirmed_downloads": 0,
+    "failed_downloads": 0,
+    "cancelled_downloads": 0,
+    "platform_counts": {
+      "douyin": 0,
+      "bilibili": 0,
+      "tiktok": 0,
+      "xiaohongshu": 0
+    },
+    "most_used_platform": "none",
+    "last_activity_type": "page_view",
+    "last_activity_status": "info",
+    "last_ip": "2409:40d4:3066:ff2c:eccb:c7f4:5915:9e4b",
+    "ip_version": "IPv6",
+    "ip_hash": "ip_18c555d02508",
+    "ip_history": [
+      {
+        "ip": "2409:40d4:3066:ff2c:eccb:c7f4:5915:9e4b",
+        "ip_version": "IPv6",
+        "first_seen": "2026-10-24T05:54:53.854Z",
+        "last_seen": "2026-10-24T05:54:53.854Z",
+        "count": 1
+      }
+    ],
+    "user_agent_summary": "Chrome on Windows",
+    "device_category": "desktop",
+    "blocked": false,
+    "rate_limit_override_rpm": null,
+    "admin_notes": ""
+  },
+  {
+    "visitor_id": "vid_ac7e167cd9e78a45",
+    "account_type": "anonymous_visitor",
+    "first_seen_at": "2026-10-24T05:54:40.264Z",
+    "last_active_at": "2026-10-24T05:54:40.264Z",
+    "session_count": 1,
+    "last_session_id": "sid_121c5eda7396",
+    "links_submitted": 0,
+    "valid_links_count": 0,
+    "invalid_links_count": 0,
+    "download_attempts": 0,
+    "successful_downloads": 0,
+    "client_confirmed_downloads": 0,
+    "failed_downloads": 0,
+    "cancelled_downloads": 0,
+    "platform_counts": {
+      "douyin": 0,
+      "bilibili": 0,
+      "tiktok": 0,
+      "xiaohongshu": 0
+    },
+    "most_used_platform": "none",
+    "last_activity_type": "page_view",
+    "last_activity_status": "info",
+    "last_ip": "127.0.0.1",
+    "ip_version": "IPv4",
+    "ip_hash": "ip_fed44f5f8eeb",
+    "ip_history": [
+      {
+        "ip": "127.0.0.1",
+        "ip_version": "IPv4",
+        "first_seen": "2026-10-24T05:54:40.264Z",
+        "last_seen": "2026-10-24T05:54:40.264Z",
+        "count": 1
+      }
+    ],
+    "user_agent_summary": "Browser on OS",
+    "device_category": "desktop",
+    "blocked": false,
+    "rate_limit_override_rpm": null,
+    "admin_notes": ""
+  },
+  {
     "visitor_id": "vid_1212bee231bd8b0f",
     "account_type": "anonymous_visitor",
     "first_seen_at": "2026-10-23T17:11:59.264Z",

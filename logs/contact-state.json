@@ -1,0 +1,21 @@
+{
+  "inq_162029e17bee": {
+    "inquiry_id": "inq_162029e17bee",
+    "read": false,
+    "status": "open",
+    "issue_type": "bug_report",
+    "admin_notes": "",
+    "email_notification_status": "not_configured",
+    "email_notification_at": null,
+    "email_notification_error": null,
+    "updated_at": "2026-10-24T05:55:41.424Z",
+    "timeline": [
+      {
+        "timestamp": "2026-10-24T05:55:41.424Z",
+        "action": "submitted",
+        "actor": "visitor",
+        "detail": "Submitted via public contact form (broken_link)"
+      }
+    ]
+  }
+}

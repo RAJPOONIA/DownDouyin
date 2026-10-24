@@ -1,0 +1,73 @@
+{
+  "notification_to_email": "rfjatt002@gmail.com",
+  "notification_from_email": "DownDouyin Admin <onboarding@resend.dev>",
+  "admin_alert_email": "rfjatt002@gmail.com",
+  "notify_on_contact": true,
+  "notify_on_feedback": true,
+  "notify_on_app_errors": true,
+  "notify_on_repeated_failures": true,
+  "repeated_failure_threshold": 5,
+  "summary_schedule": "off",
+  "shortcut_enabled": false,
+  "shortcut_phrase_hash": null,
+  "shortcut_updated_at": null,
+  "ga4_measurement_id": "G-S9BHCYX6EN",
+  "ga4_property_id": "",
+  "gsc_site_url": "https://downdouyin.com/",
+  "retention_days_operational_logs": 90,
+  "retention_days_contact_messages": 365,
+  "session_ttl_hours": 12,
+  "ip_logging_mode": "full",
+  "pricing_config": {
+    "enabled": true,
+    "badge_text": "PLANS & HD CAPABILITIES",
+    "headline_en": "DownDouyin Plans & Capabilities",
+    "headline_zh": "DownDouyin 套餐与高清解析能力",
+    "subheadline_en": "All core watermark-free parsing and downloads are 100% free. Optional high-volume API tiers are coming soon.",
+    "subheadline_zh": "基础无水印解析与下载功能永久免费开放，高频批量 API 套餐即将推出。",
+    "free_plan": {
+      "name_en": "Standard Web Downloader",
+      "name_zh": "标准网页版（当前使用）",
+      "price_label": "$0 / Free Forever",
+      "status_badge_en": "Active Now",
+      "status_badge_zh": "当前已激活",
+      "features_en": [
+        "Watermark-free Douyin, TikTok, Bilibili & Xiaohongshu parsing",
+        "Up to 1080P / 4K Bilibili DASH & Douyin multi-CDN failover",
+        "Live Photo & Multi-Photo Album ZIP batch packaging",
+        "Custom SESSDATA & Proxy configuration in HD Settings"
+      ],
+      "features_zh": [
+        "支持抖音、TikTok、B站、小红书无水印视频与图文解析",
+        "支持 B站 1080P/4K DASH 与抖音多节点容灾高速下载",
+        "支持实况图 (Live Photo) 与多图图集一键打包 ZIP",
+        "支持在「高清设置」中配置自定义 SESSDATA 与代理"
+      ]
+    },
+    "pro_plan": {
+      "name_en": "Pro Batch & Developer API",
+      "name_zh": "专业批量版 & 开发者 API",
+      "price_label": "Coming Soon",
+      "status_badge_en": "Paid Plans Not Yet Available",
+      "status_badge_zh": "付费计划暂未开放",
+      "coming_soon": true,
+      "features_en": [
+        "Automated creator profile & playlist bulk archiving",
+        "Dedicated high-concurrency REST API keys & webhooks",
+        "Server-side cloud muxing for 4K/8K Bilibili streams",
+        "Priority enterprise support & SLA guarantees"
+      ],
+      "features_zh": [
+        "支持主页作品与收藏夹全量批量归档下载",
+        "专属高并发 REST API 密钥与 Webhook 回调",
+        "云端自动音视频封装合并（4K/8K 免本地混流）",
+        "优先技术支持与企业级 SLA 稳定性保障"
+      ],
+      "cta_label_en": "Configure Free 1080P/4K Cookie Now",
+      "cta_label_zh": "立即免费配置 1080P/4K 高清 Cookie"
+    },
+    "contact_cta_enabled": true,
+    "updated_at": "2026-10-24T05:54:39.326Z"
+  },
+  "updated_at": "2026-10-24T05:59:53.498Z"
+}
